@@ -1,36 +1,27 @@
 OUTPUT_ARCH(riscv);
 ENTRY(_start);
-BASE_ADDRESS = 0x80200000;
+BASE_ADDRESS = 0x83500000;
 
 SECTIONS
 {
     . = BASE_ADDRESS;
-    skernel = .;
     .text :
     {
         *(.text.entry);
         *(.text .text.*);
     }
 
-    . = ALIGN(4k);
-    srodata = .;
     .rodata :
     {
-        *(.rodata.user_stack);
         *(.rodata .rodata.*);
     }
-    erodata = .;
 
-    . = ALIGN(4k);
-    sdata = .;
     .data :
     {
         *(.data .data.*);
         *(.sdata .sdata.*);
     }
-    edata = .;
 
-    . = ALIGN(4k);
     sbss = .;
     .bss :
     {
@@ -38,11 +29,9 @@ SECTIONS
         *(.sbss .sbss.*);
     }
     ebss = .;
-    ekernel = .;
 
     /DISCARD/ :
     {
         *(.debug* .eh_frame);
     }
-
 }

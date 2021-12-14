@@ -1,25 +1,20 @@
 use core::fmt;
 use core::fmt::Write;
-use crate::sbi::sbi_console_putchar;
-use spin::Mutex;
+use crate::syscall::{sys_write, write};
+
+const STDOUT: usize = 1;
 
 struct Stdout;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for c in s.chars() {
-            sbi_console_putchar(c);
-        }
+        write(STDOUT, s.as_bytes());
         Ok(())
     }
 }
 
-lazy_static!{
-    static ref STDOUT: Mutex<Stdout> = Mutex::new(Stdout);
-}
-
 pub fn print(args: fmt::Arguments) {
-     STDOUT.lock().write_fmt(args).unwrap();
+    Stdout.write_fmt(args).unwrap();
 }
 
 #[macro_export]
