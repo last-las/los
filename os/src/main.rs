@@ -18,6 +18,7 @@ use processor::enable_other_harts;
 use crate::task::{load_tasks, load_and_run_a_task, increase_alive_hart};
 use crate::processor::{CPU_NUMS, run_task_on_current_hart, suspend_current_hart};
 use riscv::register;
+use alloc::sync::Arc;
 
 #[macro_use]
 mod console;
@@ -32,6 +33,7 @@ mod syscall;
 mod processor;
 mod loader;
 mod timer;
+mod config;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -48,6 +50,7 @@ pub fn rust_main(hart_id: usize, _: usize) -> ! {
             panic!("running tests successfully.");
         }
 
+        task::load_tasks();
         enable_other_harts();
         task::load_and_run_a_task();
     } else {
@@ -69,7 +72,6 @@ fn do_init_jobs() {
     clear_bss();
     heap_allocator::init_heap();
     trap::init_stvec();
-    task::load_tasks();
     timer::enable_time_interrupt();
 }
 
@@ -93,6 +95,7 @@ fn clear_bss() {
 }
 
 pub fn run_tests() {
+    info!("starting running test cases.\n");
     task::test_task_mod();
     loader::test_loader();
 }

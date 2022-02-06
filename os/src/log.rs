@@ -65,12 +65,15 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        if $crate::log::LOG_STATE.eq("TRACE") => {
-            $crate::console::print(format_args!(
-                    concat!("\x1b[90m","[TRACE] ", $fmt, "\n\x1b[0m")
-                    $(, $($arg)+)?
-                )
-            );
+        match $crate::log::LOG_STATE {
+             "TRACE" => {
+                $crate::console::print(format_args!(
+                        concat!("\x1b[90m","[TRACE] ", $fmt, "\n\x1b[0m")
+                        $(, $($arg)+)?
+                    )
+                );
+            },
+            _ => {}
         }
     }
 }
