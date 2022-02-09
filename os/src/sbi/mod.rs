@@ -94,9 +94,11 @@ pub mod hart {
     const FID_HART_START: usize = 0;
     #[allow(unused)]
     const FID_HART_STOP: usize = 1;
+    #[allow(unused)]
     const FID_HART_GET_STATUS: usize = 2;
     const FID_HART_SUSPEND: usize = 3;
 
+    #[allow(unused)]
     pub fn sbi_hart_get_status(hartid: usize) -> SbiRet {
         sbi_call( EID_HART_STATE_MANAGEMENT_EXTENSION, FID_HART_GET_STATUS,[hartid, 0, 0])
     }

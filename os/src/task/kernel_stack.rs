@@ -1,5 +1,3 @@
-use alloc::boxed::Box;
-use core::marker::PhantomData;
 use spin::Mutex;
 use crate::config::MAX_TASK_NUMBER;
 use alloc::vec::Vec;
@@ -86,7 +84,7 @@ impl KernelStackAllocator {
     }
 
     fn alloc(&mut self) -> usize {
-        let mut slot;
+        let slot;
         if self.recycled.is_empty() {
             assert!(self.current < MAX_TASK_NUMBER);
             slot = self.current;
@@ -111,8 +109,8 @@ impl KernelStackAllocator {
 pub fn test_kernel_stack() {
     info!("starting kernel_stack.rs test");
 
-    /// test for kernel stack allocator.
-    // 1. test max number
+    // 1. test for kernel stack allocator.
+        // a. test max number
     let mut bp_arr: [usize; MAX_TASK_NUMBER] = [0; MAX_TASK_NUMBER];
     let mut kstack_allocator = KernelStackAllocator::new();
     for i in 0..MAX_TASK_NUMBER {
@@ -125,7 +123,7 @@ pub fn test_kernel_stack() {
     for bp in bp_arr.iter() {
         kstack_allocator.free(*bp);
     }
-    // 2. test inner structure
+        // b. test inner structure
     for i in 0..MAX_TASK_NUMBER {
         bp_arr[i] = kstack_allocator.alloc();
         assert_eq!(
@@ -137,14 +135,14 @@ pub fn test_kernel_stack() {
     drop(kstack_allocator);
     info!("    test KSTACK_ALLOCATOR successfully.");
 
-    /// test for kernel stack.
-    // 1. test return value.
+    // 1. test for kernel stack.
+        // a. test return value.
     let mut stack = KernelStack::new();
     let x: usize = 12345;
     stack.push(x);
     assert_eq!(stack.bp, stack.sp + core::mem::size_of::<usize>());
     assert_eq!(x, stack.pop());
-    // 2. test push size.
+        // b. test push size.
     let old_arrays: [u8; KERNEL_STACK_SIZE] = [61; KERNEL_STACK_SIZE];
     stack.push(old_arrays);
     let new_arrays: [u8; KERNEL_STACK_SIZE] = stack.pop();
@@ -156,9 +154,9 @@ pub fn test_kernel_stack() {
 
     /*
         The below test should be panic:
-        /// 3. test max size
+        /// c. test max size
         let old_arrays: [u8; KERNEL_STACK_SIZE + 1] = [0; KERNEL_STACK_SIZE + 1];
         stack.push(old_arrays);
     */
-    info!("end of kernel_stack.rs test.");
+    info!("end of kernel_stack.rs test.\n");
 }

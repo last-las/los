@@ -28,7 +28,7 @@ pub unsafe fn insert_apps() -> Vec<usize> {
         let app_size = end_address - start_address;
         let src_data = core::slice::from_raw_parts(start_address as *const u8, app_size);
 
-        let mut dst = core::slice::from_raw_parts_mut(dst_address, app_size);
+        let dst = core::slice::from_raw_parts_mut(dst_address, app_size);
 
         dst.copy_from_slice(src_data);
 
@@ -40,10 +40,3 @@ pub unsafe fn insert_apps() -> Vec<usize> {
 
     app_addresses
 }
-
-pub fn test_loader() {
-    unsafe {
-        insert_apps();
-    }
-}
-

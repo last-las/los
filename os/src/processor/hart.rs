@@ -1,4 +1,4 @@
-use crate::sbi::{sbi_send_ipi, sbi_legacy_send_ipi};
+use crate::sbi::sbi_send_ipi;
 use crate::sbi::hart::sbi_hart_suspend;
 
 pub fn set_hart_id(hart_id: usize) {

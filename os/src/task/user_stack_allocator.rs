@@ -1,7 +1,5 @@
 // TODO: This file should be delete when VA is enabled.
 
-use alloc::vec::Vec;
-use core::cell::RefCell;
 use spin::Mutex;
 
 pub const USER_STACK_SIZE: usize = 0x1000;
@@ -44,7 +42,7 @@ impl UserStackAllocator {
 
 /// test case for user_stack_allocator
 pub fn test_user_stack_allocator() {
-    let mut allocator = UserStackAllocator::new();
+    let allocator = UserStackAllocator::new();
     let mut sp = &USER_STACK as *const _ as usize;
     // alignment with 4k
     assert_eq!(sp % 0x1000, 0);

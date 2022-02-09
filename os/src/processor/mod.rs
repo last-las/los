@@ -1,5 +1,3 @@
-use crate::sbi::sbi_send_ipi;
-
 mod hart;
 
 pub use hart::{
@@ -11,9 +9,6 @@ pub use hart::{
 use alloc::sync::Arc;
 use crate::task::{TaskStruct, TaskContext};
 use crate::trap::__enter_user_mode;
-use alloc::string::String;
-use alloc::vec;
-use core::cell::RefCell;
 use spin::Mutex;
 
 pub const CPU_NUMS: usize = 4;
@@ -22,6 +17,7 @@ pub fn get_cur_task_context_in_this_hart() -> &'static mut TaskContext {
     PROCESSORS[get_hart_id()].get_current_task().unwrap().kernel_stack.get_mut()
 }
 
+#[allow(unused)]
 pub fn get_cur_task_in_this_hart() -> Arc<TaskStruct> {
     PROCESSORS[get_hart_id()].get_current_task().unwrap()
 }
@@ -39,7 +35,6 @@ pub fn run_task_on_current_hart() {
 }
 
 lazy_static! {
-    static ref cpu_nums: usize = env!("CPU_NUMS").parse::<usize>().unwrap();
     static ref PROCESSORS: [Processor; CPU_NUMS] = [
         Processor::new(),Processor::new(),
         Processor::new(),Processor::new(),
@@ -94,6 +89,7 @@ impl Processor{
         self.inner.lock().current_task.take()
     }
 
+    #[allow(unused)]
     fn is_empty(&self) -> bool {
         self.inner.lock().current_task.is_none()
     }

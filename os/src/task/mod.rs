@@ -4,19 +4,18 @@ mod task_context;
 mod task_manager;
 mod user_stack_allocator;
 mod test;
+mod pid;
 
-use task_manager::TASK_MANAGER;
 use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_current_hart, run_task_on_current_hart, suspend_current_hart};
 use crate::loader::insert_apps;
 use spin::Mutex;
 
 pub use test::test_task_mod;
 pub use task_struct::TaskStruct;
-pub use task_manager::fetch_a_task_from_task_manager;
+pub use task_manager::fetch_a_task_from_manager;
 pub use task_context::TaskContext;
-use crate::task::task_manager::add_a_task_to_task_manager;
+use crate::task::task_manager::{add_a_task_to_manager, return_task_to_manager, rm_task_from_manager};
 use alloc::sync::Arc;
-use crate::sbi::timer::sbi_set_timer;
 use crate::timer::set_timer_ms;
 
 pub fn load_tasks() {
@@ -25,29 +24,28 @@ pub fn load_tasks() {
         v = insert_apps();
     }
     println!("apps num : {}", v.len());
-    let mut i = 0;
     for pc in v {
-        let task = Arc::new(TaskStruct::new_user_task(pc, i));
-        add_a_task_to_task_manager(task);
-        i += 1;
+        let task = Arc::new(TaskStruct::new_user_task(pc));
+        add_a_task_to_manager(task);
     }
 }
 
 pub fn stop_current_and_run_next_task() {
     debug!("hart{} scheduling...", get_hart_id());
     let current_task = take_task_in_current_hart();
-    add_a_task_to_task_manager(current_task);
+    return_task_to_manager(current_task);
     load_and_run_a_task();
 }
 
 pub fn exit_current_and_run_next_task() {
-    take_task_in_current_hart();
+    let current_task = take_task_in_current_hart();
+    rm_task_from_manager(current_task);
     load_and_run_a_task();
 }
 
 pub fn load_and_run_a_task() {
-    if let Some(next_task) = fetch_a_task_from_task_manager() {
-        debug!("hart{} runs on task:{}", get_hart_id(), next_task.pid);
+    if let Some(next_task) = fetch_a_task_from_manager() {
+        debug!("hart{} runs on {:?}", get_hart_id(), next_task.pid);
         set_task_in_current_hart(next_task);
         set_timer_ms(10);
         run_task_on_current_hart();

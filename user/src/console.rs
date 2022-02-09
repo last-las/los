@@ -1,6 +1,6 @@
 use core::fmt;
 use core::fmt::Write;
-use crate::syscall::{sys_write, write};
+use crate::syscall::write;
 
 const STDOUT: usize = 1;
 

@@ -1,6 +1,5 @@
-use riscv::register::{time, sie, sstatus, stvec, sip};
-use crate::sbi::timer::sbi_set_timer;
-use crate::sbi::{sbi_legacy_set_timer, sbi_shutdown};
+use riscv::register::{time, sie};
+use crate::sbi::sbi_legacy_set_timer;
 
 const CLOCK_FREQUENCY: usize = 12500000;
 const MSEC_PER_SEC: usize = 1000;

@@ -5,7 +5,7 @@ use crate::syscall::syscall;
 use crate::task::stop_current_and_run_next_task;
 
 pub use trap::{__enter_user_mode, __from_user_mode};
-use crate::processor::{get_cur_task_in_this_hart, get_cur_task_context_in_this_hart, run_task_on_current_hart};
+use crate::processor::{get_cur_task_context_in_this_hart, run_task_on_current_hart};
 
 pub fn init_stvec() {
     unsafe {

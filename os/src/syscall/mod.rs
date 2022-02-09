@@ -1,6 +1,5 @@
-use crate::task::{fetch_a_task_from_task_manager, exit_current_and_run_next_task, stop_current_and_run_next_task};
+use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
 use crate::processor::get_hart_id;
-use crate::sbi::sbi_console_putchar;
 use core::str::from_utf8;
 use crate::timer::get_time_ms;
 

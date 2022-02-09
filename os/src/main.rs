@@ -15,10 +15,8 @@ extern crate riscv;
 use core::ptr;
 use processor::set_hart_id;
 use processor::enable_other_harts;
-use crate::task::{load_tasks, load_and_run_a_task, increase_alive_hart};
-use crate::processor::{CPU_NUMS, run_task_on_current_hart, suspend_current_hart};
-use riscv::register;
-use alloc::sync::Arc;
+use crate::task::increase_alive_hart;
+use crate::processor::{CPU_NUMS,suspend_current_hart};
 
 #[macro_use]
 mod console;
@@ -97,7 +95,6 @@ fn clear_bss() {
 pub fn run_tests() {
     info!("starting running test cases.\n");
     task::test_task_mod();
-    loader::test_loader();
 }
 
 
