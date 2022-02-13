@@ -3,6 +3,7 @@ const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_YIELD: usize = 124;
 const SYSCALL_GET_TIME: usize = 169;
+const SYSCALL_TEST: usize = 1234;
 
 #[inline(always)]
 fn syscall(id: usize, args: [usize; 3]) -> isize {
@@ -19,6 +20,9 @@ fn syscall(id: usize, args: [usize; 3]) -> isize {
     ret
 }
 
+pub fn sys_test() -> isize {
+    syscall(SYSCALL_TEST, [0, 0, 0])
+}
 
 #[allow(unused)]
 pub fn sys_receive() -> isize {

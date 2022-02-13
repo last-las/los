@@ -1,5 +1,5 @@
 // TODO: wrapper
-use crate::syscall::syscall::{sys_exit, sys_get_time, sys_yield};
+pub use crate::syscall::syscall::{sys_exit, sys_get_time, sys_yield, sys_test};
 
 mod syscall;
 

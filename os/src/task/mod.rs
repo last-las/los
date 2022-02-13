@@ -36,10 +36,11 @@ pub fn load_tasks() {
 pub fn stop_current_and_run_next_task() {
     debug!("scheduling...");
     let current_task = take_task_in_current_hart();
+    let current_task_context_ptr = current_task.acquire_inner_lock().task_context_ptr();
     return_task_to_manager(current_task);
     let hart_context_ptr = get_current_hart_context_ptr();
     unsafe {
-        __switch(hart_context_ptr);
+        __switch(current_task_context_ptr, hart_context_ptr);
     }
 }
 
@@ -48,7 +49,7 @@ pub fn exit_current_and_run_next_task() {
     rm_task_from_manager(current_task);
     let hart_context_ptr = get_current_hart_context_ptr();
     unsafe {
-        __switch(hart_context_ptr);
+        __switch(0, hart_context_ptr);
     }
 }
 

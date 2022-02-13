@@ -52,11 +52,13 @@ pub fn rust_main(hart_id: usize, _: usize) -> ! {
 
         task::load_tasks();
         enable_other_harts();
+        info!("start running");
         processor::run_on_current_hart();
     } else {
         suspend_current_hart();
         increase_alive_hart();
         other_hart_init_task();
+        info!("start running");
         processor::run_on_current_hart();
     }
 
@@ -98,5 +100,3 @@ pub fn run_tests() {
     info!("starting running test cases.\n");
     task::test_task_mod();
 }
-
-

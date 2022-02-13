@@ -16,6 +16,7 @@ pub struct TaskStructInner {
     pub kernel_stack: KernelStack,
     pub wait_queue: Vec<Arc<TaskStruct>>,
     pub flag: RuntimeFlags,
+    pub task_context: TaskContext,
 }
 
 impl TaskStruct {
@@ -28,13 +29,12 @@ impl TaskStruct {
         kernel_stack.push(user_context);
 
         let task_context = TaskContext::new(kernel_stack.sp);
-        kernel_stack.push(task_context);
 
         let inner = TaskStructInner {
             kernel_stack,
             wait_queue: Vec::new(),
             flag: RuntimeFlags::READY,
-
+            task_context,
         };
 
         Self {
@@ -90,17 +90,12 @@ impl TaskStruct {
 }
 
 impl TaskStructInner {
-    // pub fn is_waiting_for()
-}
-
-/*bitflags! {
-    pub struct RuntimeFlags: u8 {
-        const RECEIVING = 1 << 0;
-        const SENDING = 1 << 1;
-        const ZOMBIE = 1 << 2;
-        const RUNNING = 1 << 3;
+    pub fn task_context_ptr(&self) -> usize {
+        unsafe {
+            &self.task_context as *const _ as usize
+        }
     }
-}*/
+}
 
 #[derive(Copy, Clone)]
 pub enum RuntimeFlags {

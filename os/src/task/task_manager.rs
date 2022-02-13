@@ -55,7 +55,7 @@ impl TaskManager {
     }
 
     /// difference between add() and return_() is that add() is used when new task is created,
-    /// while return_ is used when a task is temporarily stopped thus it is returned to the manager.
+    /// while return_ is used when an old task is temporarily stopped thus it is returned to the manager.
     pub fn return_(&mut self, task: Arc<TaskStruct>) {
         self.task_queue.push_back(task.clone());
         let pid =task.pid_handle.0;
