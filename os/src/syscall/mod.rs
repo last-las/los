@@ -1,3 +1,5 @@
+mod ipc;
+
 use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
 use crate::processor::get_hart_id;
 use core::str::from_utf8;

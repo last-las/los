@@ -1,27 +1,23 @@
-use riscv::register::{sstatus::{self, SPP}};
-use riscv::register::sstatus::Sstatus;
+use crate::trap::before_enter_user_mode;
 
 #[repr(C)]
 pub struct TaskContext {
-    pub x: [usize; 32],
-    pub sstatus: Sstatus,
-    pub sepc: usize,
+    pub ra: usize,
+    pub sp: usize,
+    pub s: [usize; 12],
 }
 
 impl TaskContext {
-    pub fn new(entry: usize, task_sp: usize, is_user: bool) -> Self {
-        let mut sstatus = sstatus::read();
-        if is_user {
-            sstatus.set_spp(SPP::User);
-        } else {
-            sstatus.set_spp(SPP::Supervisor);
+    pub fn new(kernel_sp: usize) -> Self {
+        Self {
+            ra: before_enter_user_mode as usize,
+            sp: kernel_sp,
+            s: [0; 12],
         }
-        let mut task_context = TaskContext {
-            x: [0; 32],
-            sstatus,
-            sepc: entry
-        };
-        task_context.x[2] = task_sp;
-        task_context
     }
+}
+
+#[no_mangle]
+pub fn test_task_context() {
+    panic!("everything end here!");
 }

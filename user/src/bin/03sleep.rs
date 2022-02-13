@@ -6,7 +6,7 @@ extern crate user_lib;
 
 use user_lib::syscall::{sleep, get_time};
 
-const SECONDS: usize = 5;
+const SECONDS: usize = 2;
 
 #[no_mangle]
 fn main() {

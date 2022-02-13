@@ -3,22 +3,22 @@ use crate::config::MAX_TASK_NUMBER;
 use core::fmt::{Debug, Formatter};
 use spin::Mutex;
 
-pub fn alloc_pid() -> Option<Pid> {
+pub fn alloc_pid() -> Option<PidHandle> {
     PID_ALLOCATOR.lock().alloc()
 }
 
 
-pub struct Pid(pub(crate) u8);
+pub struct PidHandle(pub(crate) usize);
 
-impl Drop for Pid {
+impl Drop for PidHandle {
     fn drop(&mut self) {
         PID_ALLOCATOR.lock().free(self.0);
     }
 }
 
-impl Debug for Pid {
+impl Debug for PidHandle {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!("Pid:{}", self.0))
+        f.write_fmt(format_args!("pid:{}", self.0))
     }
 }
 
@@ -28,46 +28,43 @@ lazy_static!{
 
 pub struct PidAllocator {
     pub bit_map: u64,
-    last_pid: Option<u8>,
+    last_pid: usize,
 }
 
 impl PidAllocator {
     fn new() -> Self {
         Self {
             bit_map: 0,
-            last_pid: None,
+            last_pid: MAX_TASK_NUMBER - 1,
         }
     }
 
-    fn alloc(&mut self) -> Option<Pid> {
+    fn alloc(&mut self) -> Option<PidHandle> {
         if self.bit_map == u64::MAX {
             None
-        } else if self.last_pid.is_none() {
-                self.last_pid = Some(0);
-                self.bit_map |= 1 << 0;
-                Some(Pid(0))
         } else {
-            let mut pos = self.last_pid.unwrap();
+            let mut pos = self.last_pid;
             loop {
-                pos = (pos + 1) % 64;
+                pos = (pos + 1) % MAX_TASK_NUMBER;
                 if ((1 << pos) & self.bit_map) == 0 {
                     break;
                 }
             }
             self.bit_map |= 1 << pos;
-            self.last_pid = Some(pos);
-            Some(Pid(pos))
+            self.last_pid = pos;
+            Some(PidHandle(self.last_pid))
         }
     }
 
-    fn free(&mut self, pid: u8) {
+    fn free(&mut self, pid: usize) {
+        assert!(pid < MAX_TASK_NUMBER);
         assert_eq!( (self.bit_map >> pid) & 1, 1);
         self.bit_map ^= 1 << pid;
     }
 
     fn empty(&mut self) {
         self.bit_map = 0;
-        self.last_pid = None;
+        self.last_pid = MAX_TASK_NUMBER - 1;
     }
 }
 
@@ -75,14 +72,14 @@ impl PidAllocator {
 pub fn test_pid_allocation() {
     info!("starting pid.rs test cases");
 
-    // test allocate and free MAX_TASK_NUMBER tasks.
+    // test allocate() and free() MAX_TASK_NUMBER tasks.
     let mut pid_allocator = PID_ALLOCATOR.lock();
     pid_allocator.empty(); // make sure bit_map equal zero,
                             // because other test cases might influence its value
     let mut pids = Vec::new();
     for i in 0..MAX_TASK_NUMBER {
         pids.push(pid_allocator.alloc().unwrap());
-        assert_eq!(pids[i].0 as usize, i);
+        assert_eq!(pids[i].0, i);
     }
     assert_eq!(pid_allocator.bit_map, u64::MAX);
     drop(pid_allocator);

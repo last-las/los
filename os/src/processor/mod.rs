@@ -1,4 +1,5 @@
 mod hart;
+mod switch;
 
 pub use hart::{
     get_hart_id,
@@ -6,15 +7,18 @@ pub use hart::{
     enable_other_harts,
     suspend_current_hart
 };
+pub use switch::{__record_sp, __switch};
 use alloc::sync::Arc;
-use crate::task::{TaskStruct, TaskContext};
+use crate::task::{TaskStruct, TrapContext, fetch_a_task_from_manager, decrease_alive_hart, get_alive_hart_cnt, RuntimeFlags, TaskContext};
 use crate::trap::__enter_user_mode;
 use spin::Mutex;
 
 pub const CPU_NUMS: usize = 4;
 
-pub fn get_cur_task_context_in_this_hart() -> &'static mut TaskContext {
-    PROCESSORS[get_hart_id()].get_current_task().unwrap().kernel_stack.get_mut()
+pub fn get_cur_task_context_in_this_hart() -> &'static mut TrapContext {
+    PROCESSORS[get_hart_id()].get_current_task().unwrap()
+        .acquire_inner_lock()
+        .kernel_stack.get_mut()
 }
 
 #[allow(unused)]
@@ -30,8 +34,12 @@ pub fn take_task_in_current_hart() -> Arc<TaskStruct> {
     PROCESSORS[get_hart_id()].take_current_task().unwrap()
 }
 
-pub fn run_task_on_current_hart() {
+pub fn run_on_current_hart() {
     PROCESSORS[get_hart_id()].run();
+}
+
+pub fn get_current_hart_context_ptr() -> usize {
+    PROCESSORS[get_hart_id()].inner.lock().processor_task_context_ptr
 }
 
 lazy_static! {
@@ -48,27 +56,51 @@ pub struct Processor {
 }
 
 struct ProcessorInner {
-    current_task: Option<Arc<TaskStruct>>
+    current_task: Option<Arc<TaskStruct>>,
+    processor_task_context_ptr: usize,
 }
 
 impl Processor{
     fn new() -> Self {
         Self {
             inner: Mutex::new(ProcessorInner {
-                current_task: None
+                current_task: None,
+                processor_task_context_ptr: 0,
             })
         }
     }
 
-    // WARN: this implementation might have some problems,
-    // otherwise it doesn't make sense that rCore saves two kinds of contents on stack.
     fn run(&self) {
-        let inner = self.inner.lock();
-        let kernel_stack_sp =
-            inner.current_task.as_ref().unwrap().kernel_stack.sp;
-        drop(inner); // to avoid dead lock because this function won't reach the end.
-        unsafe {
-            __enter_user_mode(kernel_stack_sp);
+        let processor_inner = self.inner.lock();
+        let processor_task_context_ptr2 = unsafe {
+            &processor_inner.processor_task_context_ptr as * const _ as usize
+        };
+        drop(processor_inner);
+        loop {
+            if let Some(next_task) = fetch_a_task_from_manager() {
+                let mut next_task_inner = next_task.acquire_inner_lock();
+                next_task_inner.flag = RuntimeFlags::RUNNING;
+                let task_context: TaskContext = next_task_inner.kernel_stack.pop();
+                let ksp = next_task_inner.kernel_stack.sp;
+                debug!("ksp:{:#x}", ksp);
+                    drop(next_task_inner);
+                self.set_current_task(next_task);
+
+                unsafe {
+                    __record_sp(processor_task_context_ptr2);
+                    __switch(&task_context as *const _ as usize);
+                }
+
+            } else {    //TODO: The else code block should be delete after shell is implemented.
+                debug!("stopped successfully.");
+                decrease_alive_hart();
+
+                if get_alive_hart_cnt() <= 0 {
+                    panic!("Every hart has stopped. Shutdown the system.");
+                } else {
+                    suspend_current_hart();
+                }
+            }
         }
     }
 
@@ -82,7 +114,9 @@ impl Processor{
     }
 
     fn set_current_task(&self, current_task: Arc<TaskStruct>)  {
-        self.inner.lock().current_task = Some(current_task);
+        let mut processor_inner = self.inner.lock();
+        assert!(processor_inner.current_task.is_none());
+        processor_inner.current_task = Some(current_task);
     }
 
     fn take_current_task(&self) -> Option<Arc<TaskStruct>> {

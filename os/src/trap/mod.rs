@@ -1,11 +1,11 @@
 mod trap;
 
-use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec};
+use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec, sepc};
 use crate::syscall::syscall;
 use crate::task::stop_current_and_run_next_task;
 
-pub use trap::{__enter_user_mode, __from_user_mode};
-use crate::processor::{get_cur_task_context_in_this_hart, run_task_on_current_hart};
+pub use trap::{__enter_user_mode, __from_user_mode, before_enter_user_mode};
+use crate::processor::{get_cur_task_context_in_this_hart, get_hart_id};
 
 pub fn init_stvec() {
     unsafe {
@@ -17,6 +17,8 @@ pub fn init_stvec() {
 pub fn trap_handler() {
     let scause = scause::read();
     let stval = stval::read();
+    let sepc = sepc::read();
+    debug!("jump to trap_handler");
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             let context = get_cur_task_context_in_this_hart();
@@ -29,8 +31,8 @@ pub fn trap_handler() {
             stop_current_and_run_next_task();
         }
         _ => {
-            panic!("Unsupported trap {:?}, stval = {:#x}", scause.cause(), stval);
+            panic!("hart{}: Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",
+                   get_hart_id(), scause.cause(), stval, sepc);
         }
     }
-    run_task_on_current_hart();
 }

@@ -7,6 +7,8 @@
 
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate bitflags;
 extern crate buddy_system_allocator;
 extern crate alloc;
 extern crate spin;
@@ -50,12 +52,12 @@ pub fn rust_main(hart_id: usize, _: usize) -> ! {
 
         task::load_tasks();
         enable_other_harts();
-        task::load_and_run_a_task();
+        processor::run_on_current_hart();
     } else {
         suspend_current_hart();
         increase_alive_hart();
         other_hart_init_task();
-        task::load_and_run_a_task();
+        processor::run_on_current_hart();
     }
 
     unreachable!("couldn't reach here in rust_main");

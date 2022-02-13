@@ -10,7 +10,7 @@ pub fn fetch_a_task_from_manager() -> Option<Arc<TaskStruct>> {
 }
 
 pub fn rm_task_from_manager(task_struct: Arc<TaskStruct>) {
-    let pid = task_struct.pid.0 as usize;
+    let pid = task_struct.pid_handle.0;
     TASK_MANAGER.lock().rm_task_by_pid(pid);
 }
 
@@ -20,6 +20,10 @@ pub fn add_a_task_to_manager(task_struct: Arc<TaskStruct>) {
 
 pub fn return_task_to_manager(task_struct: Arc<TaskStruct>) {
     TASK_MANAGER.lock().return_(task_struct);
+}
+
+pub fn get_task_by_pid(pid: usize) -> Option<Arc<TaskStruct>> {
+    TASK_MANAGER.lock().get_task_by_pid(pid)
 }
 
 lazy_static!{
@@ -45,7 +49,7 @@ impl TaskManager {
 
     pub fn add(&mut self, task: Arc<TaskStruct>)  {
         self.task_queue.push_back(task.clone());
-        let pid = task.pid.0 as usize;
+        let pid = task.pid_handle.0;
         assert!(self.pid_2_task[pid].is_none());
         self.pid_2_task[pid] = Some(task);
     }
@@ -54,7 +58,7 @@ impl TaskManager {
     /// while return_ is used when a task is temporarily stopped thus it is returned to the manager.
     pub fn return_(&mut self, task: Arc<TaskStruct>) {
         self.task_queue.push_back(task.clone());
-        let pid =task.pid.0 as usize;
+        let pid =task.pid_handle.0;
         assert!(self.pid_2_task[pid].is_some());
     }
 
@@ -73,7 +77,7 @@ impl TaskManager {
             .iter()
             .enumerate()
             .find(|(_, task)| {
-                task.pid.0 as usize == pid
+                task.pid_handle.0 == pid
         }) {
             self.task_queue.remove(index);
             self.pid_2_task[pid].take();

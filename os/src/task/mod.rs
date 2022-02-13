@@ -1,22 +1,25 @@
 mod kernel_stack;
 mod task_struct;
-mod task_context;
+mod trap_context;
 mod task_manager;
 mod user_stack_allocator;
 mod test;
 mod pid;
+mod task_context;
 
-use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_current_hart, run_task_on_current_hart, suspend_current_hart};
+use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_current_hart, suspend_current_hart, get_current_hart_context_ptr};
 use crate::loader::insert_apps;
 use spin::Mutex;
 
 pub use test::test_task_mod;
-pub use task_struct::TaskStruct;
-pub use task_manager::fetch_a_task_from_manager;
+pub use task_struct::{TaskStruct, RuntimeFlags, ReceiveProc};
+pub use task_manager::{fetch_a_task_from_manager, get_task_by_pid};
 pub use task_context::TaskContext;
+pub use trap_context::TrapContext;
 use crate::task::task_manager::{add_a_task_to_manager, return_task_to_manager, rm_task_from_manager};
 use alloc::sync::Arc;
 use crate::timer::set_timer_ms;
+use crate::processor::__switch;
 
 pub fn load_tasks() {
     let v;
@@ -31,26 +34,32 @@ pub fn load_tasks() {
 }
 
 pub fn stop_current_and_run_next_task() {
-    debug!("hart{} scheduling...", get_hart_id());
+    debug!("scheduling...");
     let current_task = take_task_in_current_hart();
     return_task_to_manager(current_task);
-    load_and_run_a_task();
+    let hart_context_ptr = get_current_hart_context_ptr();
+    unsafe {
+        __switch(hart_context_ptr);
+    }
 }
 
 pub fn exit_current_and_run_next_task() {
     let current_task = take_task_in_current_hart();
     rm_task_from_manager(current_task);
-    load_and_run_a_task();
+    let hart_context_ptr = get_current_hart_context_ptr();
+    unsafe {
+        __switch(hart_context_ptr);
+    }
 }
 
-pub fn load_and_run_a_task() {
+/*pub fn load_and_run_a_task() {
     if let Some(next_task) = fetch_a_task_from_manager() {
-        debug!("hart{} runs on {:?}", get_hart_id(), next_task.pid);
+        debug!("runs on {:?}", next_task.pid_handle);
         set_task_in_current_hart(next_task);
         set_timer_ms(10);
         run_task_on_current_hart();
     } else {
-        debug!("hart {} stopped successfully.", get_hart_id());
+        debug!("stopped successfully.");
         decrease_alive_hart();
 
         if get_alive_hart_cnt() <= 0 {
@@ -59,7 +68,7 @@ pub fn load_and_run_a_task() {
             suspend_current_hart();
         }
     }
-}
+}*/
 
 pub fn get_alive_hart_cnt() -> usize {
     ALIVE_HARTS.lock().get_num()
