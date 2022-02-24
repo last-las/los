@@ -18,7 +18,7 @@ pub fn trap_handler() {
     let scause = scause::read();
     let stval = stval::read();
     let sepc = sepc::read();
-    debug!("jump to trap_handler");
+
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             let context = get_cur_task_context_in_this_hart();

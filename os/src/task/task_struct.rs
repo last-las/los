@@ -17,6 +17,7 @@ pub struct TaskStructInner {
     pub wait_queue: Vec<Arc<TaskStruct>>,
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
+    pub msg_ptr: Option<usize>,
 }
 
 impl TaskStruct {
@@ -35,6 +36,7 @@ impl TaskStruct {
             wait_queue: Vec::new(),
             flag: RuntimeFlags::READY,
             task_context,
+            msg_ptr: None,
         };
 
         Self {
@@ -55,44 +57,29 @@ impl TaskStruct {
     pub fn pid(&self) -> usize {
         self.pid_handle.0
     }
-
-    pub fn is_receiving_from(&self, another_task: Arc<TaskStruct>) -> bool {
-        let this_task_inner = self.acquire_inner_lock();
-        let another_pid = another_task.pid();
-
-        let mut ans = false;
-
-        if let RuntimeFlags::RECEIVING(receive_proc) = this_task_inner.flag {
-            if let ReceiveProc::SPECIFIC(target_pid) = receive_proc {
-                if target_pid == another_pid {
-                    ans = true;
-                }
-            } else { // dst_task is waiting for ANY tasks thus always return true.
-                ans = true;
-            }
-        }
-
-        ans
-    }
-
-    pub fn is_sending_to(&self, another_task: Arc<TaskStruct>) -> bool {
-        let this_task_inner = self.acquire_inner_lock();
-        let mut ans = false;
-
-        if let RuntimeFlags::SENDING(target_pid) = this_task_inner.flag {
-            if target_pid == another_task.pid() {
-                ans = true;
-            }
-        }
-
-        ans
-    }
 }
 
 impl TaskStructInner {
     pub fn task_context_ptr(&self) -> usize {
         unsafe {
             &self.task_context as *const _ as usize
+        }
+    }
+
+
+    pub fn is_receiving_from(&self, another_task: &Arc<TaskStruct>) -> bool {
+        match self.flag {
+            RuntimeFlags::RECEIVING(ReceiveProc::SPECIFIC(target_pid)) =>
+                target_pid == another_task.pid(),
+            RuntimeFlags::RECEIVING(ReceiveProc::ANY) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_sending_to(&self, another_task: &Arc<TaskStruct>) -> bool {
+        match self.flag {
+            RuntimeFlags::SENDING(target_pid) => target_pid == another_task.pid(),
+            _ => false
         }
     }
 }

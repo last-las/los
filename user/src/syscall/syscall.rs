@@ -1,4 +1,8 @@
+use ipc::Msg;
+
 // TODO: IPC
+const SYSCALL_SEND: usize = 1;
+const SYSCALL_RECEIVE: usize = 2;
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_YIELD: usize = 124;
@@ -24,9 +28,14 @@ pub fn sys_test() -> isize {
     syscall(SYSCALL_TEST, [0, 0, 0])
 }
 
-#[allow(unused)]
-pub fn sys_receive() -> isize {
-    unimplemented!();
+pub fn sys_send(dst_pid: usize, msg: &Msg) -> isize {
+    let msg_ptr = msg as *const _ as usize;
+    syscall(SYSCALL_SEND, [dst_pid, msg_ptr, 0])
+}
+
+pub fn sys_receive(dst_pid: usize, msg: &mut Msg) -> isize {
+    let msg_ptr = msg as *mut _ as usize;
+    syscall(SYSCALL_RECEIVE, [dst_pid, msg_ptr, 0])
 }
 
 #[allow(unused)]

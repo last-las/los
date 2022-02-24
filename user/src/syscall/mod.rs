@@ -1,9 +1,7 @@
 // TODO: wrapper
-pub use crate::syscall::syscall::{sys_exit, sys_get_time, sys_yield, sys_test};
-
 mod syscall;
 
-pub use syscall::sys_write;
+pub use syscall::*;
 
 pub fn exit(exit_code: usize) -> isize {
     sys_exit(exit_code)

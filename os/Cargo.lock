@@ -48,6 +48,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "ipc"
+version = "0.1.0"
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -77,6 +81,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "buddy_system_allocator",
+ "ipc",
  "lazy_static",
  "riscv",
  "spin 0.7.1",

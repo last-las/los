@@ -16,7 +16,8 @@ pub use task_struct::{TaskStruct, RuntimeFlags, ReceiveProc};
 pub use task_manager::{fetch_a_task_from_manager, get_task_by_pid};
 pub use task_context::TaskContext;
 pub use trap_context::TrapContext;
-use crate::task::task_manager::{add_a_task_to_manager, return_task_to_manager, rm_task_from_manager};
+use crate::task::task_manager::{add_a_task_to_manager, rm_task_from_manager};
+pub use crate::task::task_manager::return_task_to_manager;
 use alloc::sync::Arc;
 use crate::timer::set_timer_ms;
 use crate::processor::__switch;
@@ -33,8 +34,18 @@ pub fn load_tasks() {
     }
 }
 
+pub fn block_current_and_run_next_task() {
+    debug!("block and schedule..");
+    let current_task = take_task_in_current_hart();
+    let current_task_context_ptr = current_task.acquire_inner_lock().task_context_ptr();
+    let hart_context_ptr = get_current_hart_context_ptr();
+    unsafe {
+        __switch(current_task_context_ptr, hart_context_ptr);
+    }
+}
+
 pub fn stop_current_and_run_next_task() {
-    debug!("scheduling...");
+    debug!("stop and schedule..");
     let current_task = take_task_in_current_hart();
     let current_task_context_ptr = current_task.acquire_inner_lock().task_context_ptr();
     return_task_to_manager(current_task);

@@ -4,10 +4,9 @@ use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task
 use crate::processor::get_hart_id;
 use core::str::from_utf8;
 use crate::timer::get_time_ms;
+use crate::syscall::ipc::{sys_send, sys_receive};
 
-#[allow(unused)]
 const SYSCALL_SEND: usize = 1;
-#[allow(unused)]
 const SYSCALL_RECEIVE: usize = 2;
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
@@ -17,6 +16,8 @@ const SYSCALL_TEST: usize = 1234;
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
+        SYSCALL_SEND => sys_send(args[0], args[1]),
+        SYSCALL_RECEIVE => sys_receive(args[0], args[1]),
         SYSCALL_WRITE => sys_write(args[0], args[1], args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as isize),
         SYSCALL_YIELD => sys_yield(),
