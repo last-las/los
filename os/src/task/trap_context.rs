@@ -9,13 +9,9 @@ pub struct TrapContext {
 }
 
 impl TrapContext {
-    pub fn new(entry: usize, task_sp: usize, is_user: bool) -> Self {
+    pub fn new(entry: usize, task_sp: usize) -> Self {
         let mut sstatus = sstatus::read();
-        if is_user {
-            sstatus.set_spp(SPP::User);
-        } else {
-            sstatus.set_spp(SPP::Supervisor);
-        }
+        sstatus.set_spp(SPP::User);
         let mut task_context = TrapContext {
             x: [0; 32],
             sstatus,

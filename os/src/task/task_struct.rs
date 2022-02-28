@@ -21,11 +21,11 @@ pub struct TaskStructInner {
 }
 
 impl TaskStruct {
-    pub fn new_user_task(pc: usize) -> Self {
+    pub fn new(pc: usize) -> Self {
         let user_sp = alloc_a_user_stack();
         let pid_handle = alloc_pid().unwrap();
 
-        let user_context = TrapContext::new(pc, user_sp, true);
+        let user_context = TrapContext::new(pc, user_sp);
         let mut kernel_stack = KernelStack::new();
         kernel_stack.push(user_context);
 
@@ -47,11 +47,6 @@ impl TaskStruct {
 
     pub fn acquire_inner_lock(&self) -> MutexGuard<TaskStructInner> {
         self.inner.lock()
-    }
-
-    #[allow(unused)]
-    pub fn new_kernel_task() -> Self {
-        unimplemented!();
     }
 
     pub fn pid(&self) -> usize {

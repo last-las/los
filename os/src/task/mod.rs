@@ -29,7 +29,7 @@ pub fn load_tasks() {
     }
     println!("apps num : {}", v.len());
     for pc in v {
-        let task = Arc::new(TaskStruct::new_user_task(pc));
+        let task = Arc::new(TaskStruct::new(pc));
         add_a_task_to_manager(task);
     }
 }
