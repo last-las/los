@@ -40,7 +40,7 @@ impl UserStackAllocator {
     }
 }
 
-/// test case for user_stack_allocator
+#[cfg(feature = "test")]
 pub fn test_user_stack_allocator() {
     let allocator = UserStackAllocator::new();
     let mut sp = &USER_STACK as *const _ as usize;

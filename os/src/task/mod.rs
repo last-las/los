@@ -8,9 +8,10 @@ mod pid;
 mod task_context;
 
 use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_current_hart, suspend_current_hart, get_current_hart_context_ptr};
-use crate::loader::insert_apps;
+use crate::loader::copy_apps_to_base_address;
 use spin::Mutex;
 
+#[cfg(feature = "test")]
 pub use test::test_task_mod;
 pub use task_struct::{TaskStruct, RuntimeFlags, ReceiveProc};
 pub use task_manager::{fetch_a_task_from_manager, get_task_by_pid};
@@ -25,10 +26,11 @@ use crate::processor::__switch;
 pub fn load_tasks() {
     let v;
     unsafe {
-        v = insert_apps();
+        v = copy_apps_to_base_address();
     }
     println!("apps num : {}", v.len());
     for pc in v {
+        info!("the pc is: {:#x}", pc);
         let task = Arc::new(TaskStruct::new(pc));
         add_a_task_to_manager(task);
     }

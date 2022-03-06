@@ -29,6 +29,7 @@ impl TaskStruct {
         let mut kernel_stack = KernelStack::new();
         kernel_stack.push(user_context);
 
+        info!("kernel_stack sp: {:#x}", kernel_stack.sp);
         let task_context = TaskContext::new(kernel_stack.sp);
 
         let inner = TaskStructInner {

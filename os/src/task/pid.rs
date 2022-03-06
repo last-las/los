@@ -68,7 +68,7 @@ impl PidAllocator {
     }
 }
 
-/// test case.
+#[cfg(feature = "test")]
 pub fn test_pid_allocation() {
     info!("starting pid.rs test cases");
 

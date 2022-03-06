@@ -105,7 +105,7 @@ impl KernelStackAllocator {
 }
 
 
-/// test case
+#[cfg(feature = "test")]
 pub fn test_kernel_stack() {
     info!("starting kernel_stack.rs test");
 

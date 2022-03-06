@@ -1,4 +1,4 @@
-use crate::trap::before_enter_user_mode;
+use crate::trap:: __enter_user_mode;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -19,14 +19,9 @@ impl TaskContext {
 
     pub fn new(kernel_sp: usize) -> Self {
         Self {
-            ra: before_enter_user_mode as usize,
+            ra: __enter_user_mode as usize,
             sp: kernel_sp,
             s: [0; 12],
         }
     }
-}
-
-#[no_mangle]
-pub fn test_task_context() {
-    panic!("hello, end here!");
 }

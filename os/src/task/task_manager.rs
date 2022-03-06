@@ -88,7 +88,7 @@ impl TaskManager {
     }
 }
 
-/// test case for task_manager.
+#[cfg(feature = "test")]
 pub fn test_task_manager() {
     info!("starting task_manager.rs test cases.");
 

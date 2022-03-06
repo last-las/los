@@ -2,4 +2,4 @@
 target = "riscv64gc-unknown-none-elf"
 
 [target.riscv64gc-unknown-none-elf]
-rustflags = ["-Clink-arg=-Tlink.ld", ]
+rustflags = ["-Clink-arg=-Tlink.ld","-Cforce-frame-pointers=yes" ]

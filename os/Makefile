@@ -3,25 +3,25 @@ MODE := release
 KERNEL_ELF := target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
 BOOTLOADER := ../bootloader/rustsbi-qemu.bin
-export CPU_NUMS = 1
+export CPU_NUMS = 2
 export LOG = INFO
 # USER_PATH := ../user/target/$(TARGET)/$(MODE)/
 # APPLICATION := $(foreach app,$(shell ls ../user/src/bin/),$(patsubst %.rs, %, $(app)))
 
-all: export TEST_MODE=0
-all: user build
-
-test: export TEST_MODE=1
-test: build run
-
-user:
-	@cd ../user && make build
-
-build:
+all: user
 	@cargo build --release
 	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
 		--strip-all \
 		-O binary $(KERNEL_BIN)
+
+test: user
+	@cargo build --features test --release
+	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
+		--strip-all \
+		-O binary $(KERNEL_BIN)
+
+user:
+	@cd ../user && make build
 
 run:
 	@qemu-system-riscv64 \

@@ -4,7 +4,7 @@ use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec, 
 use crate::syscall::syscall;
 use crate::task::stop_current_and_run_next_task;
 
-pub use trap::{__enter_user_mode, __from_user_mode, before_enter_user_mode};
+pub use trap::{__enter_user_mode, __from_user_mode};
 use crate::processor::{get_cur_task_context_in_this_hart, get_hart_id};
 
 pub fn init_stvec() {

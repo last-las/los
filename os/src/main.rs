@@ -41,25 +41,36 @@ global_asm!(include_str!("entry.asm"));
 pub fn rust_main(hart_id: usize, _: usize) -> ! {
     set_hart_id(hart_id);
     if hart_id == 0 {
+        clear_bss(); // It has to be the first to invoke... because it will clear the boot_stack!
         environment_check();
-        do_init_jobs();
+        heap_allocator::init_heap();
+        trap::init_stvec();
+        timer::enable_time_interrupt();
         increase_alive_hart();
 
-        if is_test_mode() {
+        #[cfg(feature = "test")]
+        {
             run_tests();
-            panic!("running tests successfully.");
+            panic!("Test completed successfully.");
         }
 
-        task::load_tasks();
-        enable_other_harts();
-        info!("start running");
-        processor::run_on_current_hart();
+        #[cfg(not(feature = "test"))]
+        {
+            task::load_tasks();
+            enable_other_harts();
+            info!("start running");
+            processor::run_on_current_hart();
+        }
     } else {
         suspend_current_hart();
-        increase_alive_hart();
-        other_hart_init_task();
-        info!("start running");
-        processor::run_on_current_hart();
+
+        #[cfg(not(feature = "test"))]
+        {
+            increase_alive_hart();
+            other_hart_init_task();
+            info!("start running");
+            processor::run_on_current_hart();
+        }
     }
 
     unreachable!("couldn't reach here in rust_main");
@@ -68,17 +79,6 @@ pub fn rust_main(hart_id: usize, _: usize) -> ! {
 fn environment_check() {
     // Should make the constant CPU_NUMS >= the environment variable when panic.
     assert!(CPU_NUMS >= env!("CPU_NUMS").parse::<usize>().unwrap());
-}
-
-fn do_init_jobs() {
-    clear_bss();
-    heap_allocator::init_heap();
-    trap::init_stvec();
-    timer::enable_time_interrupt();
-}
-
-fn is_test_mode() -> bool {
-    env!("TEST_MODE") == "1"
 }
 
 fn other_hart_init_task() {
@@ -96,6 +96,7 @@ fn clear_bss() {
     }
 }
 
+#[cfg(feature = "test")]
 pub fn run_tests() {
     info!("starting running test cases.\n");
     task::test_task_mod();

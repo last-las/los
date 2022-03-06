@@ -10,7 +10,7 @@ extern "C" {
 }
 
 
-pub unsafe fn insert_apps() -> Vec<usize> {
+pub unsafe fn copy_apps_to_base_address() -> Vec<usize> {
     let nums = (_num_app as *const usize).read();
 
     let mut start_address_ptr = (_num_app as *mut usize).add(1);

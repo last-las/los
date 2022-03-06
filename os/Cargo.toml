@@ -12,3 +12,7 @@ spin = "0.7.0"
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 bitflags = "1.2.1"
 ipc = {path = "../ipc"}
+
+[features]
+default = []
+test = []
