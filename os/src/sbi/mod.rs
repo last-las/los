@@ -7,6 +7,7 @@ use core::fmt::{Debug, Formatter};
 #[inline(always)]
 fn sbi_call(eid: usize, fid: usize, args: [usize; 3]) -> SbiRet{
     let mut sbi_ret: SbiRet = SbiRet::empty();
+
     unsafe {
         asm!(
             "ecall",

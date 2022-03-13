@@ -9,6 +9,7 @@ const SBI_LEGACY_SHUTDOWN: usize = 0x08;
 #[inline(always)]
 fn sbi_legacy_call(eid: usize, args: [usize; 3]) -> usize {
     let retval: usize;
+
     unsafe {
         asm!(
         "ecall",

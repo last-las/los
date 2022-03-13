@@ -12,6 +12,7 @@ pub fn set_hart_id(hart_id: usize) {
 
 pub fn get_hart_id() -> usize {
     let hart_id;
+
     unsafe {
         asm!(
         "mv {0}, tp",

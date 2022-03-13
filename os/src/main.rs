@@ -4,6 +4,7 @@
 #![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
+#![feature(allocator_api)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -15,10 +16,13 @@ extern crate spin;
 extern crate riscv;
 
 use core::ptr;
-use processor::set_hart_id;
+
 use processor::enable_other_harts;
+use processor::set_hart_id;
+
+use crate::processor::{CPU_NUMS, suspend_current_hart};
 use crate::task::increase_alive_hart;
-use crate::processor::{CPU_NUMS,suspend_current_hart};
+use crate::sbi::{sbi_shutdown, sbi_console_putchar};
 
 #[macro_use]
 mod console;
@@ -27,23 +31,30 @@ mod log;
 mod sbi;
 mod panic;
 mod task;
-mod heap_allocator;
 mod trap;
 mod syscall;
 mod processor;
 mod loader;
 mod timer;
 mod config;
+mod mm;
+mod paging;
+
 
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
-pub fn rust_main(hart_id: usize, _: usize) -> ! {
+#[link_section = ".text.rust_main"]
+pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
     set_hart_id(hart_id);
+    // info!("hello world");
+    println!("{}", hart_id);
+    // sbi_console_putchar(0x61  as char);
+    suspend_current_hart();
+    panic!("This is fucking rust_main!");
     if hart_id == 0 {
-        clear_bss(); // It has to be the first to invoke... because it will clear the boot_stack!
         environment_check();
-        heap_allocator::init_heap();
+        // heap_allocator::init_heap();
         trap::init_stvec();
         timer::enable_time_interrupt();
         increase_alive_hart();
@@ -83,17 +94,6 @@ fn environment_check() {
 
 fn other_hart_init_task() {
     trap::init_stvec();
-}
-
-fn clear_bss() {
-    extern "C" {
-        fn sbss();
-        fn ebss();
-    }
-    unsafe {
-        let count = ebss as usize - sbss as usize;
-        ptr::write_bytes(sbss as usize as *mut u8, 0, count);
-    }
 }
 
 #[cfg(feature = "test")]

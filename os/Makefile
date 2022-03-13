@@ -3,6 +3,7 @@ MODE := release
 KERNEL_ELF := target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
 BOOTLOADER := ../bootloader/rustsbi-qemu.bin
+# BOOTLOADER := ../bootloader/fw_payload.bin
 export CPU_NUMS = 2
 export LOG = INFO
 # USER_PATH := ../user/target/$(TARGET)/$(MODE)/
