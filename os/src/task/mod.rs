@@ -2,13 +2,12 @@ mod kernel_stack;
 mod task_struct;
 mod trap_context;
 mod task_manager;
-mod user_stack_allocator;
 mod test;
 mod pid;
 mod task_context;
 
 use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_current_hart, suspend_current_hart, get_current_hart_context_ptr};
-use crate::loader::copy_apps_to_base_address;
+use crate::loader::get_apps_ref_data;
 use spin::Mutex;
 
 #[cfg(feature = "test")]
@@ -22,16 +21,22 @@ pub use crate::task::task_manager::return_task_to_manager;
 use alloc::sync::Arc;
 use crate::timer::set_timer_ms;
 use crate::processor::__switch;
+use crate::paging::KERNEL_SATP;
 
 pub fn load_tasks() {
     let v;
     unsafe {
-        v = copy_apps_to_base_address();
+        v = get_apps_ref_data();
     }
     println!("apps num : {}", v.len());
-    for pc in v {
-        info!("the pc is: {:#x}", pc);
-        let task = Arc::new(TaskStruct::new(pc));
+    for i in 0..v.len() {
+        let data = v[i];
+        let wrapped_task = TaskStruct::new(data);
+        if wrapped_task.is_none() {
+            info!("task{} creating error", i);
+            continue;
+        }
+        let task = Arc::new(wrapped_task.unwrap());
         add_a_task_to_manager(task);
     }
 }
@@ -61,28 +66,15 @@ pub fn exit_current_and_run_next_task() {
     let current_task = take_task_in_current_hart();
     rm_task_from_manager(current_task);
     let hart_context_ptr = get_current_hart_context_ptr();
+
+    let kernel_satp = 8 << 60 | unsafe { KERNEL_SATP };
+    riscv::register::satp::write(kernel_satp);
+
     unsafe {
+        ///seems like there is no need to do sfence.vma ???
         __switch(0, hart_context_ptr);
     }
 }
-
-/*pub fn load_and_run_a_task() {
-    if let Some(next_task) = fetch_a_task_from_manager() {
-        debug!("runs on {:?}", next_task.pid_handle);
-        set_task_in_current_hart(next_task);
-        set_timer_ms(10);
-        run_task_on_current_hart();
-    } else {
-        debug!("stopped successfully.");
-        decrease_alive_hart();
-
-        if get_alive_hart_cnt() <= 0 {
-            panic!("Every hart has stopped. Shutdown the system.");
-        } else {
-            suspend_current_hart();
-        }
-    }
-}*/
 
 pub fn get_alive_hart_cnt() -> usize {
     ALIVE_HARTS.lock().get_num()

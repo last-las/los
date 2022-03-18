@@ -12,6 +12,7 @@ use alloc::sync::Arc;
 use crate::task::{TaskStruct, TrapContext, fetch_a_task_from_manager, decrease_alive_hart, get_alive_hart_cnt, RuntimeFlags, TaskContext};
 use crate::trap::__enter_user_mode;
 use spin::Mutex;
+use crate::mm::available_frame;
 
 pub const CPU_NUMS: usize = 4;
 
@@ -84,18 +85,22 @@ impl Processor{
                 let mut next_task_inner = next_task.acquire_inner_lock();
                 next_task_inner.flag = RuntimeFlags::RUNNING;
                 let next_task_context_ptr = next_task_inner.task_context_ptr();
+                let satp = 8 << 60 | next_task_inner.mem_manager.satp();
                 drop(next_task_inner);
                 self.set_current_task(next_task);
 
+                riscv::register::satp::write(satp);
                 unsafe {
+                    asm!{"sfence.vma"}
                     __switch(hart_context_ptr,
                              next_task_context_ptr);
                 }
 
-            } else {    //TODO: The else code block should be delete after shell is implemented.
+            } else {
                 decrease_alive_hart();
 
                 if get_alive_hart_cnt() <= 0 {
+                    println!("available_frame: {}", available_frame());
                     panic!("Every hart has stopped. Shutdown the system.");
                 } else {
                     info!("stopped");

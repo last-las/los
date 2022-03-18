@@ -1,9 +1,3 @@
-/* TODO:
-    2. multi cores
-    3. support multithreading
-    4. support cpu infos
-*/
-
 pub const LOG_STATE: &str = env!("LOG");
 
 #[macro_export]

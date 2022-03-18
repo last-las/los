@@ -1,16 +1,22 @@
 use spin::Mutex;
-use crate::config::{KERNEL_OFFSET, MEMORY_MAPPING_OFFSET, FRAME_SIZE};
+use crate::config::{KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, FRAME_SIZE};
 use core::fmt::{Debug, Formatter};
 use riscv::addr::VirtAddr;
+use core::iter::Step;
+use crate::processor::get_cur_task_in_this_hart;
 
 const VPN_BITMASK: usize = 0x1ff;
 const VPN_LENGTH: usize = 9;
 pub const PAGE_SIZE_BITS: usize = 12;
 
-// IS_PAGING will affect the action of PhysicalAddress.as_mut
-pub static IS_PAGING: Mutex<Paging> = Mutex::new(Paging{ 0: false });
+// IS_PAGING determines the action of PhysicalAddress.as_mut()
+pub static mut IS_PAGING: bool = false;
 
-pub struct Paging(pub bool);
+pub fn mark_as_paging() {
+    unsafe {
+        IS_PAGING = true;
+    }
+}
 
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -25,6 +31,7 @@ pub struct PhysicalAddress(usize);
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct VirtualAddress(pub usize);
 
+/************************************** PhysicalPageNum *******************************************/
 impl Debug for PhysicalPageNum {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("PhysicalPageNum:{:#x}", self.0))
@@ -48,7 +55,8 @@ impl From<PhysicalAddress> for PhysicalPageNum {
     }
 }
 
-impl Debug for VirtualPageNum{
+/************************************** VirtualPageNum *******************************************/
+impl Debug for VirtualPageNum {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("VirtualPageNum:{:#x}", self.0))
     }
@@ -61,7 +69,7 @@ impl VirtualPageNum {
         }
     }
 
-    pub fn vpn(&self) -> [usize; 3]  {
+    pub fn vpn(&self) -> [usize; 3] {
         let mut vpns = [0; 3];
         let mut v = self.0;
         for i in 0..3 {
@@ -69,6 +77,18 @@ impl VirtualPageNum {
             v >>= 9;
         }
         vpns
+    }
+
+    pub fn add(&self, v: usize) -> Self {
+        Self {
+            0: self.0 + v
+        }
+    }
+
+    pub fn minus(&self, v: usize) -> Self {
+        Self {
+            0: self.0 - v
+        }
     }
 }
 
@@ -81,7 +101,34 @@ impl From<VirtualAddress> for VirtualPageNum {
     }
 }
 
-impl Debug for PhysicalAddress{
+unsafe impl Step for VirtualPageNum {
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        if start > end {
+            None
+        } else {
+            Some(end.0 - start.0)
+        }
+    }
+
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        if start.0 + count < start.0 {
+            None
+        } else {
+            Some(start.add(count))
+        }
+    }
+
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        if start.0 - count > start.0 {
+            None
+        } else {
+            Some(start.minus(count))
+        }
+    }
+}
+
+/************************************** PhysicalAddress *******************************************/
+impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("PhysicalAddress:{:#x}", self.0))
     }
@@ -97,14 +144,16 @@ impl PhysicalAddress {
 
     pub fn val(&self) -> usize {
         let mut offset = 0;
-        if IS_PAGING.lock().0 {
-            offset = MEMORY_MAPPING_OFFSET;
+        unsafe {
+            if IS_PAGING {
+                offset = RAM_MAPPING_OFFSET;
+            }
         }
 
         self.0 + offset
     }
 
-    pub fn floor2ppn(&self) -> PhysicalPageNum{
+    pub fn floor2ppn(&self) -> PhysicalPageNum {
         PhysicalPageNum {
             0: self.0 >> 12
         }
@@ -115,13 +164,44 @@ impl PhysicalAddress {
     }
 
     pub fn as_mut<T>(&self) -> &'static mut T {
-        let mut offset = 0;
-        if IS_PAGING.lock().0 {
-            offset = MEMORY_MAPPING_OFFSET;
-        }
-
         unsafe {
-            ((self.0 + offset) as *mut T).as_mut().unwrap()
+            let t: *mut T = self.as_raw_mut();
+            t.as_mut().unwrap()
+        }
+    }
+
+    pub fn as_ref<T>(&self) -> &'static T {
+        unsafe {
+            let t: *const T = self.as_raw();
+            t.as_ref().unwrap()
+        }
+    }
+
+    pub fn as_raw_mut<T>(&self) -> *mut T {
+        let mut offset = 0;
+        unsafe {
+            if IS_PAGING {
+                offset = RAM_MAPPING_OFFSET;
+            }
+
+            (self.0 + offset) as *mut T
+        }
+    }
+
+    pub fn as_raw<T>(&self) -> *const T {
+        let mut offset = 0;
+        unsafe {
+            if IS_PAGING {
+                offset = RAM_MAPPING_OFFSET;
+            }
+
+            (self.0 + offset) as *const T
+        }
+    }
+
+    pub fn add(&self, v: usize) -> Self {
+        Self {
+            0: self.0 + v
         }
     }
 }
@@ -132,10 +212,21 @@ impl From<PhysicalPageNum> for PhysicalAddress {
             0: ppn.0 << 12,
         }
     }
-
 }
 
-impl Debug for VirtualAddress{
+impl From<VirtualAddress> for PhysicalAddress {
+    fn from(va: VirtualAddress) -> Self {
+        let vpn = va.floor();
+        let cur_task = get_cur_task_in_this_hart();
+        let mut cur_task_inner = cur_task.acquire_inner_lock();
+        let ppn = cur_task_inner.mem_manager.page_table.find(vpn).unwrap();
+
+        PhysicalAddress::from(ppn).add(va.offset())
+    }
+}
+
+/************************************** VirtualAddress *******************************************/
+impl Debug for VirtualAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("VirtualAddress:{:#x}", self.0))
     }
@@ -149,8 +240,25 @@ impl VirtualAddress {
         }
     }
 
+    pub fn floor(&self) -> VirtualPageNum {
+        VirtualPageNum::new(self.0 / FRAME_SIZE)
+    }
+
     pub fn is_aligned(&self) -> bool {
         self.0 & (FRAME_SIZE - 1) == 0
     }
-}
 
+    pub fn add(&self, v: usize) -> Self {
+        Self {
+            0: self.0 + v
+        }
+    }
+
+    pub fn offset(&self) -> usize {
+        self.0 & (FRAME_SIZE - 1)
+    }
+}
+/************************************** other functions *******************************************/
+pub fn align(v: usize) -> usize {
+    ((v - 1) / FRAME_SIZE + 1) * FRAME_SIZE
+}

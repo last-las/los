@@ -5,6 +5,8 @@
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
+#![feature(step_trait)]
+#![feature(step_trait_ext)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -23,6 +25,9 @@ use processor::set_hart_id;
 use crate::processor::{CPU_NUMS, suspend_current_hart};
 use crate::task::increase_alive_hart;
 use crate::sbi::{sbi_shutdown, sbi_console_putchar};
+use crate::mm::heap::heap_allocator;
+use alloc::vec::Vec;
+use crate::mm::available_frame;
 
 #[macro_use]
 mod console;
@@ -46,25 +51,26 @@ global_asm!(include_str!("entry.asm"));
 #[no_mangle]
 #[link_section = ".text.rust_main"]
 pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
+    unsafe {
+        asm! { "sfence.vma"} // must do this again.
+    }
     set_hart_id(hart_id);
-    // info!("hello world");
-    println!("{}", hart_id);
-    // sbi_console_putchar(0x61  as char);
-    suspend_current_hart();
-    panic!("This is fucking rust_main!");
+
     if hart_id == 0 {
         environment_check();
-        // heap_allocator::init_heap();
+        mm::address::mark_as_paging();
+        heap_allocator::init_heap();
         trap::init_stvec();
         timer::enable_time_interrupt();
         increase_alive_hart();
+
+        println!("available_frame: {}", available_frame());
 
         #[cfg(feature = "test")]
         {
             run_tests();
             panic!("Test completed successfully.");
         }
-
         #[cfg(not(feature = "test"))]
         {
             task::load_tasks();
@@ -73,8 +79,6 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
             processor::run_on_current_hart();
         }
     } else {
-        suspend_current_hart();
-
         #[cfg(not(feature = "test"))]
         {
             increase_alive_hart();

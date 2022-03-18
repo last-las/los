@@ -1,11 +1,12 @@
 use crate::task::trap_context::TrapContext;
 use crate::task::kernel_stack::KernelStack;
-use crate::task::user_stack_allocator::alloc_a_user_stack;
 use crate::task::pid::{PidHandle, alloc_pid};
 use alloc::vec::Vec;
 use alloc::sync::Arc;
 use spin::{Mutex, MutexGuard};
 use crate::task::task_context::TaskContext;
+use crate::mm::memory_manager::MemoryManager;
+use crate::config::{MAX_USER_ADDRESS, FRAME_SIZE};
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -18,18 +19,22 @@ pub struct TaskStructInner {
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
     pub msg_ptr: Option<usize>,
+    pub mem_manager: MemoryManager,
 }
 
 impl TaskStruct {
-    pub fn new(pc: usize) -> Self {
-        let user_sp = alloc_a_user_stack();
+    pub fn new(data: &[u8]) -> Option<Self> {
+        let wrapped_result = MemoryManager::new(data);
+        if wrapped_result.is_none() {
+            return None;
+        }
+        let (mem_manager, pc, user_sp) = wrapped_result.unwrap();
         let pid_handle = alloc_pid().unwrap();
 
-        let user_context = TrapContext::new(pc, user_sp);
+        let trap_context = TrapContext::new(pc, user_sp);
         let mut kernel_stack = KernelStack::new();
-        kernel_stack.push(user_context);
+        kernel_stack.push(trap_context);
 
-        info!("kernel_stack sp: {:#x}", kernel_stack.sp);
         let task_context = TaskContext::new(kernel_stack.sp);
 
         let inner = TaskStructInner {
@@ -38,12 +43,13 @@ impl TaskStruct {
             flag: RuntimeFlags::READY,
             task_context,
             msg_ptr: None,
+            mem_manager,
         };
 
-        Self {
+        Some(Self {
             pid_handle,
             inner: Mutex::new(inner),
-        }
+        })
     }
 
     pub fn acquire_inner_lock(&self) -> MutexGuard<TaskStructInner> {

@@ -1,4 +1,3 @@
-// TODO: wrapper
 mod syscall;
 
 pub use syscall::*;
@@ -11,7 +10,6 @@ pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
 
-// TODO: implement this function with signal.
 pub fn sleep(seconds: usize) {
     let start_time = get_time();
     let mseconds = seconds * 1000;

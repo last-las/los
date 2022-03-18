@@ -3,6 +3,7 @@ use core::ptr::NonNull;
 use spin::Mutex;
 use crate::mm::address::PhysicalAddress;
 
+// StupidAllocator is only used for kernel page table in enable_paging
 pub struct StupidAllocator {
     inner: Mutex<StupidAllocatorInner>,
 }

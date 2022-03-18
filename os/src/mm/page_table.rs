@@ -2,10 +2,12 @@ use crate::mm::frame_allocator::{FrameTracker, alloc_frame};
 use alloc::vec::Vec;
 use crate::mm::address::{PhysicalAddress, VirtualAddress, PAGE_SIZE_BITS, PhysicalPageNum, VirtualPageNum};
 use crate::config::FRAME_SIZE;
-use crate::mm::stupid_allocator::StupidAllocator;
+use crate::paging::__kernel_start;
 use alloc::alloc::Global;
 use core::alloc::Allocator;
 use riscv::paging::MapToError::PageAlreadyMapped;
+use riscv::register::satp;
+
 
 const PAGE_TABLE_ENTRY_NUM: usize = FRAME_SIZE / 8;
 
@@ -24,7 +26,7 @@ impl <T: Allocator> PageTable<T> {
         }
     }
 
-    pub fn map_a_segment(
+    pub fn map_with_offset(
         &mut self,
         start: usize, end: usize, offset: usize,
         flags: PTEFlags) {
@@ -101,7 +103,13 @@ impl <T: Allocator> PageTable<T> {
 }
 
 impl PageTable {
-    pub fn new() -> Self {
+    pub fn new_user_table() -> Self {
+        let mut user_table = Self::new();
+        user_table.copy_kernel_entries();
+        user_table
+    }
+
+    fn new() -> Self {
         let mut root_table_frame = alloc_frame().unwrap();
         root_table_frame.clear();
         Self {
@@ -109,6 +117,25 @@ impl PageTable {
             sub_table_frames: Vec::new(),
         }
     }
+
+    fn copy_kernel_entries(&mut self) {
+        let new_table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
+            PhysicalAddress::from(self.root_table_frame.0).as_mut();
+
+        // copy kernel PageTableEntries.
+        let current_table = get_current_table();
+        let kernel_start_vpn: VirtualPageNum = VirtualAddress::new(__kernel_start as usize).into();
+        for i in kernel_start_vpn.vpn()[2]..PAGE_TABLE_ENTRY_NUM {
+            new_table[i].0 = current_table[i].0;
+        }
+
+    }
+}
+
+fn get_current_table() -> &'static [PageTableEntry; PAGE_TABLE_ENTRY_NUM] {
+    let ppn = PhysicalPageNum::new(satp::read().ppn());
+    let pa: PhysicalAddress = ppn.into();
+    pa.as_mut()
 }
 
 pub struct PageTableEntry(usize);

@@ -68,4 +68,5 @@ __enter_user_mode:
     ld sp, 2*8-34*8(sp)
 
     # enter user mode
+    # 0x54
     sret

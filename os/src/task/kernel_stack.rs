@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 const KERNEL_STACK_SIZE: usize = 0x1000;
 const GUARD_PAGE_SIZE: usize = 0x1000;
 const KERNEL_STACKS_MEMORY_SIZE: usize = (KERNEL_STACK_SIZE + GUARD_PAGE_SIZE) * (MAX_TASK_NUMBER + 1);
-const KERNEL_STACK: [u8; KERNEL_STACKS_MEMORY_SIZE] = [0; KERNEL_STACKS_MEMORY_SIZE];
+static mut KERNEL_STACK: [u8; KERNEL_STACKS_MEMORY_SIZE] = [0; KERNEL_STACKS_MEMORY_SIZE];
 
 pub struct KernelStack {
     bp: usize,
@@ -76,10 +76,12 @@ pub struct KernelStackAllocator {
 
 impl KernelStackAllocator {
     fn new() -> Self{
-        Self {
-            current: 0,
-            recycled: Vec::new(),
-            base_addr: &KERNEL_STACK[0] as *const _ as usize,
+        unsafe {
+            Self {
+                current: 0,
+                recycled: Vec::new(),
+                base_addr: &KERNEL_STACK[0] as *const _ as usize,
+            }
         }
     }
 
@@ -93,7 +95,9 @@ impl KernelStackAllocator {
             slot = self.recycled.pop().unwrap();
         }
         let pos = (slot + 1) * (GUARD_PAGE_SIZE + KERNEL_STACK_SIZE);
-        assert_eq!(&KERNEL_STACK[pos] as *const _ as usize, self.base_addr + pos);
+        unsafe {
+            assert_eq!(&KERNEL_STACK[pos] as *const _ as usize, self.base_addr + pos);
+        }
         self.base_addr + pos
     }
 
@@ -115,10 +119,12 @@ pub fn test_kernel_stack() {
     let mut kstack_allocator = KernelStackAllocator::new();
     for i in 0..MAX_TASK_NUMBER {
         bp_arr[i] = kstack_allocator.alloc();
-        assert_eq!(
-            bp_arr[i],
-            &KERNEL_STACK[(i+1) * (KERNEL_STACK_SIZE + GUARD_PAGE_SIZE)] as *const _ as usize
-        );
+        unsafe {
+            assert_eq!(
+                bp_arr[i],
+                &KERNEL_STACK[(i+1) * (KERNEL_STACK_SIZE + GUARD_PAGE_SIZE)] as *const _ as usize
+            );
+        }
     }
     for bp in bp_arr.iter() {
         kstack_allocator.free(*bp);
@@ -126,11 +132,13 @@ pub fn test_kernel_stack() {
         // b. test inner structure
     for i in 0..MAX_TASK_NUMBER {
         bp_arr[i] = kstack_allocator.alloc();
-        assert_eq!(
-            bp_arr[i],
-            &KERNEL_STACK[(MAX_TASK_NUMBER - i) * (KERNEL_STACK_SIZE + GUARD_PAGE_SIZE)]
-                as *const _ as usize
-        );
+        unsafe {
+            assert_eq!(
+                bp_arr[i],
+                &KERNEL_STACK[(MAX_TASK_NUMBER - i) * (KERNEL_STACK_SIZE + GUARD_PAGE_SIZE)]
+                    as *const _ as usize
+            );
+        }
     }
     drop(kstack_allocator);
     info!("    test KSTACK_ALLOCATOR successfully.");
