@@ -78,23 +78,27 @@ impl TaskManager {
     }
 }
 
-#[cfg(feature = "test")]
-pub fn test_task_manager() {
-/*    info!("starting task_manager.rs test cases.");
 
-    let mut task_manager = TaskManager::new();
-    // 1. test add() and fetch()
-    task_manager.add(Arc::new(TaskStruct::new(0)));
-    assert!(task_manager.fetch().is_some());
-    assert!(task_manager.fetch().is_none());
+#[cfg(test)]
+mod test {
+    #[test]
+    pub fn test_task_manager() {
+        /*    info!("starting task_manager.rs test cases.");
 
-    // 2. test get_task_by_pid()
-    task_manager.add(Arc::new(TaskStruct::new(0)));
-    assert!(task_manager.get_task_by_pid(0).is_some());
-    assert!(task_manager.get_task_by_pid(1).is_some());
-    assert!(task_manager.get_task_by_pid(2).is_none());
+            let mut task_manager = TaskManager::new();
+            // 1. test add() and fetch()
+            task_manager.add(Arc::new(TaskStruct::new(0)));
+            assert!(task_manager.fetch().is_some());
+            assert!(task_manager.fetch().is_none());
+
+            // 2. test get_task_by_pid()
+            task_manager.add(Arc::new(TaskStruct::new(0)));
+            assert!(task_manager.get_task_by_pid(0).is_some());
+            assert!(task_manager.get_task_by_pid(1).is_some());
+            assert!(task_manager.get_task_by_pid(2).is_none());
 
 
 
-    info!("end of task_manager.rs test.\n");*/
+            info!("end of task_manager.rs test.\n");*/
+    }
 }

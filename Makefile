@@ -1,28 +1,24 @@
 TARGET := riscv64gc-unknown-none-elf
 MODE := release
-KERNEL_ELF := target/$(TARGET)/$(MODE)/os
+KERNEL_ELF := ./target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
-BOOTLOADER := ../bootloader/rustsbi-qemu.bin
-# BOOTLOADER := ../bootloader/fw_payload.bin
+BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 1
 export LOG = INFO
-# USER_PATH := ../user/target/$(TARGET)/$(MODE)/
-# APPLICATION := $(foreach app,$(shell ls ../user/src/bin/),$(patsubst %.rs, %, $(app)))
+USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 
 all: user
-	@cargo build --release
+	@cd ./os && cargo build --release
 	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
 		--strip-all \
 		-O binary $(KERNEL_BIN)
 
-test: user
-	@cargo build --features test --release
-	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
-		--strip-all \
-		-O binary $(KERNEL_BIN)
+test:
+	@cross test --target riscv64gc-unknown-linux-gnu
 
 user:
-	@cd ../user && make build
+	@rm -rf $(USER_PATH)/deps
+	@cd ./user && python build.py
 
 run:
 	@qemu-system-riscv64 \
@@ -41,3 +37,5 @@ debug:
  		-bios $(BOOTLOADER) \
  		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
  		-s -S
+
+.PHONY: user

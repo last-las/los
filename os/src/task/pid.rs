@@ -68,25 +68,32 @@ impl PidAllocator {
     }
 }
 
-#[cfg(feature = "test")]
-pub fn test_pid_allocation() {
-    info!("starting pid.rs test cases");
+#[cfg(test)]
+mod test {
+    use alloc::vec::Vec;
+    use crate::config::MAX_TASK_NUMBER;
+    use super::PID_ALLOCATOR;
 
-    // test allocate() and free() MAX_TASK_NUMBER tasks.
-    let mut pid_allocator = PID_ALLOCATOR.lock();
-    pid_allocator.empty(); // make sure bit_map equal zero,
-                            // because other test cases might influence its value
-    let mut pids = Vec::new();
-    for i in 0..MAX_TASK_NUMBER {
-        pids.push(pid_allocator.alloc().unwrap());
-        assert_eq!(pids[i].0, i);
+    #[test]
+    pub fn test_pid_allocation() {
+        info!("starting pid.rs test cases");
+
+        // test allocate() and free() MAX_TASK_NUMBER tasks.
+        let mut pid_allocator = PID_ALLOCATOR.lock();
+        pid_allocator.empty(); // make sure bit_map equal zero,
+        // because other test cases might influence its value
+        let mut pids = Vec::new();
+        for i in 0..MAX_TASK_NUMBER {
+            pids.push(pid_allocator.alloc().unwrap());
+            assert_eq!(pids[i].0, i);
+        }
+        assert_eq!(pid_allocator.bit_map, u64::MAX);
+        drop(pid_allocator);
+        drop(pids);
+        let pid_allocator = PID_ALLOCATOR.lock();
+        assert_eq!(pid_allocator.bit_map, 0);
+        drop(pid_allocator);
+
+        info!("end of pid.rs test\n");
     }
-    assert_eq!(pid_allocator.bit_map, u64::MAX);
-    drop(pid_allocator);
-    drop(pids);
-    let pid_allocator = PID_ALLOCATOR.lock();
-    assert_eq!(pid_allocator.bit_map, 0);
-    drop(pid_allocator);
-
-    info!("end of pid.rs test\n");
 }

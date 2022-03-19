@@ -8,13 +8,9 @@ edition = "2018"
 [dependencies]
 buddy_system_allocator = "0.6"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+# lazy_static = { version = "1.4.0"}
 spin = "0.7.0"
-# riscv = { git = "https://github.com/rcore-os/riscv"}
 riscv = { git = "https://github.com/rust-embedded/riscv" }
 bitflags = "1.2.1"
 ipc = {path = "../ipc"}
 xmas-elf = "0.7.0"
-
-[features]
-default = []
-test = []

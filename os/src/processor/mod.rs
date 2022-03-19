@@ -101,7 +101,6 @@ impl Processor{
                 decrease_alive_hart();
 
                 if get_alive_hart_cnt() <= 0 {
-                    println!("available_frame: {}", available_frame());
                     panic!("Every hart has stopped. Shutdown the system.");
                 } else {
                     info!("stopped");

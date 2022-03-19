@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "os",
+]
+
+exclude = [ "user", "ipc" ]

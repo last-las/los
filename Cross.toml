@@ -1,0 +1,5 @@
+[build.env]
+passthrough = [
+    "LOG",
+    "CPU_NUMS"
+]

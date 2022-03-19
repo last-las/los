@@ -2,7 +2,6 @@ mod kernel_stack;
 mod task_struct;
 mod trap_context;
 mod task_manager;
-mod test;
 mod pid;
 mod task_context;
 
@@ -10,8 +9,6 @@ use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_curre
 use crate::loader::get_apps_ref_data;
 use spin::Mutex;
 
-#[cfg(feature = "test")]
-pub use test::test_task_mod;
 pub use task_struct::{TaskStruct, RuntimeFlags, ReceiveProc};
 pub use task_manager::{fetch_a_task_from_manager, get_task_by_pid};
 pub use task_context::TaskContext;
