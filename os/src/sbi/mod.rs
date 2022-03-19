@@ -3,6 +3,7 @@ mod legacy;
 pub use legacy::{sbi_console_putchar, sbi_shutdown, sbi_legacy_send_ipi, sbi_legacy_set_timer};
 pub use ipi::sbi_send_ipi;
 use core::fmt::{Debug, Formatter};
+use core::arch::asm;
 
 #[inline(always)]
 fn sbi_call(eid: usize, fid: usize, args: [usize; 3]) -> SbiRet{

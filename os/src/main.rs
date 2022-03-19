@@ -1,12 +1,10 @@
 #![no_main]
 #![no_std]
-#![feature(asm)]
 #![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(step_trait)]
-#![feature(step_trait_ext)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -18,6 +16,8 @@ extern crate spin;
 extern crate riscv;
 
 use core::ptr;
+use core::arch::asm;
+use core::arch::global_asm;
 
 use processor::enable_other_harts;
 use processor::set_hart_id;

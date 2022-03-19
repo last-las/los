@@ -1,7 +1,6 @@
 use spin::Mutex;
 use crate::config::{KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, FRAME_SIZE};
 use core::fmt::{Debug, Formatter};
-use riscv::addr::VirtAddr;
 use core::iter::Step;
 use crate::processor::get_cur_task_in_this_hart;
 
@@ -101,7 +100,7 @@ impl From<VirtualAddress> for VirtualPageNum {
     }
 }
 
-unsafe impl Step for VirtualPageNum {
+impl Step for VirtualPageNum {
     fn steps_between(start: &Self, end: &Self) -> Option<usize> {
         if start > end {
             None

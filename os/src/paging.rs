@@ -9,6 +9,7 @@ use riscv::register::{satp, stvec, sstatus, sie, sip};
 use crate::kmain;
 use crate::processor::{suspend_current_hart, enable_other_harts};
 use crate::mm::heap::stupid_allocator::StupidAllocator;
+use core::arch::asm;
 
 extern "C" {
     pub fn __kernel_start();

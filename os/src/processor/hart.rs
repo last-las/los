@@ -1,3 +1,4 @@
+use core::arch::asm;
 use crate::sbi::sbi_send_ipi;
 use crate::sbi::hart::sbi_hart_suspend;
 

@@ -5,7 +5,6 @@ use crate::config::FRAME_SIZE;
 use crate::paging::__kernel_start;
 use alloc::alloc::Global;
 use core::alloc::Allocator;
-use riscv::paging::MapToError::PageAlreadyMapped;
 use riscv::register::satp;
 
 
@@ -16,7 +15,7 @@ pub struct PageTable<T: Allocator = Global> {
     sub_table_frames: Vec<FrameTracker, T>,
 }
 
-impl <T: Allocator> PageTable<T> {
+impl<T: Allocator> PageTable<T> {
     pub fn new_kernel_table(allocator: T) -> Self {
         let mut root_table_frame = alloc_frame().unwrap();
         root_table_frame.clear();
@@ -52,7 +51,7 @@ impl <T: Allocator> PageTable<T> {
         vpns.reverse();
 
         for i in 0..3 {
-            let pte  = &mut table[vpns[i]];
+            let pte = &mut table[vpns[i]];
 
             if i == 2 {
                 assert!(!pte.is_valid());
@@ -73,7 +72,14 @@ impl <T: Allocator> PageTable<T> {
         }
     }
 
-    pub fn find(&mut self, virtual_page_num: VirtualPageNum) -> Option<PhysicalPageNum> {
+    pub fn find(&self, virtual_page_num: VirtualPageNum) -> Option<PhysicalPageNum> {
+        match self.find_pte(virtual_page_num) {
+            Some(pte) => Some(PhysicalPageNum::new(pte.ppn())),
+            None => None
+        }
+    }
+
+    pub fn find_pte(&self, virtual_page_num: VirtualPageNum) -> Option<PageTableEntry> {
         let mut table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
             PhysicalAddress::from(self.root_table_frame.0).as_mut();
 
@@ -81,11 +87,11 @@ impl <T: Allocator> PageTable<T> {
         vpns.reverse();
 
         for i in 0..3 {
-            let pte = &mut table[vpns[i]];
+            let pte: &mut PageTableEntry = &mut table[vpns[i]];
 
             if pte.is_valid() {
                 if i == 2 {
-                    return Some(PhysicalPageNum::new(pte.ppn()));
+                    return Some(PageTableEntry::raw(pte.0));
                 }
 
                 table = PhysicalAddress::new(pte.ppn() << PAGE_SIZE_BITS).as_mut();
@@ -96,7 +102,6 @@ impl <T: Allocator> PageTable<T> {
 
         None
     }
-
     pub fn satp(&self) -> usize {
         self.root_table_frame.0.0
     }
@@ -128,7 +133,6 @@ impl PageTable {
         for i in kernel_start_vpn.vpn()[2]..PAGE_TABLE_ENTRY_NUM {
             new_table[i].0 = current_table[i].0;
         }
-
     }
 }
 
@@ -138,9 +142,15 @@ fn get_current_table() -> &'static [PageTableEntry; PAGE_TABLE_ENTRY_NUM] {
     pa.as_mut()
 }
 
-pub struct PageTableEntry(usize);
+pub struct PageTableEntry(pub usize);
 
 impl PageTableEntry {
+    pub fn raw(v: usize) -> Self {
+        Self {
+            0: v
+        }
+    }
+
     pub fn new(flags: PTEFlags, ppn: PhysicalPageNum) -> Self {
         Self {
             0: ppn.0 << 10 | flags.bits as usize,

@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 const SBI_LEGACY_SET_TIMER: usize = 0x00;
 const SBI_LEGACY_CONSOLE_PUTCHAR: usize = 0x01;
 #[allow(unused)]

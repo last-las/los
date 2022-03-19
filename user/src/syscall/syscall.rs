@@ -1,4 +1,5 @@
 use ipc::Msg;
+use core::arch::asm;
 
 const SYSCALL_SEND: usize = 1;
 const SYSCALL_RECEIVE: usize = 2;

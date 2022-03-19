@@ -64,6 +64,8 @@ impl MemoryManager {
         let mem_manager = Self { page_table, region_list, brk_start: brk, brk };
         let pc = elf_header.pt2.entry_point() as usize;
 
+        println!("{:#x}", mem_manager.page_table.find_pte(VirtualPageNum::new(0x1)).unwrap().0);
+
         Some((mem_manager, pc, stack_top))
     }
 

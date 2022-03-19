@@ -13,6 +13,7 @@ use crate::task::{TaskStruct, TrapContext, fetch_a_task_from_manager, decrease_a
 use crate::trap::__enter_user_mode;
 use spin::Mutex;
 use crate::mm::available_frame;
+use core::arch::asm;
 
 pub const CPU_NUMS: usize = 4;
 
