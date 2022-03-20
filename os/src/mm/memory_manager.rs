@@ -268,3 +268,48 @@ bitflags! {
         const X = 1 << 2;
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::mm::memory_manager::{MemoryRegion, RegionFlags, RegionList};
+    use crate::mm::address::VirtualAddress;
+    use crate::config::FRAME_SIZE;
+    use alloc::boxed::Box;
+
+    #[test]
+    pub fn test_insert_and_shrink_on_region_list() {
+        let start = VirtualAddress::new(0x80200000);
+        let region1 = MemoryRegion::new(
+            start.add(FRAME_SIZE * 0), FRAME_SIZE,
+            RegionFlags::R
+        );
+        let region2 = MemoryRegion::new(
+            start.add(FRAME_SIZE * 1), FRAME_SIZE,
+            RegionFlags::R
+        );
+        let region3 = MemoryRegion::new(
+            start.add(FRAME_SIZE * 2), FRAME_SIZE,
+            RegionFlags::R
+        );
+        let region4 = MemoryRegion::new(
+            start.add(FRAME_SIZE * 3), FRAME_SIZE,
+            RegionFlags::R
+        );
+        let region5 = MemoryRegion::new(
+            start.add(FRAME_SIZE * 4), FRAME_SIZE,
+            RegionFlags::R
+        );
+
+        let mut region_list = RegionList::empty();
+        region_list.insert(Box::new(region1));
+        assert_eq!(region_list.length, 1);
+        region_list.insert(Box::new(region3));
+        assert_eq!(region_list.length, 2);
+        region_list.insert(Box::new(region5));
+        assert_eq!(region_list.length, 3);
+        region_list.insert(Box::new(region2));
+        assert_eq!(region_list.length, 2);
+        region_list.insert(Box::new(region4));
+        assert_eq!(region_list.length, 1);
+    }
+}

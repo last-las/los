@@ -5,6 +5,7 @@
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(step_trait)]
+#![feature(slice_ptr_get)]
 
 #[macro_use]
 extern crate lazy_static;

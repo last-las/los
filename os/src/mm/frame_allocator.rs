@@ -48,6 +48,7 @@ impl FrameTracker {
     }
 }
 
+#[cfg(not(test))]
 impl Drop for FrameTracker {
     fn drop(&mut self) {
         FRAME_ALLOCATOR.lock().dealloc(self.0)
@@ -131,5 +132,146 @@ impl BitMapFrameAllocator {
         unsafe {
             core::slice::from_raw_parts_mut(PhysicalAddress::from(self.start_ppn).as_mut(), self.bitmap_len,)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const RAM_SIZE: usize = 0x8000000;
+    #[link_section = ".data"]
+    static REAL_RAM: [u8; RAM_SIZE + FRAME_SIZE] = [0; RAM_SIZE + FRAME_SIZE];
+
+    fn acquire_aligned_ptr_and_size(arr: &[u8]) -> (usize, usize) {
+        let origin_ptr = arr.as_ptr() as usize;
+        let aligned_ptr = (origin_ptr + FRAME_SIZE - 1) / FRAME_SIZE * FRAME_SIZE;
+
+        (aligned_ptr, arr.len() - (aligned_ptr - origin_ptr))
+    }
+
+    #[test]
+    pub fn test_alloc_and_dealloc_on_small_ram() {
+        let mut fake_ram = [0; FRAME_SIZE * 10];
+
+        let mut bmf_allocator = BitMapFrameAllocator::empty();
+        let (ptr, size) = acquire_aligned_ptr_and_size(&fake_ram);
+        // println!("heap start:{:#x}, heap size:{:#x}", ptr, size);
+        let start = PhysicalAddress::new(ptr);
+        let end = PhysicalAddress::new(ptr + size);
+        bmf_allocator.init(start, end);
+
+        // 1. test init.
+        assert_eq!(bmf_allocator.bitmap()[0], 1);
+        assert_eq!(bmf_allocator.bitmap_len, 1);
+
+        // 2. test alloc.
+        let mut frame_trackers: [FrameTracker; 8] =
+            [
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+                FrameTracker::new(PhysicalPageNum::new(0)),
+
+            ];
+        let mut bitmap_entry0_val = 1;
+
+        for i in 0..8 {
+            frame_trackers[i] = bmf_allocator.alloc().unwrap();
+            // println!("{:#x}", frame_trackers[i].0.0);
+            assert_eq!(frame_trackers[i].0.0, bmf_allocator.start_ppn.0 + 1 + i);
+            bitmap_entry0_val |= (1 << (i + 1));
+            assert_eq!(bmf_allocator.bitmap()[0], bitmap_entry0_val);
+        }
+
+        assert!(bmf_allocator.alloc().is_none());
+
+        // 3. test dealloc
+        let index = 5;
+        let ppn = frame_trackers[index].0;
+        bmf_allocator.dealloc(frame_trackers[index].0);
+        assert_eq!(bmf_allocator.bitmap()[0], 0b110111111);
+
+        frame_trackers[index] = bmf_allocator.alloc().unwrap();
+        assert_eq!(ppn.0, frame_trackers[index].0.0);
+        assert_eq!(bmf_allocator.bitmap()[0], 0b111111111);
+
+        for i in 0..8 {
+            bmf_allocator.dealloc(frame_trackers[i].0);
+        }
+        assert_eq!(bmf_allocator.bitmap()[0], 0b1);
+    }
+
+    #[test]
+    pub fn test_alloc_and_dealloc_on_real_ram() {
+        // 1. test init.
+        let mut bmf_allocator = BitMapFrameAllocator::empty();
+        let (ptr,_) = unsafe {
+            acquire_aligned_ptr_and_size(REAL_RAM.as_slice())
+        };
+        let size = RAM_SIZE;
+
+        let start = PhysicalAddress::new(ptr);
+        let end = PhysicalAddress::new(ptr + size);
+        bmf_allocator.init(start, end);
+
+        let bitmap_len = 512;
+        assert_eq!(bmf_allocator.bitmap_len, bitmap_len);
+        assert_eq!(bmf_allocator.bitmap()[0], 1);
+
+        // 2. test alloc.
+        let mut ppn = start.val() >> 12;
+        ppn += 1;
+        let mut frame_tracker = FrameTracker::new(PhysicalPageNum::new(0));
+
+        for i in 0..63 {
+            frame_tracker =  bmf_allocator.alloc().unwrap();
+            assert_eq!(frame_tracker.0.0, ppn);
+            ppn += 1;
+        }
+        assert_eq!(bmf_allocator.bitmap()[0], u64::MAX);
+
+        for i in 1..bitmap_len {
+            assert_eq!(bmf_allocator.bitmap()[i], 0);
+
+            for j in 0..64 {
+                frame_tracker = bmf_allocator.alloc().unwrap();
+                assert_eq!(frame_tracker.0.0, ppn);
+                ppn += 1;
+            }
+
+            assert_eq!(bmf_allocator.bitmap()[i], u64::MAX);
+        }
+
+        assert!(bmf_allocator.alloc().is_none());
+
+        let the_bitmap_frame: &mut [u8] = unsafe {
+            core::slice::from_raw_parts_mut(start.as_mut(), FRAME_SIZE)
+        };
+        for i in 0..FRAME_SIZE {
+            assert_eq!(the_bitmap_frame[i], u8::MAX);
+        }
+
+        // 3. test dealloc
+        let offset = 128;
+        let dealloc_ppn = PhysicalPageNum::new((start.val() >> 12) + offset);
+        bmf_allocator.dealloc(dealloc_ppn);
+        frame_tracker = bmf_allocator.alloc().unwrap();
+        assert_eq!(frame_tracker.0.0, dealloc_ppn.0);
+
+        let mut start_ppn =  (start.val() >> 12) + 1;
+        for i in 0..(64 * bitmap_len - 1) {
+            bmf_allocator.dealloc(PhysicalPageNum::new(start_ppn));
+            start_ppn += 1;
+        }
+        assert_eq!(the_bitmap_frame[0], 0b1);
+        for i in 1..FRAME_SIZE {
+            assert_eq!(the_bitmap_frame[i], 0);
+        }
+
     }
 }

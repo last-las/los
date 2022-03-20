@@ -187,3 +187,70 @@ bitflags! {
         const D = 1 << 7;
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::config::FRAME_SIZE;
+    use crate::mm::{BitMapFrameAllocator, FrameTracker, alloc_frame};
+    use crate::mm::address::{PhysicalAddress, VirtualAddress, PhysicalPageNum, VirtualPageNum};
+    use crate::mm::page_table::{PageTable, PTEFlags};
+    use crate::mm::FRAME_ALLOCATOR;
+    use crate::mm::heap::stupid_allocator::StupidAllocator;
+
+    const FAKE_RAM_SIZE: usize = FRAME_SIZE * 100;
+    static mut FAKE_RAM: [u8; FAKE_RAM_SIZE] = [0; FAKE_RAM_SIZE];
+
+    const BASE_ADDRESS: usize = 0x80200000;
+    const KERNEL_OFFSET: usize = 0xFFFFFFC000000000;
+    const KERNEL_SIZE: usize = 0x400000;
+
+    #[test]
+    pub fn test_map_KERNEL_SIZE_memory() {
+        unsafe {
+            init_global_frame_allocator(FAKE_RAM.as_slice());
+        }
+        let frame_tracker = alloc_frame().unwrap();
+
+        let mut page_table = PageTable::new_kernel_table(
+            create_heap_allocator_from_a_frame(frame_tracker)
+        );
+
+        let mut virtual_addr = BASE_ADDRESS + KERNEL_OFFSET;
+        let mut physical_addr = BASE_ADDRESS;
+
+        for offset in (0..KERNEL_SIZE).step_by(FRAME_SIZE) {
+            page_table.map(
+                PhysicalAddress::new(physical_addr + offset).into(),
+                VirtualAddress::new(virtual_addr + offset).into(),
+                PTEFlags::V | PTEFlags::W | PTEFlags::R | PTEFlags::X
+            );
+        }
+
+        for offset in (0..KERNEL_SIZE).step_by(FRAME_SIZE) {
+            assert_eq!(
+                page_table.find(VirtualAddress::new(virtual_addr + offset).into()).unwrap().0,
+                PhysicalPageNum::new((physical_addr + offset) >> 12).0
+            );
+        }
+    }
+
+    fn init_global_frame_allocator(ram: &[u8]) {
+        let (start, size) = acquire_aligned_ptr_and_size(ram);
+
+        let mut bmf_allocator= FRAME_ALLOCATOR.lock();
+        bmf_allocator.init(PhysicalAddress::new(start), PhysicalAddress::new(start + size));
+    }
+
+    fn create_heap_allocator_from_a_frame(frame: FrameTracker) -> StupidAllocator {
+        let start = frame.0.0 << 12;
+        let mut heap_allocator = StupidAllocator::new(start, FRAME_SIZE);
+        heap_allocator
+    }
+
+    fn acquire_aligned_ptr_and_size(arr: &[u8]) -> (usize, usize) {
+        let origin_ptr = arr.as_ptr() as usize;
+        let aligned_ptr = (origin_ptr + FRAME_SIZE - 1) / FRAME_SIZE * FRAME_SIZE;
+
+        (aligned_ptr, arr.len() - (aligned_ptr - origin_ptr))
+    }
+}

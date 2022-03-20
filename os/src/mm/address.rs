@@ -261,3 +261,34 @@ impl VirtualAddress {
 pub fn align(v: usize) -> usize {
     ((v - 1) / FRAME_SIZE + 1) * FRAME_SIZE
 }
+
+
+#[cfg(test)]
+mod test {
+    use crate::config::{KERNEL_MAPPING_OFFSET, RAM_START_ADDRESS};
+    use crate::mm::address::VirtualPageNum;
+
+    #[test]
+    pub fn test_vpn_on_virtual_page_num() {
+        let mut address = KERNEL_MAPPING_OFFSET + RAM_START_ADDRESS;
+        address >>= 12;
+        let vpn = VirtualPageNum::new(address);
+        let mut vpns = vpn.vpn();
+        assert_eq!(address & 0x1FF, vpns[0]);
+        address >>= 9;
+        assert_eq!(address & 0x1FF, vpns[1]);
+        address >>= 9;
+        assert_eq!(address & 0x1FF, vpns[2]);
+    }
+
+    #[test]
+    pub fn test_step_trait_on_virtual_page_num() {
+        let start = VirtualPageNum::new(0);
+        let end = VirtualPageNum::new(50);
+        let mut inc: usize = 0;
+        for i in start..end {
+            assert_eq!(i.0, inc);
+            inc += 1;
+        }
+    }
+}
