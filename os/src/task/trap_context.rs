@@ -1,5 +1,3 @@
-use riscv::register::{sstatus::{self, SPP}};
-use riscv::register::sstatus::Sstatus;
 use core::arch::asm;
 
 #[repr(C)]
@@ -11,7 +9,7 @@ pub struct TrapContext {
 
 impl TrapContext {
     pub fn new(entry: usize, task_sp: usize) -> Self {
-        let mut sstatus = 0;
+        let mut sstatus;
         unsafe {
             asm! {
             "csrr {}, sstatus",

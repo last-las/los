@@ -1,4 +1,3 @@
-use core::ptr;
 use spin::Mutex;
 use crate::mm::address::{PhysicalAddress, PhysicalPageNum};
 use crate::config::FRAME_SIZE;
@@ -19,6 +18,7 @@ pub fn alloc_frame() -> Option<FrameTracker> {
     FRAME_ALLOCATOR.lock().alloc()
 }
 
+#[allow(unused)]
 pub fn available_frame() -> usize {
     FRAME_ALLOCATOR.lock().available_frame()
 }
@@ -88,7 +88,7 @@ impl BitMapFrameAllocator {
             let map_index = offset / 64;
             let bit_index = offset % 64;
             assert_eq!((self.bitmap()[map_index] >> bit_index) & 1, 0);
-            self.bitmap()[map_index] |= (1 << bit_index);
+            self.bitmap()[map_index] |= 1 << bit_index;
         }
     }
 
@@ -103,7 +103,7 @@ impl BitMapFrameAllocator {
             }
 
             assert_eq!((*entry >> bit_index) & 1, 0);
-            *entry |= (1 << bit_index);
+            *entry |= 1 << bit_index;
             return Some(FrameTracker::new(ppn));
         }
 
@@ -116,7 +116,7 @@ impl BitMapFrameAllocator {
         let bit_index = (ppn.0 - self.start_ppn.0) % 64;
 
         assert_eq!((self.bitmap()[map_index] >> bit_index) & 1, 1);
-        self.bitmap()[map_index] ^= (1 << bit_index);
+        self.bitmap()[map_index] ^= 1 << bit_index;
     }
 
     pub fn available_frame(&self) -> usize {

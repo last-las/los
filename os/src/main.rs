@@ -1,6 +1,5 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
@@ -16,19 +15,15 @@ extern crate alloc;
 extern crate spin;
 extern crate riscv;
 
-use core::ptr;
 use core::arch::asm;
 use core::arch::global_asm;
 
 use processor::enable_other_harts;
 use processor::set_hart_id;
 
-use crate::processor::{CPU_NUMS, suspend_current_hart};
+use crate::processor::CPU_NUMS;
 use crate::task::increase_alive_hart;
-use crate::sbi::{sbi_shutdown, sbi_console_putchar};
 use crate::mm::heap::heap_allocator;
-use alloc::vec::Vec;
-use crate::mm::available_frame;
 
 #[macro_use]
 mod console;

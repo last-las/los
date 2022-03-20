@@ -5,7 +5,7 @@ mod task_manager;
 mod pid;
 mod task_context;
 
-use crate::processor::{get_hart_id, take_task_in_current_hart, set_task_in_current_hart, suspend_current_hart, get_current_hart_context_ptr};
+use crate::processor::{take_task_in_current_hart,get_current_hart_context_ptr};
 use crate::loader::get_apps_ref_data;
 use spin::Mutex;
 
@@ -16,7 +16,6 @@ pub use trap_context::TrapContext;
 use crate::task::task_manager::{add_a_task_to_manager, rm_task_from_manager};
 pub use crate::task::task_manager::return_task_to_manager;
 use alloc::sync::Arc;
-use crate::timer::set_timer_ms;
 use crate::processor::__switch;
 use crate::paging::KERNEL_SATP;
 
@@ -68,7 +67,7 @@ pub fn exit_current_and_run_next_task() {
     riscv::register::satp::write(kernel_satp);
 
     unsafe {
-        ///seems like there is no need to do sfence.vma ???
+        //seems like there is no need to do sfence.vma ???
         __switch(0, hart_context_ptr);
     }
 }

@@ -1,10 +1,7 @@
-use alloc::string::String;
-use crate::task::{get_task_by_pid, RuntimeFlags, ReceiveProc, TaskStruct, stop_current_and_run_next_task, block_current_and_run_next_task, return_task_to_manager};
+use crate::task::{get_task_by_pid, RuntimeFlags, ReceiveProc, TaskStruct,block_current_and_run_next_task, return_task_to_manager};
 use crate::processor::get_cur_task_in_this_hart;
 use alloc::sync::Arc;
-use riscv::register::fcsr::RoundingMode::RoundUp;
-use ipc::{Msg, MsgContent};
-use crate::config::MAX_TASK_NUMBER;
+use ipc::Msg;
 
 pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> isize {
     let wrapped_dst_task = get_task_by_pid(dst_pid);
@@ -90,7 +87,7 @@ pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> isize {
 fn check_deadlock(src_task: Arc<TaskStruct>, mut dst_task: Arc<TaskStruct>) {
     let src_pid = src_task.pid();
     loop {
-        let mut dst_task_inner = dst_task.acquire_inner_lock();
+        let dst_task_inner = dst_task.acquire_inner_lock();
         match dst_task_inner.flag {
             RuntimeFlags::SENDING(target_pid) => {
                 assert_ne!(target_pid, src_pid);

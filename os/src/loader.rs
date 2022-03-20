@@ -4,9 +4,6 @@ use core::arch::global_asm;
 #[cfg(not(test))]
 global_asm!(include_str!("link_app.asm"));
 
-const BASE_ADDRESS: usize = 0x8350_0000;
-const APP_SIZE: usize = 0x20000;
-
 extern "C" {
     fn _num_app();
 }

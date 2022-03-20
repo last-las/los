@@ -78,8 +78,8 @@ impl StupidAllocatorInner {
         let relative_addr = addr - self.start_addr;
 
         for i in 0..size {
-            let mut index = (relative_addr + i) / 8;
-            let mut bit_offset = (relative_addr + i) % 8;
+            let index = (relative_addr + i) / 8;
+            let bit_offset = (relative_addr + i) % 8;
             if (bitmap[index] >> bit_offset) & 1 == 1 {
                 return false;
             }
@@ -93,8 +93,8 @@ impl StupidAllocatorInner {
         let relative_addr = addr - self.start_addr;
 
         for i in 0..size {
-            let mut index = (relative_addr + i) / 8;
-            let mut bit_offset = (relative_addr + i) % 8;
+            let index = (relative_addr + i) / 8;
+            let bit_offset = (relative_addr + i) % 8;
 
             bitmap[index] |= 1 << bit_offset;
         }
@@ -105,8 +105,8 @@ impl StupidAllocatorInner {
         let relative_addr = addr - self.start_addr;
 
         for i in 0..size {
-            let mut index = (relative_addr + i) / 8;
-            let mut bit_offset = (relative_addr + i) % 8;
+            let index = (relative_addr + i) / 8;
+            let bit_offset = (relative_addr + i) % 8;
 
             assert_eq!(bitmap[index] >> bit_offset & 1, 1);
             bitmap[index] ^= 1 << bit_offset;

@@ -6,7 +6,6 @@ use alloc::sync::Arc;
 use spin::{Mutex, MutexGuard};
 use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
-use crate::config::{MAX_USER_ADDRESS, FRAME_SIZE};
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -63,9 +62,7 @@ impl TaskStruct {
 
 impl TaskStructInner {
     pub fn task_context_ptr(&self) -> usize {
-        unsafe {
-            &self.task_context as *const _ as usize
-        }
+        &self.task_context as *const _ as usize
     }
 
 
@@ -91,7 +88,7 @@ pub enum RuntimeFlags {
     RECEIVING(ReceiveProc),
     SENDING(usize),
     READY,
-    ZOMBIE,
+    // ZOMBIE,
     RUNNING,
 }
 

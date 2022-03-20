@@ -1,11 +1,8 @@
-use spin::Mutex;
-use crate::config::{KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, FRAME_SIZE};
+use crate::config::{RAM_MAPPING_OFFSET, FRAME_SIZE};
 use core::fmt::{Debug, Formatter};
 use core::iter::Step;
 use crate::processor::get_cur_task_in_this_hart;
 
-const VPN_BITMASK: usize = 0x1ff;
-const VPN_LENGTH: usize = 9;
 pub const PAGE_SIZE_BITS: usize = 12;
 
 // IS_PAGING determines the action of PhysicalAddress.as_mut()
@@ -152,6 +149,7 @@ impl PhysicalAddress {
         self.0 + offset
     }
 
+    #[allow(unused)]
     pub fn floor2ppn(&self) -> PhysicalPageNum {
         PhysicalPageNum {
             0: self.0 >> 12
@@ -169,6 +167,7 @@ impl PhysicalAddress {
         }
     }
 
+    #[allow(unused)]
     pub fn as_ref<T>(&self) -> &'static T {
         unsafe {
             let t: *const T = self.as_raw();
@@ -217,7 +216,7 @@ impl From<VirtualAddress> for PhysicalAddress {
     fn from(va: VirtualAddress) -> Self {
         let vpn = va.floor();
         let cur_task = get_cur_task_in_this_hart();
-        let mut cur_task_inner = cur_task.acquire_inner_lock();
+        let cur_task_inner = cur_task.acquire_inner_lock();
         let ppn = cur_task_inner.mem_manager.page_table.find(vpn).unwrap();
 
         PhysicalAddress::from(ppn).add(va.offset())

@@ -1,5 +1,6 @@
 use core::arch::asm;
 
+#[allow(unused)]
 const SBI_LEGACY_SET_TIMER: usize = 0x00;
 const SBI_LEGACY_CONSOLE_PUTCHAR: usize = 0x01;
 #[allow(unused)]
@@ -24,6 +25,7 @@ fn sbi_legacy_call(eid: usize, args: [usize; 3]) -> usize {
     retval
 }
 
+#[allow(unused)]
 pub fn sbi_legacy_set_timer(stime_value: usize) {
     sbi_legacy_call(SBI_LEGACY_SET_TIMER, [stime_value, 0, 0]);
 }

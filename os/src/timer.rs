@@ -18,6 +18,7 @@ pub fn get_time_ms() -> usize {
     get_time() / (CLOCK_FREQUENCY / MSEC_PER_SEC)
 }
 
+#[allow(unused)]
 // should consider differences between user and kernel tasks.
 pub fn set_timer_ms(slice_ms: usize) {
     sbi_legacy_set_timer(get_time() +  CLOCK_FREQUENCY * slice_ms / MSEC_PER_SEC);

@@ -1,13 +1,10 @@
-use crate::sbi::{sbi_console_putchar, sbi_shutdown};
 use crate::config::{FRAME_SIZE, RAM_SIZE, RAM_START_ADDRESS, KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET};
-use crate::mm::{BitMapFrameAllocator, alloc_frame};
+use crate::mm::alloc_frame;
 use crate::mm::FRAME_ALLOCATOR;
 use crate::mm::page_table::{PageTable, PTEFlags};
-use crate::mm::address::{PhysicalAddress, PhysicalPageNum, VirtualAddress, VirtualPageNum};
-use spin::Mutex;
-use riscv::register::{satp, stvec, sstatus, sie, sip};
+use crate::mm::address::PhysicalAddress;
 use crate::kmain;
-use crate::processor::{suspend_current_hart, enable_other_harts};
+use crate::processor::suspend_current_hart;
 use crate::mm::heap::stupid_allocator::StupidAllocator;
 use core::arch::asm;
 
@@ -27,12 +24,13 @@ extern "C" {
 pub static mut KERNEL_SATP: usize = 0;
 
 #[no_mangle]
+#[allow(unreachable_code)]
 #[link_section = ".text.paging"]
 pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
     if hart_id != 0 {
         suspend_current_hart();
     } else {
-        let start = unsafe { PhysicalAddress::new(__kernel_end as usize) };
+        let start = PhysicalAddress::new(__kernel_end as usize) ;
         let end = PhysicalAddress::new(RAM_START_ADDRESS + RAM_SIZE);
         let mut frame_allocator = FRAME_ALLOCATOR.lock();
         frame_allocator.init(start, end);
@@ -84,12 +82,4 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
     }
 
     panic!("never gonna reach here!");
-}
-
-
-pub fn println(info: &str) {
-    for chr in info.chars() {
-        sbi_console_putchar(chr);
-    }
-    sbi_console_putchar(0xa as char);
 }

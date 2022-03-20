@@ -10,9 +10,7 @@ pub use hart::{
 pub use switch::__switch;
 use alloc::sync::Arc;
 use crate::task::{TaskStruct, TrapContext, fetch_a_task_from_manager, decrease_alive_hart, get_alive_hart_cnt, RuntimeFlags, TaskContext};
-use crate::trap::__enter_user_mode;
 use spin::Mutex;
-use crate::mm::available_frame;
 use core::arch::asm;
 
 pub const CPU_NUMS: usize = 4;
@@ -28,6 +26,7 @@ pub fn get_cur_task_in_this_hart() -> Arc<TaskStruct> {
     PROCESSORS[get_hart_id()].get_current_task().unwrap()
 }
 
+#[allow(unused)]
 pub fn set_task_in_current_hart(new_task: Arc<TaskStruct>) {
     PROCESSORS[get_hart_id()].set_current_task(new_task);
 }
@@ -41,9 +40,7 @@ pub fn run_on_current_hart() {
 }
 
 pub fn get_current_hart_context_ptr() -> usize {
-    unsafe {
-        &PROCESSORS[get_hart_id()].inner.lock().switcher_context as *const _ as usize
-    }
+    &PROCESSORS[get_hart_id()].inner.lock().switcher_context as *const _ as usize
 }
 
 lazy_static! {
@@ -76,9 +73,7 @@ impl Processor{
 
     fn run(&self) {
         let processor_inner = self.inner.lock();
-        let hart_context_ptr = unsafe {
-            &processor_inner.switcher_context as *const _ as usize
-        };
+        let hart_context_ptr = &processor_inner.switcher_context as *const _ as usize;
         drop(processor_inner);
 
         loop {

@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use crate::config::MAX_TASK_NUMBER;
 use core::fmt::{Debug, Formatter};
 use spin::Mutex;
@@ -62,6 +61,7 @@ impl PidAllocator {
         self.bit_map ^= 1 << pid;
     }
 
+    #[allow(unused)]
     fn empty(&mut self) {
         self.bit_map = 0;
         self.last_pid = MAX_TASK_NUMBER - 1;

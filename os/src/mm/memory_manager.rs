@@ -7,6 +7,7 @@ use alloc::boxed::Box;
 use core::fmt::{Debug, Formatter};
 use crate::mm::{alloc_frame, address};
 
+#[allow(unused)]
 pub struct MemoryManager {
     pub page_table: PageTable,
     region_list: RegionList,
@@ -69,6 +70,7 @@ impl MemoryManager {
         Some((mem_manager, pc, stack_top))
     }
 
+    #[allow(unused)]
     pub fn brk(&mut self, arg: Option<VirtualAddress>) -> VirtualAddress {
         if arg.is_none() {
             return self.brk;
@@ -144,6 +146,7 @@ impl RegionList {
         None
     }
 
+    #[allow(unused)]
     pub fn delete(&mut self, va: VirtualAddress, size: usize) -> bool {
         unimplemented!();
     }

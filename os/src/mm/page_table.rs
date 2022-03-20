@@ -171,7 +171,7 @@ impl PageTableEntry {
 
     pub fn write_ppn(&mut self, ppn: PhysicalPageNum) {
         self.0 &= 0b11_1111_1111; // empty possible writen ppn.
-        self.0 |= (ppn.0 << 10);
+        self.0 |= ppn.0 << 10;
     }
 }
 

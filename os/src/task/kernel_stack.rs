@@ -34,6 +34,7 @@ impl KernelStack {
         }
     }
 
+    #[allow(unused)]
     pub fn pop<T>(&mut self) -> T {
         let x_size = core::mem::size_of::<T>();
         assert!(self.sp + x_size <= self.bp);
