@@ -1,11 +1,11 @@
 mod ipc;
 
 use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
-use crate::processor::{get_hart_id, get_cur_task_in_this_hart};
+use crate::processor::get_cur_task_in_this_hart;
 use core::str::from_utf8;
 use crate::timer::get_time_ms;
 use crate::syscall::ipc::{sys_send, sys_receive};
-use crate::mm::address::{VirtualAddress, PhysicalAddress, ceil};
+use crate::mm::address::{VirtualAddress, ceil};
 use crate::mm::memory_manager::RegionFlags;
 use crate::config::{MMAP_START_ADDRESS, FRAME_SIZE};
 
@@ -82,7 +82,7 @@ pub fn sys_brk(mut new_brk: VirtualAddress) -> isize {
                 inner.mem_manager.brk = new_brk;
                 return new_brk.0 as isize;
             }
-            size -=(FRAME_SIZE - brk.offset());
+            size -= FRAME_SIZE - brk.offset();
             brk = brk.ceil().into();
         }
         inner.mem_manager.add_area(brk, ceil(size), RegionFlags::W | RegionFlags::R, None);

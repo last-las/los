@@ -159,12 +159,6 @@ fn get_current_table() -> &'static [PageTableEntry; PAGE_TABLE_ENTRY_NUM] {
 pub struct PageTableEntry(pub usize);
 
 impl PageTableEntry {
-    pub fn raw(v: usize) -> Self {
-        Self {
-            0: v
-        }
-    }
-
     pub fn empty() -> Self {
         Self {
             0: 0,

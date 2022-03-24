@@ -18,8 +18,8 @@ pub struct MemoryManager {
 
 impl MemoryManager {
     pub fn new(data: &[u8]) -> Option<(Self, usize, usize)> {
-        let mut page_table = PageTable::new_user_table();
-        let mut region_list = RegionList::empty();
+        let page_table = PageTable::new_user_table();
+        let region_list = RegionList::empty();
         let mut mem_manager = MemoryManager {page_table, region_list,
             brk_start: VirtualAddress::new(0) , brk: VirtualAddress::new(0)};
 
@@ -257,7 +257,7 @@ impl RegionList {
             }
         }
 
-        let mut start = self.region_head.as_mut().unwrap();
+        let start = self.region_head.as_mut().unwrap();
         if start.region_size == 0 {
             self.region_head = start.next.take();
             self.length -= 1;

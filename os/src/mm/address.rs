@@ -279,11 +279,6 @@ pub fn ceil(v: usize) -> usize {
     ((v - 1) / FRAME_SIZE + 1) * FRAME_SIZE
 }
 
-pub fn is_aligned(v: usize) -> bool {
-   v & (FRAME_SIZE - 1) == 0
-}
-
-
 #[cfg(test)]
 mod test {
     use crate::config::{KERNEL_MAPPING_OFFSET, RAM_START_ADDRESS};
