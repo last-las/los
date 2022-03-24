@@ -44,8 +44,7 @@ pub fn sys_write(fd: usize, buf_ptr_va: VirtualAddress, length: usize) -> isize 
     if fd != 1 {
         return -1;
     }
-    let buf_ptr_pa: PhysicalAddress = buf_ptr_va.into();
-    let buf_ptr: *const u8 = buf_ptr_pa.as_raw();
+    let buf_ptr = buf_ptr_va.0 as *const u8;
     let buffer = unsafe {
         core::slice::from_raw_parts(buf_ptr, length)
     };

@@ -31,8 +31,7 @@ pub fn trap_handler() {
             stop_current_and_run_next_task();
         }
         _ => {
-            info!("hart{}: Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",
-                   get_hart_id(), scause.cause(), stval, sepc);
+            info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
             exit_current_and_run_next_task();
         }
     }

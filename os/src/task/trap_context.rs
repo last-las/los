@@ -17,6 +17,7 @@ impl TrapContext {
             }
         }
         clear_spp(&mut sstatus);
+        set_sum(&mut sstatus);
 
         let mut task_context = TrapContext {
             x: [0; 32],
@@ -30,4 +31,8 @@ impl TrapContext {
 
 fn clear_spp(sstatus: &mut usize) {
     *sstatus &= usize::MAX - (1 << 8);
+}
+
+fn set_sum(sstatus: &mut usize) {
+    *sstatus |= 1 << 18;
 }
