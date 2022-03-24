@@ -10,6 +10,7 @@ pub use hart::{
 pub use switch::__switch;
 use alloc::sync::Arc;
 use crate::task::{TaskStruct, TrapContext, fetch_a_task_from_manager, decrease_alive_hart, get_alive_hart_cnt, RuntimeFlags, TaskContext};
+use crate::timer::set_timer_ms;
 use spin::Mutex;
 use core::arch::asm;
 
@@ -84,6 +85,8 @@ impl Processor{
                 let satp = 8 << 60 | next_task_inner.mem_manager.page_table.satp();
                 drop(next_task_inner);
                 self.set_current_task(next_task);
+
+                set_timer_ms(10);
 
                 riscv::register::satp::write(satp);
                 unsafe {
