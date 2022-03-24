@@ -37,26 +37,44 @@ impl<T: Allocator> PageTable<T> {
                 vpn,
                 flags,
             );
-            assert_eq!(self.find(vpn).unwrap().0, ppn.0);
+            assert_eq!(self.translate(vpn).unwrap().0, ppn.0);
         }
     }
 
     pub fn map(&mut self,
                physical_page_num: PhysicalPageNum, virtual_page_num: VirtualPageNum,
                flags: PTEFlags) {
+        let pte = self.find_pte_create(virtual_page_num);
+        *pte = PageTableEntry::new(flags, physical_page_num);
+    }
+
+    pub fn unmap(&mut self, virtual_page_num: VirtualPageNum) {
+        let pte = self.find_pte(virtual_page_num).unwrap();
+        *pte = PageTableEntry::empty();
+    }
+
+    pub fn translate(&self, virtual_page_num: VirtualPageNum) -> Option<PhysicalPageNum> {
+        match self.find_pte(virtual_page_num) {
+            Some(pte) => Some(PhysicalPageNum::new(pte.ppn())),
+            None => None
+        }
+    }
+
+    pub fn find_pte_create(&mut self, virtual_page_num: VirtualPageNum) -> &mut PageTableEntry{
         let mut table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
             PhysicalAddress::from(self.root_table_frame.0).as_mut();
 
         let mut vpns = virtual_page_num.vpn();
         vpns.reverse();
+        let mut result = None;
 
         for i in 0..3 {
             let pte = &mut table[vpns[i]];
 
             if i == 2 {
                 assert!(!pte.is_valid());
-                *pte = PageTableEntry::new(flags, physical_page_num);
-                return;
+                result = Some(pte);
+                break;
             }
 
             if pte.is_valid() {
@@ -70,16 +88,11 @@ impl<T: Allocator> PageTable<T> {
                 self.sub_table_frames.push(new_frame);
             }
         }
+
+        result.unwrap() // always success
     }
 
-    pub fn find(&self, virtual_page_num: VirtualPageNum) -> Option<PhysicalPageNum> {
-        match self.find_pte(virtual_page_num) {
-            Some(pte) => Some(PhysicalPageNum::new(pte.ppn())),
-            None => None
-        }
-    }
-
-    pub fn find_pte(&self, virtual_page_num: VirtualPageNum) -> Option<PageTableEntry> {
+    pub fn find_pte(&self, virtual_page_num: VirtualPageNum) -> Option<&mut PageTableEntry> {
         let mut table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
             PhysicalAddress::from(self.root_table_frame.0).as_mut();
 
@@ -91,7 +104,7 @@ impl<T: Allocator> PageTable<T> {
 
             if pte.is_valid() {
                 if i == 2 {
-                    return Some(PageTableEntry::raw(pte.0));
+                    return Some(pte);
                 }
 
                 table = PhysicalAddress::new(pte.ppn() << PAGE_SIZE_BITS).as_mut();
@@ -102,6 +115,7 @@ impl<T: Allocator> PageTable<T> {
 
         None
     }
+
     pub fn satp(&self) -> usize {
         self.root_table_frame.0.0
     }
@@ -114,7 +128,7 @@ impl PageTable {
         user_table
     }
 
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut root_table_frame = alloc_frame().unwrap();
         root_table_frame.clear();
         Self {
@@ -124,14 +138,14 @@ impl PageTable {
     }
 
     fn copy_kernel_entries(&mut self) {
-        let new_table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
+        let self_table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
             PhysicalAddress::from(self.root_table_frame.0).as_mut();
 
         // copy kernel PageTableEntries.
         let current_table = get_current_table();
         let kernel_start_vpn: VirtualPageNum = VirtualAddress::new(__kernel_start as usize).into();
         for i in kernel_start_vpn.vpn()[2]..PAGE_TABLE_ENTRY_NUM {
-            new_table[i].0 = current_table[i].0;
+            self_table[i].0 = current_table[i].0;
         }
     }
 }
@@ -148,6 +162,12 @@ impl PageTableEntry {
     pub fn raw(v: usize) -> Self {
         Self {
             0: v
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            0: 0,
         }
     }
 
@@ -228,8 +248,19 @@ mod test {
 
         for offset in (0..KERNEL_SIZE).step_by(FRAME_SIZE) {
             assert_eq!(
-                page_table.find(VirtualAddress::new(virtual_addr + offset).into()).unwrap().0,
+                page_table.translate(VirtualAddress::new(virtual_addr + offset).into()).unwrap().0,
                 PhysicalPageNum::new((physical_addr + offset) >> 12).0
+            );
+        }
+
+        for offset in (0..KERNEL_SIZE).step_by(FRAME_SIZE) {
+            page_table.unmap(VirtualAddress::new(virtual_addr + offset).into());
+        }
+
+        for offset in (0..KERNEL_SIZE).step_by(FRAME_SIZE) {
+            assert_eq!(
+                page_table.find_pte_create(VirtualAddress::new(virtual_addr + offset).into()).0,
+                0
             );
         }
     }

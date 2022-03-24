@@ -217,7 +217,7 @@ impl From<VirtualAddress> for PhysicalAddress {
         let vpn = va.floor();
         let cur_task = get_cur_task_in_this_hart();
         let cur_task_inner = cur_task.acquire_inner_lock();
-        let ppn = cur_task_inner.mem_manager.page_table.find(vpn).unwrap();
+        let ppn = cur_task_inner.mem_manager.page_table.translate(vpn).unwrap();
 
         PhysicalAddress::from(ppn).add(va.offset())
     }
@@ -242,6 +242,10 @@ impl VirtualAddress {
         VirtualPageNum::new(self.0 / FRAME_SIZE)
     }
 
+    pub fn ceil(&self) -> VirtualPageNum {
+        VirtualPageNum::new((self.0 - 1) / FRAME_SIZE + 1)
+    }
+
     pub fn is_aligned(&self) -> bool {
         self.0 & (FRAME_SIZE - 1) == 0
     }
@@ -252,13 +256,31 @@ impl VirtualAddress {
         }
     }
 
+    pub fn minus(&self, v: usize) -> Self {
+        Self {
+            0: self.0 - v
+        }
+    }
+
     pub fn offset(&self) -> usize {
         self.0 & (FRAME_SIZE - 1)
     }
 }
+
+impl From<VirtualPageNum> for VirtualAddress {
+    fn from(vpn: VirtualPageNum) -> Self {
+        Self {
+            0: vpn.0 << 12
+        }
+    }
+}
 /************************************** other functions *******************************************/
-pub fn align(v: usize) -> usize {
+pub fn ceil(v: usize) -> usize {
     ((v - 1) / FRAME_SIZE + 1) * FRAME_SIZE
+}
+
+pub fn is_aligned(v: usize) -> bool {
+   v & (FRAME_SIZE - 1) == 0
 }
 
 

@@ -81,7 +81,7 @@ impl Processor{
                 let mut next_task_inner = next_task.acquire_inner_lock();
                 next_task_inner.flag = RuntimeFlags::RUNNING;
                 let next_task_context_ptr = next_task_inner.task_context_ptr();
-                let satp = 8 << 60 | next_task_inner.mem_manager.satp();
+                let satp = 8 << 60 | next_task_inner.mem_manager.page_table.satp();
                 drop(next_task_inner);
                 self.set_current_task(next_task);
 

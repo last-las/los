@@ -5,3 +5,4 @@ pub const RAM_MAPPING_OFFSET: usize = 0xFFFFFFD000000000;
 pub const RAM_START_ADDRESS: usize = 0x80000000;
 pub const RAM_SIZE: usize = 0x8_000_000;
 pub const MAX_USER_ADDRESS: usize = 0x4_000_000_000;
+pub const MMAP_START_ADDRESS: usize = 0x2_000_000_000;

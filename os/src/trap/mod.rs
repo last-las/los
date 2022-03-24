@@ -2,7 +2,7 @@ mod trap;
 
 use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec, sepc};
 use crate::syscall::syscall;
-use crate::task::stop_current_and_run_next_task;
+use crate::task::{stop_current_and_run_next_task, exit_current_and_run_next_task};
 
 pub use trap::{__enter_user_mode, __from_user_mode};
 use crate::processor::{get_cur_task_context_in_this_hart, get_hart_id};
@@ -31,8 +31,9 @@ pub fn trap_handler() {
             stop_current_and_run_next_task();
         }
         _ => {
-            panic!("hart{}: Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",
+            info!("hart{}: Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",
                    get_hart_id(), scause.cause(), stval, sepc);
+            exit_current_and_run_next_task();
         }
     }
 }
