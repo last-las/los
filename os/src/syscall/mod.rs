@@ -54,7 +54,7 @@ pub fn sys_write(fd: usize, buf_ptr_va: VirtualAddress, length: usize) -> isize 
 }
 
 pub fn sys_exit(exit_code: isize) -> isize {
-    info!("task exit with exit_code:{} on hart:{}", exit_code, get_hart_id());
+    info!("task exit with exit_code:{}", exit_code);
     exit_current_and_run_next_task();
     0
 }

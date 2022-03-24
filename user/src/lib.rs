@@ -4,17 +4,20 @@
 #![feature(alloc_error_handler)]
 
 use crate::syscall::exit;
+use crate::heap::init_heap;
 use core::ptr;
 
 #[macro_use]
 pub mod console;
 pub mod syscall;
 mod panic;
+mod heap;
 
 #[no_mangle]
 #[link_section = ".text.entry"]
 pub extern "C" fn _start() {
     clear_bss();
+    init_heap();
     main();
     exit(0);
     panic!("unreachable in _start.");

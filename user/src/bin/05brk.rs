@@ -50,7 +50,7 @@ fn test_frame_alloc() {
 }
 
 fn test_invalid_read() {
-    println!("read invalid address:(LoadPageFault)");
+    println!("read invalid address:(should trigger LoadPageFault)");
     let cur_pos = sys_brk(None) as usize;
 
     unsafe {
