@@ -42,6 +42,7 @@ pub fn block_current_and_run_next_task() {
     let current_task = take_task_in_current_hart();
     let current_task_context_ptr = current_task.acquire_inner_lock().task_context_ptr();
     let hart_context_ptr = get_current_hart_context_ptr();
+    drop(current_task);
     unsafe {
         __switch(current_task_context_ptr, hart_context_ptr);
     }

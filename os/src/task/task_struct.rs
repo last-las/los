@@ -19,6 +19,7 @@ pub struct TaskStructInner {
     pub task_context: TaskContext,
     pub msg_ptr: Option<usize>,
     pub mem_manager: MemoryManager,
+    pub priority: usize,
 }
 
 impl TaskStruct {
@@ -43,6 +44,7 @@ impl TaskStruct {
             task_context,
             msg_ptr: None,
             mem_manager,
+            priority: 0,
         };
 
         Some(Self {
