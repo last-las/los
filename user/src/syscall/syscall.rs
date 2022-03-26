@@ -60,7 +60,6 @@ pub fn sys_get_time() -> isize {
     syscall(SYSCALL_GET_TIME, [0, 0, 0])
 }
 
-pub fn sys_brk(new_brk: Option<usize>) -> isize {
-    let arg0 = if new_brk.is_some() {new_brk.unwrap()} else { 0 };
-    syscall(SYSCALL_BRK, [arg0, 0, 0])
+pub fn sys_brk(new_brk: usize) -> isize {
+    syscall(SYSCALL_BRK, [new_brk, 0, 0])
 }

@@ -1,5 +1,5 @@
 use buddy_system_allocator::LockedHeap;
-use crate::syscall::sys_brk;
+use crate::syscall::brk;
 
 const USER_HEAP_SIZE: usize = 0x4000;
 
@@ -8,8 +8,8 @@ const USER_HEAP_SIZE: usize = 0x4000;
 static USER_HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init_heap() {
-    let cur_pos = sys_brk(None) as usize;
-    sys_brk(Some(cur_pos + USER_HEAP_SIZE));
+    let cur_pos = brk(None).unwrap();
+    brk(Some(cur_pos + USER_HEAP_SIZE)).unwrap();
     unsafe {
         USER_HEAP_ALLOCATOR.lock().init(cur_pos, USER_HEAP_SIZE);
     }
