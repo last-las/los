@@ -38,7 +38,7 @@ impl FrameTracker {
         }
     }
 
-    pub fn fill_with(&mut self, data: &[u8]) {
+    pub fn fill_with(&self, data: &[u8]) {
         let pa: PhysicalAddress = self.0.into();
         let byte_arr: &mut [u8;FRAME_SIZE] = pa.as_mut();
         let len = data.len();
