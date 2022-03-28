@@ -1,7 +1,7 @@
 use crate::mm::page_table::{PageTable, PTEFlags};
 use alloc::vec::Vec;
 use crate::mm::frame_allocator::FrameTracker;
-use crate::mm::address::{VirtualAddress, VirtualPageNum};
+use crate::mm::address::{VirtualAddress, VirtualPageNum, PhysicalAddress};
 use crate::config::{FRAME_SIZE, MAX_USER_ADDRESS};
 use alloc::boxed::Box;
 use core::fmt::{Debug, Formatter};
@@ -64,13 +64,31 @@ impl MemoryManager {
         Some((mem_manager, pc, stack_top))
     }
 
+    pub fn clone(&self) -> Self {
+        let mut page_table = PageTable::new_user_table();
+        let mut region_list = RegionList::empty();
+        for mem in self.region_list.iter() {
+            let new_region = mem.clone_with_new_frames();
+            new_region.mapped_by(&mut page_table);
+            region_list.insert(Box::new(new_region));
+        }
+
+        Self {
+            page_table,
+            region_list,
+            brk_start: self.brk_start,
+            brk: self.brk,
+        }
+    }
+
     pub fn add_area(&mut self, start: VirtualAddress, size: usize, flags: RegionFlags, data: Option<&[u8]>) {
         let mut memory_region = MemoryRegion::new(start, size, flags);
-        if data.is_none() {
-            memory_region.map_and_fill(&mut self.page_table, &[]);
-        } else {
-            memory_region.map_and_fill(&mut self.page_table, data.unwrap());
-        }
+        let data = match data {
+            Some(data) => data,
+            None => &[]
+        };
+        memory_region.fill(data);
+        memory_region.mapped_by(&mut self.page_table);
 
         self.region_list.insert(Box::new(memory_region));
     }
@@ -224,7 +242,9 @@ impl RegionList {
         true
     }
 
-
+    pub fn iter(&self) -> RegionListIter {
+        RegionListIter::new(self.region_head.as_ref())
+    }
 
     fn find_first_region_containing(&mut self, va: VirtualAddress) -> Option<&mut Box<MemoryRegion>> {
         if self.region_head.is_none() { return None; }
@@ -335,6 +355,30 @@ impl RegionList {
     }
 }
 
+pub struct RegionListIter<'a> {
+    current_region: Option<&'a Box<MemoryRegion>>,
+}
+
+impl<'a> RegionListIter<'a> {
+    pub fn new(current_region: Option<&'a Box<MemoryRegion>>) -> Self {
+        Self {
+            current_region
+        }
+    }
+}
+
+impl<'a> Iterator for RegionListIter<'a> {
+    type Item = &'a Box<MemoryRegion>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut result = None;
+        if self.current_region.is_some() {
+            result = self.current_region.take();
+            self.current_region = result.as_ref().unwrap().next.as_ref();
+        }
+        result
+    }
+}
 
 pub struct MemoryRegion {
     frames: Vec<FrameTracker>,
@@ -361,7 +405,58 @@ impl MemoryRegion {
         }
     }
 
-    pub fn map_and_fill(&mut self, page_table: &mut PageTable, data: &[u8]) {
+    pub fn clone_with_new_frames(&self,) -> Self {
+        let mut frames = Vec::new();
+        for i in 0..self.region_size/FRAME_SIZE {
+            let frame = alloc_frame().unwrap();
+            let frame_data: &[u8; FRAME_SIZE] = PhysicalAddress::from(self.frames[i].0).as_mut();
+            frame.fill_with(frame_data);
+
+            frames.push(frame);
+        }
+
+        Self {
+            frames,
+            start: self.start,
+            region_size: self.region_size,
+            flags: self.flags,
+            next: None,
+        }
+    }
+
+    pub fn fill(&mut self, data: &[u8]) {
+        let mut start = 0;
+        let len = data.len();
+        for _ in (0..self.region_size).step_by(FRAME_SIZE) {
+            let mut frame = alloc_frame().unwrap();
+            frame.fill_with(&data[start..len.min(start + FRAME_SIZE)]);
+            self.frames.push(frame);
+
+            if start + FRAME_SIZE >= len {
+                start = len;
+            } else {
+                start += FRAME_SIZE;
+            }
+        }
+    }
+
+    pub fn mapped_by(&self, page_table: &mut PageTable) {
+        let mut flags = PTEFlags::V | PTEFlags::U;
+        if self.flags.contains(RegionFlags::R) { flags |= PTEFlags::R };
+        if self.flags.contains(RegionFlags::W) { flags |= PTEFlags::W };
+        if self.flags.contains(RegionFlags::X) { flags |= PTEFlags::X };
+
+        let start_vpn: VirtualPageNum = self.start.into();
+        let end_vpn: VirtualPageNum = self.end().into();
+        let mut frame_iter = self.frames.iter();
+
+        for vpn in start_vpn..end_vpn {
+            let frame = frame_iter.next().unwrap();
+            page_table.map(frame.0, vpn, flags);
+        }
+    }
+
+    /*pub fn map_and_fill(&mut self, page_table: &mut PageTable, data: &[u8]) {
         let start_vpn: VirtualPageNum = self.start.into();
         let end_vpn: VirtualPageNum = self.end().into();
         let mut flags = PTEFlags::V | PTEFlags::U;
@@ -383,7 +478,7 @@ impl MemoryRegion {
                 start += FRAME_SIZE;
             }
         }
-    }
+    }*/
 
     pub fn delete(&mut self, del_region_start: VirtualAddress, size: usize) -> bool{
         let del_region_end = del_region_start.add(size);
@@ -459,7 +554,8 @@ mod test {
         let start = VirtualAddress::new(0);
         let size = FRAME_SIZE * 5;
         let mut memory_region = MemoryRegion::new(start, size, RegionFlags::R);
-        memory_region.map_and_fill(&mut page_table, &[]);
+        memory_region.fill(&[]);
+        memory_region.mapped_by(&mut page_table);
         memory_region.delete(start, FRAME_SIZE);
 
         assert_eq!(memory_region.start.0, FRAME_SIZE);
@@ -482,7 +578,8 @@ mod test {
         let start = VirtualAddress::new(0);
         let size = FRAME_SIZE * 5;
         let mut memory_region = MemoryRegion::new(start, size, RegionFlags::R);
-        memory_region.map_and_fill(&mut page_table, &[]);
+        memory_region.fill(&[]);
+        memory_region.mapped_by(&mut page_table);
         memory_region.delete(start.add(FRAME_SIZE * 2), FRAME_SIZE);
 
         assert_eq!(memory_region.start.0, 0);
@@ -517,7 +614,8 @@ mod test {
         let start = VirtualAddress::new(0);
         let size = FRAME_SIZE * 5;
         let mut memory_region = MemoryRegion::new(start, size, RegionFlags::R);
-        memory_region.map_and_fill(&mut page_table, &[]);
+        memory_region.fill(&[]);
+        memory_region.mapped_by(&mut page_table);
         memory_region.delete(start.add(FRAME_SIZE * 4), FRAME_SIZE);
 
         assert_eq!(memory_region.start.0, 0);
@@ -663,6 +761,31 @@ mod test {
         assert_eq!(region_list.length(), 2);
     }
 
+    #[test]
+    pub fn test_iter_on_region_list() {
+        let _ = init_frame_allocator();
+        let mut page_table = PageTable::new();
+        let mut region_list = create_a_testing_region_list(&mut page_table);
+        let mut region_iter = region_list.iter();
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start,VirtualAddress::new(0));
+        assert_eq!(region.region_size, 2 * FRAME_SIZE);
+
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start,VirtualAddress::new(2 * FRAME_SIZE));
+        assert_eq!(region.region_size, 3 * FRAME_SIZE);
+
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start,VirtualAddress::new(5 * FRAME_SIZE));
+        assert_eq!(region.region_size, 2 * FRAME_SIZE);
+
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start,VirtualAddress::new(7 * FRAME_SIZE));
+        assert_eq!(region.region_size, 2 * FRAME_SIZE);
+
+        assert!(region_iter.next().is_none());
+    }
+
     // TODO: test region_list's sortable feature
     fn init_frame_allocator() -> Box<[u8; REGION_SIZE]> {
         let frame_region: Box<[u8; REGION_SIZE]> = Box::new([0; REGION_SIZE]);
@@ -684,25 +807,29 @@ mod test {
         let mut va = VirtualAddress::new(0);
         let size = 2 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size, RegionFlags::R | RegionFlags::W);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[]);
+        region.mapped_by(page_table);
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         let size = 3 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size, RegionFlags::W);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[]);
+        region.mapped_by(page_table);
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         let size = 2 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size,RegionFlags::X);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[]);
+        region.mapped_by(page_table);
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         let size = 2 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size, RegionFlags::R);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[]);
+        region.mapped_by(page_table);
         region_list.insert(Box::new(region));
         va = va.add(size);
 

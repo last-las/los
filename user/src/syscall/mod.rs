@@ -40,3 +40,7 @@ pub fn brk(new_brk: Option<usize>) -> Result<usize, SysError> {
         Result::Ok(ret as usize)
     }
 }
+
+pub fn fork() -> isize {
+    sys_fork(0, 0, 0, 0, 0)
+}

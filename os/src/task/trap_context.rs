@@ -27,6 +27,14 @@ impl TrapContext {
         task_context.x[2] = task_sp;
         task_context
     }
+
+    pub fn clone(&self) -> Self {
+        Self {
+            x: self.x,
+            sstatus: self.sstatus,
+            sepc: self.sepc,
+        }
+    }
 }
 
 fn clear_spp(sstatus: &mut usize) {

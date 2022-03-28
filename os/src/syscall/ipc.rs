@@ -1,5 +1,5 @@
 use crate::task::{get_task_by_pid, RuntimeFlags, ReceiveProc, TaskStruct,block_current_and_run_next_task, return_task_to_manager};
-use crate::processor::get_cur_task_in_this_hart;
+use crate::processor::clone_cur_task_in_this_hart;
 use alloc::sync::Arc;
 use ipc::Msg;
 
@@ -9,7 +9,7 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> isize {
         return -1;
     }
     let dst_task = wrapped_dst_task.unwrap();
-    let caller_task = get_cur_task_in_this_hart();
+    let caller_task = clone_cur_task_in_this_hart();
     check_deadlock(caller_task.clone(), dst_task.clone());
 
 
@@ -40,7 +40,7 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> isize {
 }
 
 pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> isize {
-    let src_task = get_cur_task_in_this_hart();
+    let src_task = clone_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     let mut exist_possible_task = false;
     let mut idx = None;

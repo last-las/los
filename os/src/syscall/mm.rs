@@ -1,12 +1,12 @@
 use crate::mm::address::{VirtualAddress, ceil};
-use crate::processor::get_cur_task_in_this_hart;
+use crate::processor::clone_cur_task_in_this_hart;
 use crate::config::{MMAP_START_ADDRESS, FRAME_SIZE};
 use crate::mm::memory_manager::RegionFlags;
 
 pub fn do_brk(mut new_brk: usize) -> isize {
     let mut new_brk = VirtualAddress::new(new_brk);
 
-    let cur_task = get_cur_task_in_this_hart();
+    let cur_task = clone_cur_task_in_this_hart();
     let mut inner = cur_task.acquire_inner_lock();
     let mut brk = inner.mem_manager.brk;
     let mut size = new_brk.0.abs_diff(brk.0);

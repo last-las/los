@@ -1,4 +1,7 @@
+mod do_fork;
+
 use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
+pub use do_fork::do_fork;
 
 pub fn do_exit(exit_code: isize) -> isize {
     info!("task exit with exit_code:{}", exit_code);
@@ -24,11 +27,6 @@ pub fn do_get_pid() -> isize {
 }
 
 pub fn do_get_ppid() -> isize {
-    unimplemented!();
-}
-
-#[allow(unused_variables)]
-pub fn do_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_ptr: usize) -> isize {
     unimplemented!();
 }
 

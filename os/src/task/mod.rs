@@ -9,11 +9,12 @@ use crate::processor::{take_task_in_current_hart,get_current_hart_context_ptr};
 use crate::loader::get_apps_ref_data;
 use spin::Mutex;
 
+pub use kernel_stack::KernelStack;
 pub use task_struct::{TaskStruct, RuntimeFlags, ReceiveProc};
-pub use task_manager::{fetch_a_task_from_manager, get_task_by_pid};
+pub use task_manager::{fetch_a_task_from_manager, add_a_task_to_manager, get_task_by_pid};
 pub use task_context::TaskContext;
 pub use trap_context::TrapContext;
-use crate::task::task_manager::{add_a_task_to_manager, rm_task_from_manager};
+use crate::task::task_manager::rm_task_from_manager;
 pub use crate::task::task_manager::return_task_to_manager;
 use alloc::sync::Arc;
 use crate::processor::__switch;
