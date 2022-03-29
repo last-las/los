@@ -6,6 +6,7 @@ use alloc::sync::{Arc, Weak};
 use spin::{Mutex, MutexGuard};
 use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
+use share::syscall::error::{SysError, EAGAIN};
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -26,12 +27,8 @@ pub struct TaskStructInner {
 }
 
 impl TaskStruct {
-    pub fn new(data: &[u8]) -> Option<Self> {
-        let wrapped_result = MemoryManager::new(data);
-        if wrapped_result.is_none() {
-            return None;
-        }
-        let (mem_manager, pc, user_sp) = wrapped_result.unwrap();
+    pub fn new(data: &[u8]) -> Result<Self, SysError> {
+        let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
         let pid_handle = alloc_pid().unwrap();
 
         let trap_context = TrapContext::new(pc, user_sp);
@@ -52,16 +49,20 @@ impl TaskStruct {
             parent: None,
         };
 
-        Some(Self {
+        Ok(Self {
             pid_handle,
             inner: Mutex::new(inner),
         })
     }
 
-    pub fn copy_process(self: &Arc<TaskStruct>, _: u32, _: usize, _: usize, _: usize, _: usize) -> Self {
+    pub fn copy_process(self: &Arc<TaskStruct>, _: u32, _: usize, _: usize, _: usize, _: usize) -> Result<Self, SysError>{
         let self_inner = self.acquire_inner_lock();
-        let mem_manager = self_inner.mem_manager.clone();
-        let pid_handle = alloc_pid().unwrap();
+        let mem_manager = self_inner.mem_manager.clone()?;
+        let pid_handle = alloc_pid();
+        if pid_handle.is_none() {
+            return Err(SysError::new(EAGAIN));
+        }
+        let pid_handle = pid_handle.unwrap();
 
         let self_trap_context_ref: &mut TrapContext = self_inner.kernel_stack.get_mut();
         let mut trap_context = self_trap_context_ref.clone();
@@ -83,10 +84,7 @@ impl TaskStruct {
             parent: Some(Arc::downgrade(self))
         };
 
-        Self {
-            pid_handle,
-            inner: Mutex::new(inner),
-        }
+        Ok(Self {pid_handle, inner: Mutex::new(inner)})
     }
 
     pub fn acquire_inner_lock(&self) -> MutexGuard<TaskStructInner> {

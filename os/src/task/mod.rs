@@ -28,12 +28,7 @@ pub fn load_tasks() {
     println!("apps num : {}", v.len());
     for i in 0..v.len() {
         let data = v[i];
-        let wrapped_task = TaskStruct::new(data);
-        if wrapped_task.is_none() {
-            info!("task{} creating error", i);
-            continue;
-        }
-        let task = Arc::new(wrapped_task.unwrap());
+        let task = Arc::new(TaskStruct::new(data).unwrap());
         add_a_task_to_manager(task);
     }
 }

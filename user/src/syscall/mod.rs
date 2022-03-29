@@ -1,9 +1,15 @@
 mod raw;
-mod error;
 
 pub use raw::*;
-pub use error::SysError;
-use crate::syscall::error::ENOMEM;
+use share::syscall::error::{SysError, ENOMEM};
+
+fn isize2result(ret: isize) -> Result<usize, SysError> {
+    if ret < 0 {
+        Result::Err(SysError::new(-ret as i32))
+    } else {
+        Result::Ok(ret as usize)
+    }
+}
 
 pub fn exit(exit_code: usize) -> isize {
     sys_exit(exit_code)
@@ -32,15 +38,10 @@ pub fn get_time() -> usize {
 
 pub fn brk(new_brk: Option<usize>) -> Result<usize, SysError> {
     let new_brk = if new_brk.is_some() {new_brk.unwrap()} else { 0 };
-    let ret = sys_brk(new_brk);
 
-    if ret == -1 {
-        Result::Err(SysError::new(ENOMEM))
-    } else {
-        Result::Ok(ret as usize)
-    }
+    isize2result(sys_brk(new_brk))
 }
 
-pub fn fork() -> isize {
-    sys_fork(0, 0, 0, 0, 0)
+pub fn fork() -> Result<usize, SysError> {
+    isize2result(sys_fork(0, 0, 0, 0, 0))
 }

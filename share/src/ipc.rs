@@ -1,5 +1,3 @@
-#![no_std]
-
 #[repr(C)]
 pub struct Msg<'a> {
     src_pid: usize,

@@ -1,6 +1,7 @@
 use spin::Mutex;
 use crate::mm::address::{PhysicalAddress, PhysicalPageNum};
 use crate::config::FRAME_SIZE;
+use share::syscall::error::{SysError, ENOMEM};
 
 /* TODO-FUTURE: For each frame, implement frame descriptor which indicates whether the frame is
     mapped to a file,or it should be writen back to the file system when deallocating, etc.
@@ -14,8 +15,13 @@ use crate::config::FRAME_SIZE;
     }
 */
 
-pub fn alloc_frame() -> Option<FrameTracker> {
-    FRAME_ALLOCATOR.lock().alloc()
+pub fn alloc_frame() -> Result<FrameTracker, SysError> {
+    let frame = FRAME_ALLOCATOR.lock().alloc();
+    if frame.is_none() {
+        Err(SysError::new(ENOMEM))
+    } else {
+        Ok(frame.unwrap())
+    }
 }
 
 #[allow(unused)]

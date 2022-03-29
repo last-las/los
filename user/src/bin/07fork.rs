@@ -10,7 +10,7 @@ const LEN: usize = 100;
 
 #[no_mangle]
 fn main() {
-    let pid = fork();
+    let pid = fork().expect("fork error!");
     if pid == 0 {
         println!("This is father");
     }else {

@@ -1,12 +1,13 @@
 use crate::task::{get_task_by_pid, RuntimeFlags, ReceiveProc, TaskStruct,block_current_and_run_next_task, return_task_to_manager};
 use crate::processor::clone_cur_task_in_this_hart;
 use alloc::sync::Arc;
-use ipc::Msg;
+use share::ipc::Msg;
+use share::syscall::error::{EINVAL, SysError};
 
-pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> isize {
+pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     let wrapped_dst_task = get_task_by_pid(dst_pid);
     if wrapped_dst_task.is_none() {
-        return -1;
+        return Err(SysError::new(EINVAL));
     }
     let dst_task = wrapped_dst_task.unwrap();
     let caller_task = clone_cur_task_in_this_hart();
@@ -36,10 +37,11 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> isize {
 
         block_current_and_run_next_task();
     }
-    0
+
+    Ok(0)
 }
 
-pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> isize {
+pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError>{
     let src_task = clone_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     let mut exist_possible_task = false;
@@ -69,7 +71,7 @@ pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> isize {
 
         src_task_inner.wait_queue.remove(idx);
         debug!("wait_queue length: {}",src_task_inner.wait_queue.len());
-        return 0;
+        return Ok(0);
     }
 
     if dst_pid == usize::MAX {
@@ -81,7 +83,7 @@ pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> isize {
     drop(src_task_inner);
 
     block_current_and_run_next_task();
-    0
+    Ok(0)
 }
 
 fn check_deadlock(src_task: Arc<TaskStruct>, mut dst_task: Arc<TaskStruct>) {

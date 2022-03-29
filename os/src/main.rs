@@ -5,6 +5,7 @@
 #![feature(allocator_api)]
 #![feature(step_trait)]
 #![feature(slice_ptr_get)]
+#![feature(result_option_inspect)]
 
 #[macro_use]
 extern crate lazy_static;

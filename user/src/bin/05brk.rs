@@ -4,7 +4,8 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{brk, SysError};
+use user_lib::syscall::brk;
+use share::syscall::error::SysError;
 
 const FRAME_SIZE: usize = 4096;
 

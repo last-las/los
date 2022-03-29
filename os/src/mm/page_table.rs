@@ -6,6 +6,7 @@ use crate::paging::__kernel_start;
 use alloc::alloc::Global;
 use core::alloc::Allocator;
 use riscv::register::satp;
+use share::syscall::error::SysError;
 
 
 const PAGE_TABLE_ENTRY_NUM: usize = FRAME_SIZE / 8;
@@ -16,19 +17,21 @@ pub struct PageTable<T: Allocator = Global> {
 }
 
 impl<T: Allocator> PageTable<T> {
-    pub fn new_kernel_table(allocator: T) -> Self {
-        let mut root_table_frame = alloc_frame().unwrap();
+    pub fn new_kernel_table(allocator: T) -> Result<Self, SysError>{
+        let mut root_table_frame = alloc_frame()?;
         root_table_frame.clear();
-        Self {
-            root_table_frame,
-            sub_table_frames: Vec::<FrameTracker, T>::new_in(allocator),
-        }
+        Ok(
+            Self {
+                root_table_frame,
+                sub_table_frames: Vec::<FrameTracker, T>::new_in(allocator),
+            }
+        )
     }
 
     pub fn map_with_offset(
         &mut self,
         start: usize, end: usize, offset: usize,
-        flags: PTEFlags) {
+        flags: PTEFlags) -> Result<(), SysError> {
         for addr in (start..end).step_by(FRAME_SIZE) {
             let ppn = PhysicalAddress::new(addr).into();
             let vpn = VirtualAddress::new(addr + offset).into();
@@ -36,16 +39,20 @@ impl<T: Allocator> PageTable<T> {
                 ppn,
                 vpn,
                 flags,
-            );
+            )?;
             assert_eq!(self.translate(vpn).unwrap().0, ppn.0);
         }
+
+        Ok(())
     }
 
     pub fn map(&mut self,
                physical_page_num: PhysicalPageNum, virtual_page_num: VirtualPageNum,
-               flags: PTEFlags) {
-        let pte = self.find_pte_create(virtual_page_num);
+               flags: PTEFlags) -> Result<(), SysError> {
+        let pte = self.find_pte_create(virtual_page_num)?;
         *pte = PageTableEntry::new(flags, physical_page_num);
+
+        Ok(())
     }
 
     pub fn unmap(&mut self, virtual_page_num: VirtualPageNum) {
@@ -60,7 +67,7 @@ impl<T: Allocator> PageTable<T> {
         }
     }
 
-    pub fn find_pte_create(&mut self, virtual_page_num: VirtualPageNum) -> &mut PageTableEntry{
+    pub fn find_pte_create(&mut self, virtual_page_num: VirtualPageNum) -> Result<&mut PageTableEntry, SysError> {
         let mut table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
             PhysicalAddress::from(self.root_table_frame.0).as_mut();
 
@@ -80,7 +87,7 @@ impl<T: Allocator> PageTable<T> {
             if pte.is_valid() {
                 table = PhysicalAddress::new(pte.ppn() << PAGE_SIZE_BITS).as_mut();
             } else {
-                let mut new_frame = alloc_frame().unwrap();
+                let mut new_frame = alloc_frame()?;
                 new_frame.clear();
                 pte.write_ppn(new_frame.0);
                 pte.set_valid();
@@ -89,7 +96,7 @@ impl<T: Allocator> PageTable<T> {
             }
         }
 
-        result.unwrap() // always success
+        Ok(result.unwrap()) // calling unwrap() on result always success
     }
 
     pub fn find_pte(&self, virtual_page_num: VirtualPageNum) -> Option<&mut PageTableEntry> {
@@ -122,19 +129,21 @@ impl<T: Allocator> PageTable<T> {
 }
 
 impl PageTable {
-    pub fn new_user_table() -> Self {
-        let mut user_table = Self::new();
+    pub fn new_user_table() -> Result<Self, SysError> {
+        let mut user_table = Self::new()?;
         user_table.copy_kernel_entries();
-        user_table
+        Ok(user_table)
     }
 
-    pub fn new() -> Self {
-        let mut root_table_frame = alloc_frame().unwrap();
+    pub fn new() -> Result<Self, SysError> {
+        let mut root_table_frame = alloc_frame()?;
         root_table_frame.clear();
-        Self {
-            root_table_frame,
-            sub_table_frames: Vec::new(),
-        }
+        Ok(
+            Self {
+                root_table_frame,
+                sub_table_frames: Vec::new(),
+            }
+        )
     }
 
     fn copy_kernel_entries(&mut self) {
@@ -227,7 +236,7 @@ mod test {
 
         let mut page_table = PageTable::new_kernel_table(
             create_heap_allocator_from_a_frame(frame_tracker)
-        );
+        ).unwrap();
 
         let mut virtual_addr = BASE_ADDRESS + KERNEL_OFFSET;
         let mut physical_addr = BASE_ADDRESS;
@@ -236,7 +245,7 @@ mod test {
             page_table.map(
                 PhysicalAddress::new(physical_addr + offset).into(),
                 VirtualAddress::new(virtual_addr + offset).into(),
-                PTEFlags::V | PTEFlags::W | PTEFlags::R | PTEFlags::X
+                PTEFlags::V | PTEFlags::W | PTEFlags::R | PTEFlags::X,
             );
         }
 
@@ -253,7 +262,7 @@ mod test {
 
         for offset in (0..KERNEL_SIZE).step_by(FRAME_SIZE) {
             assert_eq!(
-                page_table.find_pte_create(VirtualAddress::new(virtual_addr + offset).into()).0,
+                page_table.find_pte_create(VirtualAddress::new(virtual_addr + offset).into()).unwrap().0,
                 0
             );
         }
@@ -262,7 +271,7 @@ mod test {
     fn init_global_frame_allocator(ram: &[u8]) {
         let (start, size) = acquire_aligned_ptr_and_size(ram);
 
-        let mut bmf_allocator= FRAME_ALLOCATOR.lock();
+        let mut bmf_allocator = FRAME_ALLOCATOR.lock();
         bmf_allocator.init(PhysicalAddress::new(start), PhysicalAddress::new(start + size));
     }
 

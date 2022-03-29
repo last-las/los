@@ -1,21 +1,6 @@
-use ipc::Msg;
+use share::ipc::Msg;
+use share::syscall::sys_const::*;
 use core::arch::asm;
-
-const SYSCALL_SEND: usize = 1;
-const SYSCALL_RECEIVE: usize = 2;
-const SYSCALL_WRITE: usize = 64;
-const SYSCALL_EXIT: usize = 93;
-const SYSCALL_YIELD: usize = 124;
-const SYSCALL_GET_PRIORITY: usize = 140;
-const SYSCALL_SET_PRIORITY: usize = 141;
-const SYSCALL_GET_TIME: usize = 169;
-const SYSCALL_GETPID: usize = 172;
-const SYSCALL_GETPPID: usize = 173;
-const SYSCALL_BRK: usize = 214;
-const SYSCALL_FORK: usize = 220;
-const SYSCALL_EXEC: usize = 221;
-const SYSCALL_WAITPID: usize = 260;
-const SYSCALL_TEST: usize = 1234;
 
 #[inline(always)]
 fn syscall0(id: usize) -> isize {

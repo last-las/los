@@ -2,8 +2,9 @@ use crate::mm::address::{VirtualAddress, ceil};
 use crate::processor::clone_cur_task_in_this_hart;
 use crate::config::{MMAP_START_ADDRESS, FRAME_SIZE};
 use crate::mm::memory_manager::RegionFlags;
+use share::syscall::error::{SysError, ENOMEM};
 
-pub fn do_brk(mut new_brk: usize) -> isize {
+pub fn do_brk(mut new_brk: usize) -> Result<usize, SysError> {
     let mut new_brk = VirtualAddress::new(new_brk);
 
     let cur_task = clone_cur_task_in_this_hart();
@@ -12,18 +13,18 @@ pub fn do_brk(mut new_brk: usize) -> isize {
     let mut size = new_brk.0.abs_diff(brk.0);
 
     if new_brk.0 == 0 {
-        return brk.0 as isize;
+        return Ok(brk.0);
     }
 
     if new_brk >= brk { // alloc
         if new_brk.0 >= MMAP_START_ADDRESS {
-            return -1;
+            return Err(SysError::new(ENOMEM));
         }
 
         if ! brk.is_aligned() {
             if size <= (FRAME_SIZE - brk.offset()) {
                 inner.mem_manager.brk = new_brk;
-                return new_brk.0 as isize;
+                return Ok(new_brk.0);
             }
             size -= FRAME_SIZE - brk.offset();
             brk = brk.ceil().into();
@@ -32,12 +33,12 @@ pub fn do_brk(mut new_brk: usize) -> isize {
     } else { // dealloc
         let brk_start = inner.mem_manager.brk_start;
         if new_brk < brk_start {
-            return 0;
+            return Ok(0);
         }
         size += new_brk.offset();
         new_brk = new_brk.floor().into();
         inner.mem_manager.delete_area(new_brk, ceil(size));
     }
     inner.mem_manager.brk = new_brk;
-    new_brk.0 as isize
+    Ok(new_brk.0)
 }

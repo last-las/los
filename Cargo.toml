@@ -3,4 +3,4 @@ members = [
     "os",
 ]
 
-exclude = [ "user", "ipc" ]
+exclude = [ "user", "share" ]
