@@ -9,7 +9,7 @@ static USER_HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init_heap() {
     let cur_pos = brk(None).unwrap();
-
+    brk(Some(cur_pos + USER_HEAP_SIZE)).unwrap();
     unsafe {
         USER_HEAP_ALLOCATOR.lock().init(cur_pos, USER_HEAP_SIZE);
     }

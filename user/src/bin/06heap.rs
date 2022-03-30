@@ -8,7 +8,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use alloc::boxed::Box;
 
-const SIZE: usize = 0x1000 * 4;
+const FRAME_SIZE: usize = 0x1000;
 
 #[no_mangle]
 fn main() {
@@ -26,10 +26,21 @@ fn allocating_vector() {
     for i in (0..100).rev() {
         assert_eq!(i, v.pop().unwrap());
     }
+    println!("allocating success.");
 }
 
 fn allocating_large_memory() {
-    let b: Box<[u8; SIZE]> = Box::new([0; SIZE]);
-    let v = b.as_ptr() as usize;
-    println!("Allocating success. Heap start size:{:#x}", v);
+    println!("test allocating large memory");
+    let boxes: [Box<[u8; FRAME_SIZE]>; 4] =  [
+        Box::new([0; FRAME_SIZE]),
+        Box::new([0; FRAME_SIZE]),
+        Box::new([0; FRAME_SIZE]),
+        Box::new([0; FRAME_SIZE]),
+    ];
+    for i in 0..boxes.len() {
+        let v = boxes[i].as_ptr() as usize;
+        println!("Chunk start size:{:#x}", v);
+    }
+
+    println!("allocating success.");
 }
