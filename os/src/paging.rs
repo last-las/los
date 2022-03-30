@@ -62,6 +62,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
         }
 
         core::mem::forget(root_table);
+        core::mem::drop(tmp_heap_frame); // This frame is no longer useful.
     }
 
     unsafe {
