@@ -16,11 +16,9 @@ use share::syscall::error::{SysError, ENOMEM};
 */
 
 pub fn alloc_frame() -> Result<FrameTracker, SysError> {
-    let frame = FRAME_ALLOCATOR.lock().alloc();
-    if frame.is_none() {
-        Err(SysError::new(ENOMEM))
-    } else {
-        Ok(frame.unwrap())
+    match FRAME_ALLOCATOR.lock().alloc() {
+        Some(frame) => Ok(frame),
+        None => Err(SysError::new(ENOMEM))
     }
 }
 
