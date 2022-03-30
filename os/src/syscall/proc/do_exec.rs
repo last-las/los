@@ -7,7 +7,6 @@ use core::arch::asm;
 
 #[allow(unused_variables)]
 pub fn do_exec(path_ptr: usize, argv_ptr: usize, envp_ptr: usize) -> Result<usize, SysError> {
-    println!("do_exec");
     let path: &str = cvt_c_like_str_ptr_to_rust(path_ptr);
     let result = get_task_data_by_name(path);
     if result.is_none() {

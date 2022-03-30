@@ -12,7 +12,8 @@ pub fn do_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_p
     inner.children.push(Arc::clone(&child_task));
     drop(inner);
 
+    let child_pid = child_task.pid();
     add_a_task_to_manager(child_task);
-    Ok(0)
+    Ok(child_pid)
 }
 

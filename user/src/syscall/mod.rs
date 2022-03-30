@@ -55,3 +55,8 @@ pub fn exec(path: &str, args: Vec<String>, env: Vec<String>) -> Result<usize, Sy
     let path_ptr = s.as_ptr() as usize;
     isize2result(sys_exec(path_ptr, 0, 0))
 }
+
+pub fn waitpid(pid: isize, status: &mut usize, options: usize) -> Result<usize, SysError> {
+    let status_ptr = status as *mut usize as usize;
+    isize2result(sys_waitpid(pid as usize, status_ptr, options))
+}

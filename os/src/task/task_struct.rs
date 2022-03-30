@@ -66,7 +66,7 @@ impl TaskStruct {
 
         let self_trap_context_ref: &mut TrapContext = self_inner.kernel_stack.get_mut();
         let mut trap_context = self_trap_context_ref.clone();
-        trap_context.x[10] = pid_handle.0;
+        trap_context.x[10] = 0;
         let mut kernel_stack = KernelStack::new();
         kernel_stack.push(trap_context);
 

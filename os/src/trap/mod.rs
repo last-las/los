@@ -32,7 +32,7 @@ pub fn trap_handler() {
         }
         _ => {
             info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
-            exit_current_and_run_next_task();
+            exit_current_and_run_next_task(4);
         }
     }
 }

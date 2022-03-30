@@ -1,14 +1,17 @@
 mod do_fork;
 mod do_exec;
+mod do_waitpid;
 
-use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
+use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task, RuntimeFlags};
 pub use do_fork::do_fork;
 pub use do_exec::do_exec;
-use share::syscall::error::SysError;
+pub use do_waitpid::do_waitpid;
+use share::syscall::error::{SysError, ECHILD};
+use crate::processor::clone_cur_task_in_this_hart;
 
 pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
     info!("task exit with exit_code:{}", exit_code);
-    exit_current_and_run_next_task();
+    exit_current_and_run_next_task(exit_code as usize);
     Ok(0)
 }
 
@@ -30,9 +33,5 @@ pub fn do_get_pid() -> isize {
 }
 
 pub fn do_get_ppid() -> isize {
-    unimplemented!();
-}
-
-pub fn do_waitpid(pid: usize, status_ptr: usize, options: usize) -> isize {
     unimplemented!();
 }

@@ -25,6 +25,7 @@ impl Debug for SysError {
             ENOENT => "ENOENT: No such file or directory",
             ENOEXEC => "ENOEXEC: Exec format error",
             EBADF => "EBADF: Bad file number",
+            ECHILD => "ECHILD: No child processes",
             EAGAIN => "EAGAIN: Try again",
             ENOMEM => "ENOMEM: Out of memory",
             EACCES => "EACCES: Permission denied",
@@ -38,6 +39,7 @@ impl Debug for SysError {
 pub const ENOENT: i32 = 2;
 pub const ENOEXEC: i32 = 8;
 pub const EBADF: i32 = 9;
+pub const ECHILD: i32 = 10;
 pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;

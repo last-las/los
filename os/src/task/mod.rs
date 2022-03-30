@@ -71,8 +71,9 @@ pub fn stop_current_and_run_next_task() {
     }
 }
 
-pub fn exit_current_and_run_next_task() {
+pub fn exit_current_and_run_next_task(exit_code: usize) {
     let current_task = take_task_in_current_hart();
+    current_task.acquire_inner_lock().flag = RuntimeFlags::ZOMBIE(exit_code);
     rm_task_from_manager(current_task);
     let hart_context_ptr = get_current_hart_context_ptr();
 
