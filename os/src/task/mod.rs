@@ -33,6 +33,7 @@ lazy_static! {
 pub fn load_tasks() {
     println!("apps num : {}", APP_DATA.len());
     for i in 0..APP_DATA.len() {
+        println!("app[{}] name: {}", i, APP_NAMES[i]);
         let data = APP_DATA[i];
         let task = Arc::new(TaskStruct::new(data).unwrap());
         add_a_task_to_manager(task);

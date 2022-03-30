@@ -22,6 +22,8 @@ impl SysError {
 impl Debug for SysError {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let info = match self.errno {
+            ENOENT => "ENOENT: No such file or directory",
+            ENOEXEC => "ENOEXEC: Exec format error",
             EBADF => "EBADF: Bad file number",
             EAGAIN => "EAGAIN: Try again",
             ENOMEM => "ENOMEM: Out of memory",
@@ -33,6 +35,8 @@ impl Debug for SysError {
     }
 }
 
+pub const ENOENT: i32 = 2;
+pub const ENOEXEC: i32 = 8;
 pub const EBADF: i32 = 9;
 pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;

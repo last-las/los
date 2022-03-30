@@ -7,6 +7,8 @@ use crate::syscall::exit;
 use crate::heap::init_heap;
 use core::ptr;
 
+extern crate alloc;
+
 #[macro_use]
 pub mod console;
 pub mod syscall;

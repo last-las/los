@@ -41,6 +41,7 @@ mod timer;
 mod config;
 mod mm;
 mod paging;
+mod util;
 
 
 #[cfg(not(test))]

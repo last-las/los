@@ -2,6 +2,8 @@ mod raw;
 
 pub use raw::*;
 use share::syscall::error::{SysError, ENOMEM};
+use alloc::vec::Vec;
+use alloc::string::String;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -44,4 +46,12 @@ pub fn brk(new_brk: Option<usize>) -> Result<usize, SysError> {
 
 pub fn fork() -> Result<usize, SysError> {
     isize2result(sys_fork(0, 0, 0, 0, 0))
+}
+
+#[allow(unused_variables)]
+pub fn exec(path: &str, args: Vec<String>, env: Vec<String>) -> Result<usize, SysError> {
+    let mut s = String::from(path);
+    s.push('\0');
+    let path_ptr = s.as_ptr() as usize;
+    isize2result(sys_exec(path_ptr, 0, 0))
 }

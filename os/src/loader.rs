@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use core::arch::global_asm;
+use crate::util::cvt_c_like_str_ptr_to_rust;
 
 #[cfg(not(test))]
 global_asm!(include_str!("link_app.asm"));
@@ -11,20 +12,14 @@ extern "C" {
 
 pub fn get_app_names() -> Vec<&'static str> {
     let num = get_app_num();
-    let mut start = _app_names as usize as *const u8;
+    let mut start = _app_names as usize;
     let mut v = Vec::new();
-    unsafe {
-        for _ in 0..num {
-            let mut end = start;
-            while end.read_volatile() != '\0' as u8 {
-                end = end.add(1);
-            }
-            let slice = core::slice::from_raw_parts(start, end as usize - start as usize);
-            let str = core::str::from_utf8(slice).unwrap();
-            v.push(str);
-            start = end.add(1);
-        }
+    for _ in 0..num {
+        let str = cvt_c_like_str_ptr_to_rust(start);
+        v.push(str);
+        start += str.len() + 1;
     }
+
     v
 }
 

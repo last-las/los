@@ -1,7 +1,9 @@
 mod do_fork;
+mod do_exec;
 
 use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
 pub use do_fork::do_fork;
+pub use do_exec::do_exec;
 use share::syscall::error::SysError;
 
 pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
@@ -28,10 +30,6 @@ pub fn do_get_pid() -> isize {
 }
 
 pub fn do_get_ppid() -> isize {
-    unimplemented!();
-}
-
-pub fn do_exec(path_ptr: usize, argv_ptr: usize, envp_ptr: usize) -> isize {
     unimplemented!();
 }
 
