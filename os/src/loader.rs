@@ -6,18 +6,37 @@ global_asm!(include_str!("link_app.asm"));
 
 extern "C" {
     fn _num_app();
+    fn _app_names();
 }
 
+pub fn get_app_names() -> Vec<&'static str> {
+    let num = get_app_num();
+    let mut start = _app_names as usize as *const u8;
+    let mut v = Vec::new();
+    unsafe {
+        for _ in 0..num {
+            let mut end = start;
+            while end.read_volatile() != '\0' as u8 {
+                end = end.add(1);
+            }
+            let slice = core::slice::from_raw_parts(start, end as usize - start as usize);
+            let str = core::str::from_utf8(slice).unwrap();
+            v.push(str);
+            start = end.add(1);
+        }
+    }
+    v
+}
 
-pub unsafe fn get_apps_ref_data() -> Vec<&'static [u8]> {
-    let nums = (_num_app as *const usize).read();
+pub unsafe fn get_app_ref_data() -> Vec<&'static [u8]> {
+    let num = get_app_num();
 
     let mut start_address_ptr = (_num_app as *mut usize).add(1);
     let mut end_address_ptr = start_address_ptr.add(1);
 
     let mut apps_ref_data = Vec::new();
 
-    for _ in 0..nums {
+    for _ in 0..num {
         let start_address = start_address_ptr.read();
         let end_address = end_address_ptr.read();
 
@@ -31,3 +50,10 @@ pub unsafe fn get_apps_ref_data() -> Vec<&'static [u8]> {
 
     apps_ref_data
 }
+
+pub fn get_app_num() -> usize {
+    unsafe {
+        (_num_app as *const usize).read()
+    }
+}
+

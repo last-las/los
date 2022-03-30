@@ -6,7 +6,7 @@ mod pid;
 mod task_context;
 
 use crate::processor::{take_task_in_current_hart,get_current_hart_context_ptr};
-use crate::loader::get_apps_ref_data;
+use crate::loader::{get_app_ref_data, get_app_names};
 use spin::Mutex;
 
 pub use kernel_stack::KernelStack;
@@ -19,18 +19,33 @@ pub use crate::task::task_manager::return_task_to_manager;
 use alloc::sync::Arc;
 use crate::processor::__switch;
 use crate::paging::KERNEL_SATP;
+use lazy_static::*;
+use alloc::vec::Vec;
+
+lazy_static! {
+    pub static ref APP_NAMES: Vec<&'static str> =get_app_names();
+
+    pub static ref APP_DATA: Vec<&'static [u8]> = unsafe {
+        get_app_ref_data()
+    };
+}
 
 pub fn load_tasks() {
-    let v;
-    unsafe {
-        v = get_apps_ref_data();
-    }
-    println!("apps num : {}", v.len());
-    for i in 0..v.len() {
-        let data = v[i];
+    println!("apps num : {}", APP_DATA.len());
+    for i in 0..APP_DATA.len() {
+        let data = APP_DATA[i];
         let task = Arc::new(TaskStruct::new(data).unwrap());
         add_a_task_to_manager(task);
     }
+}
+
+pub fn get_task_data_by_name(name: &str) -> Option<&'static [u8]> {
+    let result = APP_NAMES.iter().enumerate().find(|(_, &app_name)| {
+        name == app_name
+    });
+    result.map(|(index, _)| {
+        APP_DATA[index]
+    })
 }
 
 pub fn block_current_and_run_next_task() {
