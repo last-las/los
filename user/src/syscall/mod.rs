@@ -49,11 +49,21 @@ pub fn fork() -> Result<usize, SysError> {
 }
 
 #[allow(unused_variables)]
-pub fn exec(path: &str, args: Vec<String>, env: Vec<String>) -> Result<usize, SysError> {
+pub fn exec(path: &str, mut args: Vec<String>, env: &[usize]) -> Result<usize, SysError> {
     let mut s = String::from(path);
     s.push('\0');
     let path_ptr = s.as_ptr() as usize;
-    isize2result(sys_exec(path_ptr, 0, 0))
+
+    let mut c_like_args = Vec::new();
+    args.iter_mut().map(|string| {
+        string.push('\0');
+        c_like_args.push(string.as_ptr() as usize);
+    });
+    c_like_args.push(0);
+    let argv_ptr = c_like_args.as_ptr() as usize;
+
+    let envp_ptr = env as usize;
+    isize2result(sys_exec(path_ptr, argv_ptr, envp_ptr))
 }
 
 pub fn waitpid(pid: isize, status: &mut usize, options: usize) -> Result<usize, SysError> {
