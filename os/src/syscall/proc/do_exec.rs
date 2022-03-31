@@ -2,8 +2,8 @@ use share::syscall::error::{SysError, ENOENT};
 use crate::task::{get_task_data_by_name, TrapContext};
 use crate::processor::clone_cur_task_in_this_hart;
 use crate::mm::memory_manager::MemoryManager;
-use crate::util::cvt_c_like_str_ptr_to_rust;
 use core::arch::asm;
+use share::util::cvt_c_like_str_ptr_to_rust;
 
 #[allow(unused_variables)]
 pub fn do_exec(path_ptr: usize, argv_ptr: usize, envp_ptr: usize) -> Result<usize, SysError> {

@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use core::arch::global_asm;
-use crate::util::cvt_c_like_str_ptr_to_rust;
+use share::util::cvt_c_like_str_ptr_to_rust;
 
 #[cfg(not(test))]
 global_asm!(include_str!("link_app.asm"));

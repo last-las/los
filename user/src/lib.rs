@@ -12,6 +12,7 @@ extern crate alloc;
 #[macro_use]
 pub mod console;
 pub mod syscall;
+pub mod env;
 mod panic;
 mod heap;
 
