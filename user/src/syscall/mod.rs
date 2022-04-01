@@ -62,7 +62,7 @@ pub fn exec(path: &str, mut args: Vec<String>, env: &[usize]) -> Result<usize, S
     c_like_args.push(0);
     let argv_ptr = c_like_args.as_ptr() as usize;
 
-    let envp_ptr = env as usize;
+    let envp_ptr = env.as_ptr() as usize;
     isize2result(sys_exec(path_ptr, argv_ptr, envp_ptr))
 }
 

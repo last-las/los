@@ -13,5 +13,6 @@ use alloc::vec::Vec;
 fn main() {
     let path = "00hello_world";
     println!("executing {}", path);
-    exec(path, Vec::new(), Vec::new()).unwrap();
+    let env = [0];
+    exec(path, Vec::new(),&env).unwrap();
 }

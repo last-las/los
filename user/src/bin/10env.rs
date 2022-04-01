@@ -3,20 +3,30 @@
 
 #[macro_use]
 extern crate user_lib;
+extern crate alloc;
 
 use user_lib::env::{setenv, getenv, cvt_c_like, EnvironVariable};
+use user_lib::syscall::{fork, exec, waitpid};
+use alloc::vec::Vec;
+
+const SIZE: usize = 3;
+const NAME: [&str; SIZE] = [ "PATH", "USER", "SHELL"];
+const VALUE: [&str; SIZE] = [ "/user/bin", "ROOT", "/bin/bash"];
 
 #[no_mangle]
 fn main() {
-    // setenv("PATH", "less", false);
-    setenv("TOOL", "good", false);
-    setenv("SOOL", "great", false);
-    let v = cvt_c_like();
+    for i in 0..SIZE {
+        setenv(NAME[i], VALUE[i], true);
+    }
 
-    let mut new_env = EnvironVariable::new();
-    new_env.from_c_like(v.as_slice());
-
-    // assert_eq!(getenv("PATH").unwrap(), new_env.get("PATH").unwrap());
-    assert_eq!(getenv("TOOL").unwrap(), new_env.get("TOOL").unwrap());
-    assert_eq!(getenv("SOOL").unwrap(), new_env.get("SOOL").unwrap());
+    let pid = fork().unwrap();
+    if pid == 0 {
+        let envs = cvt_c_like();
+        exec("10env_child", Vec::new(),envs.as_slice()).unwrap();
+    } else {
+        let mut status = 0;
+        let ret = waitpid(pid as isize, &mut status, 0).unwrap();
+        assert_eq!(ret, pid);
+        assert_eq!(status, 23);
+    }
 }

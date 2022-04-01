@@ -24,6 +24,20 @@ pub fn cvt_c_like() -> Vec<usize> {
     ENV.lock().cvt_c_like()
 }
 
+pub fn from_c_like(ptr: usize) {
+    let mut cnt = 0;
+    let start = ptr as *const usize;
+    let mut end = start;
+    unsafe {
+        while end.read_volatile() != 0 {
+            cnt += 1;
+            end = end.add(1);
+        }
+    }
+    let env_slice = unsafe { core::slice::from_raw_parts(start, cnt) };
+    ENV.lock().from_c_like(env_slice);
+}
+
 lazy_static! {
     static ref ENV: Mutex<EnvironVariable> = Mutex::new(EnvironVariable::new());
 }

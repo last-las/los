@@ -1,6 +1,6 @@
 mod trap;
 
-use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec, sepc};
+use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec, sepc, sstatus};
 use crate::syscall::syscall;
 use crate::task::{stop_current_and_run_next_task, exit_current_and_run_next_task};
 
@@ -32,7 +32,10 @@ pub fn trap_handler() {
         }
         _ => {
             info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
-            exit_current_and_run_next_task(4);
+            match sstatus::read().spp() {
+                sstatus::SPP::User => exit_current_and_run_next_task(4),
+                sstatus::SPP::Supervisor => panic!("Supervisor trap!"),
+            };
         }
     }
 }

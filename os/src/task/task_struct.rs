@@ -28,8 +28,9 @@ pub struct TaskStructInner {
 
 impl TaskStruct {
     pub fn new(data: &[u8]) -> Result<Self, SysError> {
-        let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
+        let (mem_manager, pc,mut user_sp) = MemoryManager::new(data)?;
         let pid_handle = alloc_pid().unwrap();
+        user_sp -= core::mem::size_of::<usize>() * 3; // push argc, NULL and NULL onto stack.
 
         let trap_context = TrapContext::new(pc, user_sp);
         let mut kernel_stack = KernelStack::new();

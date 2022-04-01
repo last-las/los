@@ -5,6 +5,7 @@
 
 use crate::syscall::exit;
 use crate::heap::init_heap;
+use core::arch::global_asm;
 use core::ptr;
 
 extern crate alloc;
@@ -16,11 +17,15 @@ pub mod env;
 mod panic;
 mod heap;
 
+global_asm!(include_str!("entry.asm"));
+
 #[no_mangle]
-#[link_section = ".text.entry"]
-pub extern "C" fn _start() {
+//pub extern "C" fn _start(argv_ptr: usize, envp_ptr: usize) {
+pub extern "C" fn rust_start(argv_ptr: usize, envp_ptr: usize) {
     clear_bss();
     init_heap();
+    env::from_c_like(envp_ptr);
+
     main();
     exit(0);
     panic!("unreachable in _start.");
