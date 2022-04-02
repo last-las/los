@@ -7,13 +7,14 @@ use share::util::{cvt_c_like_str_ptr_to_rust, cvt_c_like_str_array_ptr_to_rust};
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::mm::page_table::PageTable;
+use share::ffi::{CString, CStrArray, c_char, CStr};
 
-pub fn do_exec(path_ptr: usize, argv_ptr: usize, envp_ptr: usize) -> Result<usize, SysError> {
+pub fn do_exec(path_ptr: usize, argv: *const *const c_char, envp: *const *const c_char) -> Result<usize, SysError> {
     let data = get_target_elf_data_by(path_ptr)?;
     let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
-    let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv_ptr, envp_ptr);
+    let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv, envp);
     switch_to_new_addr_space(&mem_manager.page_table);
-    let user_sp = unsafe { push_argv_and_envp_onto_stack(arg_vec, env_vec, user_sp) };
+    let user_sp = unsafe { push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp) };
     modify_current_task_struct(mem_manager, pc, user_sp);
 
     Ok(0)
@@ -25,10 +26,12 @@ fn get_target_elf_data_by(path_ptr: usize) -> Result<&'static [u8], SysError> {
     result.ok_or(SysError::new(ENOENT))
 }
 
-fn read_arg_and_env_in_current_addr_space(argv_ptr: usize, envp_ptr: usize) -> (Vec<String>, Vec<String>) {
-    let arg_vec = cvt_c_like_str_array_ptr_to_rust(argv_ptr);
-    let env_vec = cvt_c_like_str_array_ptr_to_rust(envp_ptr);
-    (arg_vec, env_vec)
+fn read_arg_and_env_in_current_addr_space(argv_ptr: *const *const c_char, envp_ptr: *const *const c_char)
+    -> (Vec<CString>, Vec<CString>) {
+    let arg_cstring_vec = get_cstring_vec_from_str_array_ptr(argv_ptr);
+    let env_cstring_vec = get_cstring_vec_from_str_array_ptr(envp_ptr);
+
+    (arg_cstring_vec, env_cstring_vec)
 }
 
 fn switch_to_new_addr_space(page_table: &PageTable) {
@@ -39,7 +42,7 @@ fn switch_to_new_addr_space(page_table: &PageTable) {
     }
 }
 
-fn push_argv_and_envp_onto_stack(arg_vec: Vec<String>, env_vec: Vec<String>, mut user_sp: usize) -> usize {
+fn push_arg_and_env_onto_stack(arg_vec: Vec<CString>, env_vec: Vec<CString>, mut user_sp: usize) -> usize {
     let argc = arg_vec.len();
 
     unsafe {
@@ -65,18 +68,30 @@ fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usi
     inner.mem_manager = mem_manager;
 }
 
-unsafe fn push_str_vector_onto_stack_in_c_style(vec: Vec<String>, sp: &mut usize) -> Vec<usize> {
+fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const c_char) -> Vec<CString> {
+    let mut vec = Vec::new();
+    for cstr_ptr in CStrArray::copy_from_ptr(str_array_ptr).iter() {
+        let cstr = unsafe {
+            CStr::from_ptr(cstr_ptr)
+        };
+        vec.push(CString::from(cstr));
+    }
+
+    vec
+}
+
+/// return a vector containing pointers, each of them points to the first byte of a str.
+unsafe fn push_str_vector_onto_stack_in_c_style(vec: Vec<CString>, sp: &mut usize) -> Vec<usize> {
     let mut ptr_vec = Vec::new();
 
-    for env in vec.iter().rev() {
-        *sp -= env.len() + 1;
+    for cstring in vec.iter().rev() {
+        *sp -= cstring.as_bytes_with_nul().len();
         ptr_vec.insert(0, *sp);
         let mut pointer = *sp as *mut u8;
-        for c in env.as_bytes() {
+        for c in cstring.as_bytes_with_nul() {
             pointer.write(*c);
             pointer = pointer.add(1);
         }
-        pointer.write(0);
     }
 
     ptr_vec

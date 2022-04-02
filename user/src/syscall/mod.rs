@@ -4,6 +4,7 @@ pub use raw::*;
 use share::syscall::error::{SysError, ENOMEM};
 use alloc::vec::Vec;
 use alloc::string::String;
+use crate::env::get_envp_copy;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -49,7 +50,7 @@ pub fn fork() -> Result<usize, SysError> {
 }
 
 #[allow(unused_variables)]
-pub fn exec(path: &str, mut args: Vec<String>, env: &[usize]) -> Result<usize, SysError> {
+pub fn exec(path: &str, mut args: Vec<String>) -> Result<usize, SysError> {
     let mut s = String::from(path);
     s.push('\0');
     let path_ptr = s.as_ptr() as usize;
@@ -62,8 +63,8 @@ pub fn exec(path: &str, mut args: Vec<String>, env: &[usize]) -> Result<usize, S
     c_like_args.push(0);
     let argv_ptr = c_like_args.as_ptr() as usize;
 
-    let envp_ptr = env.as_ptr() as usize;
-    isize2result(sys_exec(path_ptr, argv_ptr, envp_ptr))
+    let envp = get_envp_copy();
+    isize2result(sys_exec(path_ptr, argv_ptr, envp.as_ptr() as usize))
 }
 
 pub fn waitpid(pid: isize, status: &mut usize, options: usize) -> Result<usize, SysError> {

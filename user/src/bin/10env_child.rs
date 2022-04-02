@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::env::{setenv, getenv, cvt_c_like, EnvironVariable};
+use user_lib::env::{setenv, getenv};
 use user_lib::syscall::{fork, exit};
 
 const SIZE: usize = 3;

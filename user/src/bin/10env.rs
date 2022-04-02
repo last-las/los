@@ -3,9 +3,10 @@
 
 #[macro_use]
 extern crate user_lib;
+#[macro_use]
 extern crate alloc;
 
-use user_lib::env::{setenv, getenv, cvt_c_like, EnvironVariable};
+use user_lib::env::{setenv, getenv, get_envp_copy, EnvironVariable};
 use user_lib::syscall::{fork, exec, waitpid};
 use alloc::vec::Vec;
 
@@ -21,8 +22,7 @@ fn main() {
 
     let pid = fork().unwrap();
     if pid == 0 {
-        let envs = cvt_c_like();
-        exec("10env_child", Vec::new(),envs.as_slice()).unwrap();
+        exec("10env_child", vec![]).unwrap();
     } else {
         let mut status = 0;
         let ret = waitpid(pid as isize, &mut status, 0).unwrap();

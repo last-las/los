@@ -2,11 +2,12 @@ use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use lazy_static::*;
 use spin::Mutex;
-use share::syscall::error::SysError;
+use share::syscall::error::{SysError, EINVAL};
 use core::ops::Add;
 use core::str::from_utf8;
 use alloc::vec::Vec;
 use share::util::cvt_c_like_str_ptr_to_rust;
+use share::ffi::{CStrArray, c_char, CString, CStr};
 
 pub fn setenv(name: &str, value: &str, overwrite: bool) {
     ENV.lock().insert(name, value, overwrite);
@@ -20,22 +21,17 @@ pub fn getenv<'a>(name: &str) -> Option<String> {
     ENV.lock().get(name)
 }
 
-pub fn cvt_c_like() -> Vec<usize> {
-    ENV.lock().cvt_c_like()
+/// Create a collection of all environment variables' pointers, end with zero.
+/// Normally this function is called when sys_exec is about to be invoked.
+pub fn get_envp_copy() -> CStrArray {
+    ENV.lock().get_envp_copy()
 }
 
-pub fn from_c_like(ptr: usize) {
-    let mut cnt = 0;
-    let start = ptr as *const usize;
-    let mut end = start;
-    unsafe {
-        while end.read_volatile() != 0 {
-            cnt += 1;
-            end = end.add(1);
-        }
-    }
-    let env_slice = unsafe { core::slice::from_raw_parts(start, cnt) };
-    ENV.lock().from_c_like(env_slice);
+/// Read environment variables on the stack when the process is just created,
+/// and copy them to the heap for better management.
+pub fn parse_envp(envp: *const *const c_char) {
+    let c_array_envp = CStrArray::copy_from_ptr(envp);
+    ENV.lock().parse_envp(c_array_envp);
 }
 
 lazy_static! {
@@ -53,13 +49,15 @@ impl EnvironVariable {
         }
     }
 
-    pub fn insert(&mut self, k: &str, v: &str, overwrite: bool) {
+    pub fn insert(&mut self, k: &str, v: &str, overwrite: bool) -> Result<(), SysError> {
         let key = String::from(k);
         let pair = Pair::new(k, v);
 
         if overwrite || !self.store.contains_key(&key) {
             self.store.insert(key, pair);
         }
+
+        Ok(())
     }
 
     pub fn get(&self, k: &str) -> Option<String> {
@@ -76,67 +74,67 @@ impl EnvironVariable {
         self.store.remove(&key);
     }
 
-    pub fn cvt_c_like(&self) -> Vec<usize> {
+    pub fn get_envp_copy(&self) -> CStrArray {
         let mut v = Vec::new();
         for (_, pair) in self.store.iter() {
-            v.push(pair.0.as_ptr() as usize);
+            v.push(pair.cstring.as_ptr());
         }
-        v.push(0);
 
-        v
+        CStrArray::from_vec(v)
     }
 
-    pub fn from_c_like(&mut self, envs: &[usize]) {
-        for &str_ptr in envs {
-            if str_ptr == 0 {
-                break;
-            }
-
-            let pair = Pair::from_c_like_ptr(str_ptr);
+    pub fn parse_envp(&mut self, envs: CStrArray) -> Result<(), SysError> {
+        for str_ptr in envs.iter() {
+            let pair = Pair::from(str_ptr)?;
             let key = String::from(pair.key());
             self.store.insert(key, pair);
         }
+
+        Ok(())
     }
 }
 
-pub struct Pair(String);
+pub struct Pair {
+    cstring: CString,
+    equal_index: usize,
+}
 
 impl Pair {
     pub fn new(key: &str, value: &str) -> Self {
         let mut string = String::from(key);
+        let equal_index = string.len();
         string.push('=');
         string.push_str(value);
-        string.push('\0');
+
         Self {
-            0: string
+            cstring: CString::new(string),
+            equal_index,
         }
     }
 
-    pub fn from_c_like_ptr(str_ptr: usize) -> Self {
-        let str = cvt_c_like_str_ptr_to_rust(str_ptr);
-        let mut string = String::from(str);
-        string.push('\0');
-        Self {
-            0: string,
+    pub fn from(ptr:* const c_char) -> Result<Self, SysError> {
+        let cstr = unsafe { CStr::from_ptr(ptr) };
+        let cstring = unsafe {CString::from(cstr) };
+        assert_ne!(cstring.as_ptr() as usize, ptr as usize);
+
+        let result = cstring.as_bytes().iter().enumerate().find(|(_, byte)| {
+            **byte == '=' as u8
+        });
+        if result.is_none() {
+            return Err(SysError::new(EINVAL));
         }
+        let equal_index = result.unwrap().0;
+
+        Ok(Self {cstring, equal_index})
     }
 
     pub fn key(&self) -> &str{
-        let index = self.index_of_equal();
-        let (key, _) = self.0.as_bytes().split_at(index);
+        let (key, _) = self.cstring.as_bytes().split_at(self.equal_index);
         from_utf8(key).unwrap()
     }
 
     pub fn value(&self) -> &str{
-        let index = self.index_of_equal();
-        let (_, value) = self.0.as_bytes().split_at(index + 1);
-        from_utf8(&value[..value.len()-1]).unwrap()
-    }
-
-    fn index_of_equal(&self) -> usize {
-        let (index, _) = self.0.as_bytes().iter().enumerate().find(|(_, byte)| {
-            **byte == '=' as u8
-        }).unwrap();
-        index
+        let (_, value) = self.cstring.as_bytes().split_at(self.equal_index + 1);
+        from_utf8(&value[..value.len()]).unwrap()
     }
 }

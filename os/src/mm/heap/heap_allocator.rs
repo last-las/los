@@ -15,6 +15,10 @@ pub fn init_heap() {
     }
 }
 
+pub fn print_heap_usage() {
+    println!("{:?}", HEAP_ALLOCATOR.lock());
+}
+
 #[cfg_attr(not(test), alloc_error_handler)]
 pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
     panic!("Heap allocation error, Layout = {:?}", layout);
