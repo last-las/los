@@ -21,6 +21,10 @@ pub fn getenv<'a>(name: &str) -> Option<String> {
     ENV.lock().get(name)
 }
 
+pub fn get_args() -> Vec<String> {
+    ARGS.lock().clone()
+}
+
 /// Create a collection of all environment variables' pointers, end with zero.
 /// Normally this function is called when sys_exec is about to be invoked.
 pub fn get_envp_copy() -> CStrArray {
@@ -34,8 +38,19 @@ pub fn parse_envp(envp: *const *const c_char) {
     ENV.lock().parse_envp(c_array_envp);
 }
 
+/// Read arguments on the stack when the process is just created,
+/// and copy them to the heap for better management.
+pub fn parse_argv(argv: *const *const c_char) {
+    let c_array_argv = CStrArray::copy_from_ptr(argv);
+    for arg_ptr in c_array_argv.iter() {
+        let cstr = CStr::from_ptr(arg_ptr);
+        ARGS.lock().push(cstr.into());
+    }
+}
+
 lazy_static! {
     static ref ENV: Mutex<EnvironVariable> = Mutex::new(EnvironVariable::new());
+    static ref ARGS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 }
 
 pub struct EnvironVariable {

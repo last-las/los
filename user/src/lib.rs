@@ -25,6 +25,7 @@ global_asm!(include_str!("entry.asm"));
 pub extern "C" fn rust_start(argv: *const *const c_char, envp: *const *const c_char) {
     clear_bss();
     init_heap();
+    env::parse_argv(argv);
     env::parse_envp(envp);
 
     main();

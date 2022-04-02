@@ -9,6 +9,7 @@ extern crate alloc;
 use user_lib::env::{setenv, getenv, get_envp_copy, EnvironVariable};
 use user_lib::syscall::{fork, exec, waitpid};
 use alloc::vec::Vec;
+use alloc::string::String;
 
 const SIZE: usize = 3;
 const NAME: [&str; SIZE] = [ "PATH", "USER", "SHELL"];
@@ -22,7 +23,7 @@ fn main() {
 
     let pid = fork().unwrap();
     if pid == 0 {
-        exec("10env_child", vec![]).unwrap();
+        exec("10env_child", vec!["-hello", "me"]).unwrap();
     } else {
         let mut status = 0;
         let ret = waitpid(pid as isize, &mut status, 0).unwrap();

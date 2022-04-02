@@ -65,6 +65,14 @@ impl<'a> CStr<'a> {
     }
 }
 
+impl<'a> Into<String> for CStr<'a> {
+    fn into(self) -> String {
+        let len = self.inner.len();
+        let str = core::str::from_utf8(&self.inner[..len-1]).unwrap();
+        String::from(str)
+    }
+}
+
 /// `CStrArray` is used to describe structure like `char*` in C.
 pub struct CStrArray {
     inner: Vec<*const u8>
