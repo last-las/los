@@ -1,6 +1,6 @@
 import os
 
-OS_APPLICATION_TXT = "../os/application.txt"
+OS_APPLICATION_TXT = "../../os/application.txt"
 
 apps = os.listdir("src/bin/")
 apps.sort()

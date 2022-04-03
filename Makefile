@@ -5,7 +5,8 @@ KERNEL_BIN := $(KERNEL_ELF).bin
 BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 1
 export LOG = INFO
-USER_PATH := ./user/target/$(TARGET)/$(MODE)/
+USER_SRC := ./user/lib
+USER_PATH := $(USER_SRC)/target/$(TARGET)/$(MODE)/
 
 all: user
 	@cd ./os && cargo build --release
@@ -18,7 +19,7 @@ test:
 
 user:
 	@rm -rf $(USER_PATH)/deps
-	@cd ./user && python build.py
+	@cd $(USER_SRC) && python build.py
 
 run:
 	@qemu-system-riscv64 \

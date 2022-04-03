@@ -1,7 +1,7 @@
 use std::io::{Result, Write};
 use std::fs::{self, File};
 
-static TARGET_PATH: &str = "./user/target/riscv64gc-unknown-none-elf/release/";
+static TARGET_PATH: &str = "./user/lib/target/riscv64gc-unknown-none-elf/release/";
 
 fn main() {
     insert_app_data().unwrap();
