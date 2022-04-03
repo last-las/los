@@ -18,6 +18,10 @@ pub fn exit(exit_code: usize) -> isize {
     sys_exit(exit_code)
 }
 
+pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(sys_read(fd, buf))
+}
+
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }

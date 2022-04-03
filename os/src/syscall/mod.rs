@@ -5,7 +5,7 @@ mod time;
 mod proc;
 
 use crate::syscall::mm::do_brk;
-use crate::syscall::file::do_write;
+use crate::syscall::file::*;
 use crate::syscall::time::do_get_time;
 use crate::syscall::ipc::{sys_receive, sys_send};
 use crate::syscall::proc::*;
@@ -19,8 +19,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {
         SYSCALL_SEND => sys_send(args[0], args[1]),
         SYSCALL_RECEIVE => sys_receive(args[0], args[1]),
-
-        SYSCALL_WRITE => do_write(args[0], args[1], args[2]),
+        SYSCALL_READ => do_read(args[0], args[1] as *mut u8, args[2]),
+        SYSCALL_WRITE => do_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => do_exit(args[0] as isize),
         SYSCALL_YIELD => do_yield(),
         SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),

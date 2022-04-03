@@ -1,5 +1,6 @@
 pub const SYSCALL_SEND: usize = 1;
 pub const SYSCALL_RECEIVE: usize = 2;
+pub const SYSCALL_READ: usize = 63;
 pub const SYSCALL_WRITE: usize = 64;
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;

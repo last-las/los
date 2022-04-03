@@ -86,6 +86,10 @@ pub fn sys_receive(dst_pid: usize, msg: &mut Msg) -> isize {
     syscall2(SYSCALL_RECEIVE, dst_pid, msg_ptr)
 }
 
+pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
 pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }

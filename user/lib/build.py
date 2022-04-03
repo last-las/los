@@ -3,6 +3,7 @@ import os
 OS_APPLICATION_TXT = "../../os/application.txt"
 
 apps = os.listdir("src/bin/")
+apps.append("shell.rs")
 apps.sort()
 
 with open(OS_APPLICATION_TXT, "w") as f:

@@ -16,6 +16,7 @@ extern crate alloc;
 pub mod console;
 pub mod syscall;
 pub mod env;
+pub mod io;
 mod panic;
 mod heap;
 

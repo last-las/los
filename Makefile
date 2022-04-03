@@ -17,9 +17,12 @@ all: user
 test:
 	@cross test --target riscv64gc-unknown-linux-gnu
 
-user:
+user: shell
 	@rm -rf $(USER_PATH)/deps
 	@cd $(USER_SRC) && python build.py
+
+shell:
+	@cd ./user/shell && cargo build -Z unstable-options --release --out-dir ../lib/target/riscv64gc-unknown-none-elf/release/
 
 run:
 	@qemu-system-riscv64 \
@@ -39,4 +42,4 @@ debug:
  		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
  		-s -S
 
-.PHONY: user
+.PHONY: user shell
