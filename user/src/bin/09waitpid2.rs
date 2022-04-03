@@ -20,7 +20,7 @@ fn main() {
 
     let mut status = 0;
     loop {
-        match waitpid(-1, &mut status, 0) {
+        match waitpid(-1, Some(&mut status), 0) {
             Ok(ret) => {
                 println!("child pid {} exit with:{}", ret, status);
             },

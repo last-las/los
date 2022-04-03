@@ -45,7 +45,7 @@ impl TaskStruct {
             task_context,
             msg_ptr: None,
             mem_manager,
-            priority: 0,
+            priority: 7,
             children: Vec::new(),
             parent: None,
         };

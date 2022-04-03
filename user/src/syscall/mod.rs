@@ -35,6 +35,14 @@ pub fn sleep(seconds: usize) {
     }
 }
 
+pub fn get_priority(which: usize, who: usize) -> Result<usize, SysError> {
+    isize2result(sys_get_priority(which, who))
+}
+
+pub fn set_priority(which: usize, who: usize, prio: usize) -> Result<usize, SysError> {
+    isize2result(sys_set_priority(which, who, prio))
+}
+
 pub fn get_time() -> usize {
     sys_get_time() as usize
 }

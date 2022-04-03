@@ -8,7 +8,7 @@ use crate::syscall::mm::do_brk;
 use crate::syscall::file::do_write;
 use crate::syscall::time::do_get_time;
 use crate::syscall::ipc::{sys_receive, sys_send};
-use crate::syscall::proc::{do_exit, do_yield, do_fork, do_exec, do_waitpid, do_get_pid, do_get_ppid};
+use crate::syscall::proc::*;
 use crate::task::stop_current_and_run_next_task;
 use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
@@ -23,6 +23,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_WRITE => do_write(args[0], args[1], args[2]),
         SYSCALL_EXIT => do_exit(args[0] as isize),
         SYSCALL_YIELD => do_yield(),
+        SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),
+        SYSCALL_SET_PRIORITY => do_set_priority(args[0], args[1], args[2] as isize),
         SYSCALL_GET_TIME => do_get_time(),
         SYSCALL_GETPID => do_get_pid(),
         SYSCALL_GETPPID => do_get_ppid(),
