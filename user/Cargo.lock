@@ -32,6 +32,13 @@ name = "share"
 version = "0.1.0"
 
 [[package]]
+name = "shell"
+version = "0.1.0"
+dependencies = [
+ "user_lib",
+]
+
+[[package]]
 name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

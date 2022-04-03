@@ -30,14 +30,19 @@ lazy_static! {
     };
 }
 
-pub fn load_tasks() {
+pub fn print_app_names() {
     println!("apps num : {}", APP_DATA.len());
     for i in 0..APP_DATA.len() {
         println!("app[{}] name: {}", i, APP_NAMES[i]);
-        let data = APP_DATA[i];
-        let task = Arc::new(TaskStruct::new(data).unwrap());
-        add_a_task_to_manager(task);
     }
+}
+
+pub fn load_init_task() {
+    let data = get_task_data_by_name("init").unwrap_or_else(|| {
+        panic!("'init' doesn't exist!");
+    });
+    let task = Arc::new(TaskStruct::new(data).unwrap());
+    add_a_task_to_manager(task);
 }
 
 pub fn get_task_data_by_name(name: &str) -> Option<&'static [u8]> {

@@ -1,0 +1,4 @@
+[workspace]
+members = ["init", "lib", "shell"]
+
+exclude = ["servers"]

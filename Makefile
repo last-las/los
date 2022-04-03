@@ -5,8 +5,7 @@ KERNEL_BIN := $(KERNEL_ELF).bin
 BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 1
 export LOG = INFO
-USER_SRC := ./user/lib
-USER_PATH := $(USER_SRC)/target/$(TARGET)/$(MODE)/
+USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 
 all: user
 	@cd ./os && cargo build --release
@@ -17,12 +16,9 @@ all: user
 test:
 	@cross test --target riscv64gc-unknown-linux-gnu
 
-user: shell
+user:
 	@rm -rf $(USER_PATH)/deps
-	@cd $(USER_SRC) && python build.py
-
-shell:
-	@cd ./user/shell && cargo build -Z unstable-options --release --out-dir ../lib/target/riscv64gc-unknown-none-elf/release/
+	@cd ./user && python build.py && cargo build --release
 
 run:
 	@qemu-system-riscv64 \
@@ -42,4 +38,4 @@ debug:
  		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
  		-s -S
 
-.PHONY: user shell
+.PHONY: user
