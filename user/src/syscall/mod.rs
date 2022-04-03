@@ -39,6 +39,14 @@ pub fn get_time() -> usize {
     sys_get_time() as usize
 }
 
+pub fn getpid() -> usize {
+    sys_get_pid() as usize
+}
+
+pub fn getppid() -> usize {
+    sys_get_ppid() as usize
+}
+
 pub fn brk(new_brk: Option<usize>) -> Result<usize, SysError> {
     let new_brk = if new_brk.is_some() {new_brk.unwrap()} else { 0 };
 
@@ -71,7 +79,10 @@ pub fn exec(path: &str, mut args: Vec<&str>) -> Result<usize, SysError> {
     isize2result(sys_exec(path_ptr, argv_ptr,envp_ptr))
 }
 
-pub fn waitpid(pid: isize, status: &mut usize, options: usize) -> Result<usize, SysError> {
-    let status_ptr = status as *mut usize as usize;
+pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result<usize, SysError> {
+    let status_ptr = match status {
+        Some(status) => status as *mut usize as usize,
+        None => 0,
+    };
     isize2result(sys_waitpid(pid as usize, status_ptr, options))
 }

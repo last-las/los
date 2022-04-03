@@ -28,10 +28,13 @@ pub fn do_set_priority(which: usize, who: usize, prio: usize) -> isize {
     unimplemented!();
 }
 
-pub fn do_get_pid() -> isize {
-    unimplemented!();
+pub fn do_get_pid() -> Result<usize, SysError> {
+    Ok(clone_cur_task_in_this_hart().pid())
 }
 
-pub fn do_get_ppid() -> isize {
-    unimplemented!();
+/// Except init process, this function is always successful.
+pub fn do_get_ppid() -> Result<usize, SysError> {
+    let cur_task = clone_cur_task_in_this_hart();
+    let inner = cur_task.acquire_inner_lock();
+    Ok(inner.parent.as_ref().unwrap().upgrade().unwrap().pid())
 }

@@ -26,7 +26,7 @@ fn main() {
         exec("10env_child", vec!["-hello", "me"]).unwrap();
     } else {
         let mut status = 0;
-        let ret = waitpid(pid as isize, &mut status, 0).unwrap();
+        let ret = waitpid(pid as isize, Some(&mut status), 0).unwrap();
         assert_eq!(ret, pid);
         assert_eq!(status, 23);
     }

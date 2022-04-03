@@ -42,8 +42,10 @@ fn wait_on_all_children(status_ptr: usize, _: usize) -> Result<usize, SysError> 
         }
 
         let (index,_) = result.unwrap();
-        unsafe {
-            (status_ptr as *mut usize).write(exit_code);
+        if status_ptr != 0 {
+            unsafe {
+                (status_ptr as *mut usize).write(exit_code);
+            }
         }
         inner.children.remove(index);
 
@@ -67,8 +69,10 @@ fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize
         let child_inner = child.acquire_inner_lock();
         match child_inner.flag {
             RuntimeFlags::ZOMBIE(exit_code) => {
-                unsafe {
-                    (status_ptr as *mut usize).write(exit_code);
+                if status_ptr != 0 {
+                    unsafe {
+                        (status_ptr as *mut usize).write(exit_code);
+                    }
                 }
                 drop(child_inner);
                 inner.children.remove(index);

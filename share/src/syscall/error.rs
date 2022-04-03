@@ -30,6 +30,8 @@ impl Debug for SysError {
             ENOMEM => "ENOMEM: Out of memory",
             EACCES => "EACCES: Permission denied",
             EINVAL => "EINVAL: Invalid argument",
+
+            EUNKOWN => "Unknown error nnn.",
             _ => "Unknown errno",
         };
         f.write_fmt(format_args!("{}", info))
@@ -44,3 +46,5 @@ pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;
 pub const EINVAL: i32 = 22;
+
+pub const EUNKOWN: i32 = 400;
