@@ -77,9 +77,21 @@ pub fn stop_current_and_run_next_task() {
 }
 
 pub fn exit_current_and_run_next_task(exit_code: usize) {
-    let current_task = take_task_in_current_hart();
-    current_task.acquire_inner_lock().flag = RuntimeFlags::ZOMBIE(exit_code);
-    rm_task_from_manager(current_task);
+    let cur_task = take_task_in_current_hart();
+    let mut cur_task_inner = cur_task.acquire_inner_lock();
+    // mark current task as zombie
+    cur_task_inner.flag = RuntimeFlags::ZOMBIE(exit_code);
+    // move current task's children to init.
+    let init_task = get_task_by_pid(0).unwrap();
+    let mut init_task_inner = init_task.acquire_inner_lock();
+    for child in cur_task_inner.children.iter() {
+        init_task_inner.children.push(Arc::clone(child));
+    }
+
+    drop(init_task_inner);
+    drop(init_task);
+    drop(cur_task_inner);
+    rm_task_from_manager(cur_task);
     let hart_context_ptr = get_current_hart_context_ptr();
 
     let kernel_satp = 8 << 60 | unsafe { KERNEL_SATP };

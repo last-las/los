@@ -31,17 +31,8 @@ fn allocating_vector() {
 }
 
 fn allocating_large_memory() {
-    /*
-        This function will allocate `USER_HEAP_SIZE` bytes memory.
-
-        However, because of the implementation of `USER_HEAP_ALLOCATOR`,
-        allocating `USER_HEAP_SIZE` bytes at once doesn't guarantee success.
-        So instead it allocates `FRAME_SIZE` at once
-         and allocates `USER_HEAP_SIZE` / `FRAME_SIZE` times.
-    */
     println!("test allocating large memory");
-    let boxes: [Box<[u8; FRAME_SIZE]>; USER_HEAP_SIZE / FRAME_SIZE] =  [
-        Box::new([0; FRAME_SIZE]),
+    let boxes: [Box<[u8; FRAME_SIZE]>; 3] =  [
         Box::new([0; FRAME_SIZE]),
         Box::new([0; FRAME_SIZE]),
         Box::new([0; FRAME_SIZE]),
