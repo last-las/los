@@ -40,6 +40,16 @@ impl PhysicalPageNum {
             0: v,
         }
     }
+
+    pub fn inc(&mut self) {
+        self.0 += 1;
+    }
+
+    pub fn add(&self, v: usize) -> Self {
+        Self {
+            0: self.0 + v
+        }
+    }
 }
 
 impl From<PhysicalAddress> for PhysicalPageNum {
@@ -200,6 +210,12 @@ impl PhysicalAddress {
     pub fn add(&self, v: usize) -> Self {
         Self {
             0: self.0 + v
+        }
+    }
+
+    pub fn sub(&self, v: usize) -> Self {
+        Self {
+            0: self.0 - v
         }
     }
 }
