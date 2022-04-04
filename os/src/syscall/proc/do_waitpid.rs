@@ -13,7 +13,6 @@ pub fn do_waitpid(pid: isize, status_ptr: usize, options: usize) -> Result<usize
         wait_on_all_children(status_ptr, options)
     } else {
         wait_on_target_child(pid as usize, status_ptr, options)
-
     }
 }
 

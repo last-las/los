@@ -43,7 +43,7 @@ pub fn get_priority(which: usize, who: usize) -> Result<usize, SysError> {
     isize2result(sys_get_priority(which, who))
 }
 
-pub fn set_priority(which: usize, who: usize, prio: usize) -> Result<usize, SysError> {
+pub fn set_priority(which: usize, who: usize, prio: isize) -> Result<usize, SysError> {
     isize2result(sys_set_priority(which, who, prio))
 }
 

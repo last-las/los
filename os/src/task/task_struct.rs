@@ -10,7 +10,7 @@ use share::syscall::error::{SysError, EAGAIN};
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
-    inner: Mutex<TaskStructInner>
+    pub inner: Mutex<TaskStructInner>
 }
 
 pub struct TaskStructInner {
@@ -54,38 +54,6 @@ impl TaskStruct {
             pid_handle,
             inner: Mutex::new(inner),
         })
-    }
-
-    pub fn copy_process(self: &Arc<TaskStruct>, _: u32, _: usize, _: usize, _: usize, _: usize) -> Result<Self, SysError>{
-        let self_inner = self.acquire_inner_lock();
-        let mem_manager = self_inner.mem_manager.clone()?;
-        let pid_handle = alloc_pid();
-        if pid_handle.is_none() {
-            return Err(SysError::new(EAGAIN));
-        }
-        let pid_handle = pid_handle.unwrap();
-
-        let self_trap_context_ref: &mut TrapContext = self_inner.kernel_stack.get_mut();
-        let mut trap_context = self_trap_context_ref.clone();
-        trap_context.x[10] = 0;
-        let mut kernel_stack = KernelStack::new();
-        kernel_stack.push(trap_context);
-
-        let task_context = TaskContext::new(kernel_stack.sp);
-
-        let inner = TaskStructInner {
-            kernel_stack,
-            wait_queue: Vec::new(),
-            flag: RuntimeFlags::READY,
-            task_context,
-            msg_ptr: None,
-            mem_manager,
-            priority: self_inner.priority,
-            children: Vec::new(),
-            parent: Some(Arc::downgrade(self))
-        };
-
-        Ok(Self {pid_handle, inner: Mutex::new(inner)})
     }
 
     pub fn acquire_inner_lock(&self) -> MutexGuard<TaskStructInner> {

@@ -106,8 +106,8 @@ pub fn sys_get_priority(which: usize, who: usize) -> isize {
     syscall2(SYSCALL_GET_PRIORITY, which, who)
 }
 
-pub fn sys_set_priority(which: usize, who: usize, prio: usize) -> isize {
-    syscall3(SYSCALL_SET_PRIORITY, which, who, prio)
+pub fn sys_set_priority(which: usize, who: usize, prio: isize) -> isize {
+    syscall3(SYSCALL_SET_PRIORITY, which, who, prio as usize)
 }
 
 pub fn sys_get_time() -> isize {
