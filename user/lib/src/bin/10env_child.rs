@@ -20,5 +20,4 @@ fn main() {
     }
 
     println!("\nargs: {:#?}", get_args());
-    exit(23);
 }

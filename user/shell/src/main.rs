@@ -22,7 +22,7 @@ fn main() {
         if ret == 0 {
             if exec(line.as_str(), vec![line.as_str()]).is_err() {
                 println!("{}: no such file", line);
-                exit(4);
+                exit(127);
             }
         } else {
             let pid = waitpid(ret as isize, None, 0).unwrap();

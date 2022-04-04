@@ -28,6 +28,6 @@ fn main() {
         let mut status = 0;
         let ret = waitpid(pid as isize, Some(&mut status), 0).unwrap();
         assert_eq!(ret, pid);
-        assert_eq!(status, 23);
+        assert_eq!(status, 0);
     }
 }

@@ -8,7 +8,7 @@ fn panic(panic_info: &PanicInfo) -> ! {
     } else {
         println!("Panicked: {}", panic_info.message().unwrap());
     }
-    exit(4);
+    exit(1);
     // This loop should never be reached.
     loop{}
 }
