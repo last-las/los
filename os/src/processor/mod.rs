@@ -18,8 +18,7 @@ pub const CPU_NUMS: usize = 4;
 
 pub fn get_cur_task_context_in_this_hart() -> &'static mut TrapContext {
     PROCESSORS[get_hart_id()].get_current_task().unwrap()
-        .acquire_inner_lock()
-        .kernel_stack.get_mut()
+        .acquire_inner_lock().trap_context_ref()
 }
 
 #[allow(unused)]

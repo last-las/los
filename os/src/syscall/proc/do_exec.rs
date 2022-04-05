@@ -62,9 +62,8 @@ fn push_arg_and_env_onto_stack(arg_vec: Vec<CString>, env_vec: Vec<CString>, mut
 fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usize) {
     let cur_task = clone_cur_task_in_this_hart();
     let mut inner = cur_task.acquire_inner_lock();
-    let _: TrapContext = inner.kernel_stack.pop();
-    let trap_context = TrapContext::new(pc, user_sp);
-    inner.kernel_stack.push(trap_context);
+    let trap_context_ref = inner.trap_context_ref();
+    *trap_context_ref = TrapContext::new(pc, user_sp);
     inner.mem_manager = mem_manager;
 }
 

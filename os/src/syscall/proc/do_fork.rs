@@ -21,9 +21,9 @@ pub fn do_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_p
 
 #[allow(unused_variables)]
 fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_ptr: usize, parent: &Arc<TaskStruct>) -> Result<TaskStruct, SysError>{
-    let self_inner = parent.acquire_inner_lock();
+    let mut parent_inner = parent.acquire_inner_lock();
 
-    let mem_manager = self_inner.mem_manager.clone()?;
+    let mem_manager = parent_inner.mem_manager.clone()?;
 
     let pid_handle = alloc_pid();
     if pid_handle.is_none() {
@@ -31,25 +31,28 @@ fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_
     }
     let pid_handle = pid_handle.unwrap();
 
-    let self_trap_context_ref: &mut TrapContext = self_inner.kernel_stack.get_mut();
-    let mut trap_context = self_trap_context_ref.clone();
-    trap_context.x[10] = 0;
-    let mut kernel_stack = KernelStack::new();
-    kernel_stack.push(trap_context);
+    let mut kernel_stack = KernelStack::new()?;
 
-    let task_context = TaskContext::new(kernel_stack.sp);
+    let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 
-    let inner = TaskStructInner {
+    let mut child_inner = TaskStructInner {
         kernel_stack,
         wait_queue: Vec::new(),
         flag: RuntimeFlags::READY,
         task_context,
         msg_ptr: None,
         mem_manager,
-        priority: self_inner.priority,
+        priority: parent_inner.priority,
         children: Vec::new(),
         parent: Some(Arc::downgrade(parent))
     };
 
-    Ok(TaskStruct {pid_handle, inner: Mutex::new(inner)})
+    // push `trap_context` onto the `kernel_stack`
+    let parent_trap_context_ref: &mut TrapContext = parent_inner.trap_context_ref();
+    let mut child_trap_context = parent_trap_context_ref.clone();
+    child_trap_context.x[10] = 0;
+    let child_trap_context_ref = child_inner.trap_context_ref();
+    *child_trap_context_ref = child_trap_context;
+
+    Ok(TaskStruct {pid_handle, inner: Mutex::new(child_inner)})
 }

@@ -7,6 +7,7 @@ use spin::{Mutex, MutexGuard};
 use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
 use share::syscall::error::{SysError, EAGAIN};
+use crate::mm::address::PhysicalAddress;
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -32,13 +33,10 @@ impl TaskStruct {
         let pid_handle = alloc_pid().unwrap();
         user_sp -= core::mem::size_of::<usize>() * 3; // push argc, NULL and NULL onto stack.
 
-        let trap_context = TrapContext::new(pc, user_sp);
-        let mut kernel_stack = KernelStack::new();
-        kernel_stack.push(trap_context);
+        let mut kernel_stack = KernelStack::new()?;
+        let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 
-        let task_context = TaskContext::new(kernel_stack.sp);
-
-        let inner = TaskStructInner {
+        let mut inner = TaskStructInner {
             kernel_stack,
             wait_queue: Vec::new(),
             flag: RuntimeFlags::READY,
@@ -49,12 +47,16 @@ impl TaskStruct {
             children: Vec::new(),
             parent: None,
         };
+        // push `trap_context` onto `kernel_stack`
+        let trap_context_ref = inner.trap_context_ref();
+         *trap_context_ref = TrapContext::new(pc, user_sp);
 
         Ok(Self {
             pid_handle,
             inner: Mutex::new(inner),
         })
     }
+
 
     pub fn acquire_inner_lock(&self) -> MutexGuard<TaskStructInner> {
         self.inner.lock()
@@ -70,6 +72,10 @@ impl TaskStructInner {
         &self.task_context as *const _ as usize
     }
 
+    pub fn trap_context_ref(&mut self) -> &'static mut TrapContext {
+        let trap_context_pa = self.kernel_stack.sp.sub(core::mem::size_of::<TrapContext>());
+        trap_context_pa.as_mut()
+    }
 
     pub fn is_receiving_from(&self, another_task: &Arc<TaskStruct>) -> bool {
         match self.flag {
