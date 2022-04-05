@@ -7,7 +7,7 @@ extern crate user_lib;
 extern crate alloc;
 
 use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, exit, waitpid};
+use user_lib::syscall::{fork, exec, exit, waitpid, debug_frame_usage};
 
 #[no_mangle]
 fn main() {
@@ -15,6 +15,10 @@ fn main() {
         print!("root@los$ ");
         let line = read_line();
         if line.len() == 0 {
+            continue;
+        }
+        if line.as_str() =="frame_usage"  {
+            println!("available frames: {:#x}", debug_frame_usage());
             continue;
         }
 

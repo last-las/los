@@ -141,3 +141,7 @@ pub fn sys_waitpid(pid: usize, status_ptr: usize, options: usize) -> isize {
 pub fn sys_test() -> isize {
     syscall0(SYSCALL_TEST)
 }
+
+pub fn debug_frame_usage() -> usize {
+    syscall0(DEBUG_FRAME_USAGE) as usize
+}

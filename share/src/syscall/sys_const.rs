@@ -14,3 +14,5 @@ pub const SYSCALL_FORK: usize = 220;
 pub const SYSCALL_EXEC: usize = 221;
 pub const SYSCALL_WAITPID: usize = 260;
 pub const SYSCALL_TEST: usize = 1234;
+
+pub const DEBUG_FRAME_USAGE: usize = 1001;

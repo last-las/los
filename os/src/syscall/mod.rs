@@ -13,6 +13,7 @@ use crate::task::stop_current_and_run_next_task;
 use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
 use share::ffi::c_char;
+use crate::mm::available_frame;
 
 
 pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
@@ -35,6 +36,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
 
         SYSCALL_TEST =>  do_test(),
 
+        DEBUG_FRAME_USAGE => debug_frame_usage(),
+
         _ => Err(SysError::new(EUNKOWN))
     };
 
@@ -45,4 +48,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
 
 pub fn do_test() -> Result<usize, SysError>{
     unimplemented!();
+}
+
+pub fn debug_frame_usage() -> Result<usize, SysError> {
+    Ok(available_frame())
 }
