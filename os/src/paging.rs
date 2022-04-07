@@ -8,6 +8,7 @@ use crate::processor::suspend_current_hart;
 use crate::mm::heap::stupid_allocator::StupidAllocator;
 use core::arch::asm;
 use crate::sbi::sbi_shutdown;
+use crate::plic::PLIC_START_ADDRESS;
 
 extern "C" {
     pub fn __kernel_start();
@@ -55,7 +56,9 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
             // ram mapping
             root_table.map_with_offset(RAM_START_ADDRESS, RAM_START_ADDRESS + RAM_SIZE, RAM_MAPPING_OFFSET,
                                        PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
-
+            // plic mapping
+            root_table.map_with_offset(PLIC_START_ADDRESS, PLIC_START_ADDRESS + 0x100_0000, RAM_MAPPING_OFFSET,
+                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
 
             // set global satp for all harts
             KERNEL_SATP =root_table.satp();
