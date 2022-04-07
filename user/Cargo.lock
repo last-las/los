@@ -12,6 +12,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs"
+version = "0.1.0"
+dependencies = [
+ "user_lib",
+]
+
+[[package]]
 name = "init"
 version = "0.1.0"
 dependencies = [
