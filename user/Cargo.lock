@@ -58,6 +58,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13287b4da9d1207a4f4929ac390916d64eacfe236a487e9a9f5b3be392be5162"
 
 [[package]]
+name = "terminal"
+version = "0.1.0"
+dependencies = [
+ "user_lib",
+]
+
+[[package]]
 name = "user_lib"
 version = "0.1.0"
 dependencies = [

@@ -1,2 +1,2 @@
 [workspace]
-members = ["init", "lib", "shell", "fs"]
+members = ["init", "lib", "shell", "fs", "drivers/*"]
