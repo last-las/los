@@ -98,3 +98,11 @@ pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result
     };
     isize2result(sys_waitpid(pid as usize, status_ptr, options))
 }
+
+pub fn dev_read_u8(dev_phys_addr: usize) -> Result<usize, SysError> {
+    isize2result(k_read_dev(dev_phys_addr, 1))
+}
+
+pub fn dev_write_u8(dev_phys_addr: usize, val: u8) -> Result<usize, SysError> {
+    isize2result(k_write_dev(dev_phys_addr, val as usize, 1))
+}

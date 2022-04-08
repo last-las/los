@@ -78,12 +78,12 @@ fn syscall5(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5:
 
 pub fn sys_send(dst_pid: usize, msg: &Msg) -> isize {
     let msg_ptr = msg as *const _ as usize;
-    syscall2(SYSCALL_SEND, dst_pid, msg_ptr)
+    syscall2(KCALL_SEND, dst_pid, msg_ptr)
 }
 
 pub fn sys_receive(dst_pid: usize, msg: &mut Msg) -> isize {
     let msg_ptr = msg as *mut _ as usize;
-    syscall2(SYSCALL_RECEIVE, dst_pid, msg_ptr)
+    syscall2(KCALL_RECEIVE, dst_pid, msg_ptr)
 }
 
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
@@ -144,4 +144,12 @@ pub fn sys_test() -> isize {
 
 pub fn debug_frame_usage() -> usize {
     syscall0(DEBUG_FRAME_USAGE) as usize
+}
+
+pub fn k_read_dev(dev_phys_addr: usize, byte_size: usize) -> isize {
+    syscall2(KCALL_READ_DEV, dev_phys_addr, byte_size)
+}
+
+pub fn k_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> isize {
+    syscall3(KCALL_WRITE_DEV, dev_phys_addr, val, byte_size)
 }

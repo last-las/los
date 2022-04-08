@@ -1,4 +1,4 @@
-use crate::config::{FRAME_SIZE, RAM_SIZE, RAM_START_ADDRESS, KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET};
+use crate::config::{FRAME_SIZE, RAM_SIZE, RAM_START_ADDRESS, KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, UART_BASE_ADDRESS};
 use crate::mm::alloc_frame;
 use crate::mm::FRAME_ALLOCATOR;
 use crate::mm::page_table::{PageTable, PTEFlags};
@@ -55,6 +55,9 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
 
             // ram mapping
             root_table.map_with_offset(RAM_START_ADDRESS, RAM_START_ADDRESS + RAM_SIZE, RAM_MAPPING_OFFSET,
+                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
+            // uart mapping
+            root_table.map_with_offset(UART_BASE_ADDRESS, UART_BASE_ADDRESS + FRAME_SIZE, RAM_MAPPING_OFFSET,
                                        PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
             // plic mapping
             root_table.map_with_offset(PLIC_START_ADDRESS, PLIC_START_ADDRESS + 0x100_0000, RAM_MAPPING_OFFSET,

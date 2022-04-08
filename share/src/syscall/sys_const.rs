@@ -1,5 +1,3 @@
-pub const SYSCALL_SEND: usize = 1;
-pub const SYSCALL_RECEIVE: usize = 2;
 pub const SYSCALL_READ: usize = 63;
 pub const SYSCALL_WRITE: usize = 64;
 pub const SYSCALL_EXIT: usize = 93;
@@ -16,3 +14,8 @@ pub const SYSCALL_WAITPID: usize = 260;
 pub const SYSCALL_TEST: usize = 1234;
 
 pub const DEBUG_FRAME_USAGE: usize = 1001;
+
+pub const KCALL_SEND: usize = 2001;
+pub const KCALL_RECEIVE: usize = 2002;
+pub const KCALL_READ_DEV: usize = 2003;
+pub const KCALL_WRITE_DEV: usize = 2004;
