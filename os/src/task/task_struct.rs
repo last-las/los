@@ -20,7 +20,10 @@ pub struct TaskStructInner {
     pub wait_queue: Vec<Arc<TaskStruct>>,
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
+    // ipc
     pub message_holder: Option<Msg>,
+    pub interrupt_flag: bool,
+
     pub mem_manager: MemoryManager,
     pub priority: usize,
 
@@ -43,6 +46,7 @@ impl TaskStruct {
             flag: RuntimeFlags::READY,
             task_context,
             message_holder: None,
+            interrupt_flag: false,
             mem_manager,
             priority: 7,
             children: Vec::new(),

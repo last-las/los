@@ -7,10 +7,12 @@ extern crate user_lib;
 extern crate alloc;
 
 use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, waitpid, sys_yield};
+use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid};
 
 #[no_mangle]
 fn main() {
+    start_terminal_driver();
+
     let ret = fork().unwrap();
     if ret == 0 {
         let path = "shell";
@@ -22,5 +24,18 @@ fn main() {
                 Err(_) => sys_yield(),
             };
         }
+    }
+}
+
+fn start_terminal_driver() {
+    let ret = fork().unwrap();
+    if ret == 0 {
+        assert_eq!(
+            getpid(),
+            1
+        );
+        let path = "terminal";
+        exec(path, vec![path]).unwrap();
+        exit(0); // never reach here.
     }
 }

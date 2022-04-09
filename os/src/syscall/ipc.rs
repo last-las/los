@@ -14,11 +14,12 @@ use spin::MutexGuard;
 /// it moves the message to dst task's [`TaskStruct`] and wakes it up. Otherwise it stores the message
 /// inside caller task's [`TaskStruct`] and blocks itself.
 pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
-    let dst_task = get_dst_receiving_task(dst_pid)?;
+    let dst_task = get_dst_task_or_err(dst_pid)?;
     let caller_task = clone_cur_task_in_this_hart();
     check_deadlock(caller_task.clone(), dst_task.clone())?;
 
-    let message = unsafe { (msg_ptr as *const Msg).read() };
+    let mut message = unsafe { (msg_ptr as *const Msg).read() };
+    message.src_pid = caller_task.pid();
     let mut dst_task_inner =
         dst_task.acquire_inner_lock(); // acquire lock to avoid race condition
 
@@ -43,14 +44,20 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     Ok(0)
 }
 
-/// Receive a [`Msg`] from `dst_pid` task, and save it to `msg_ptr` address.
+/// Receive a [`Msg`] `dst_pid` task, and save it to `msg_ptr` address.
 ///
+/// If `interrupt_flag` is set for caller task, it return with an interrupt message immediately.
 /// Caller task finds out possible sending tasks, if there is someone sending, it moves the [`Msg`]
 /// from sending task to address where `msg_ptr` points to and wakes the sending task up. Otherwise
 /// it blocks itself, and after it is waked up, it moves message to that address.
 pub fn sys_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
     let src_task = clone_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
+    if dst_pid == -1 && src_task_inner.interrupt_flag {
+        src_task_inner.interrupt_flag = false;
+        build_and_move_interrupt_message_to(msg_ptr);
+        return Ok(0);
+    }
     let idx = find_possible_sending_task_index(&src_task_inner, dst_pid);
 
     if idx.is_some() {
@@ -84,7 +91,26 @@ pub fn sys_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
     Ok(0)
 }
 
-fn get_dst_receiving_task(dst_pid: usize) -> Result<Arc<TaskStruct>, SysError> {
+/// This function is only used by kernel to notify `dst_pid` task that there is an interrupt for it.
+pub fn notify(dst_pid: usize) -> Result<(), SysError> {
+    let dst_task = get_dst_task_or_err(dst_pid)?;
+    let mut dst_task_inner = dst_task.acquire_inner_lock();
+    match dst_task_inner.flag {
+        RuntimeFlags::RECEIVING(-1) => {
+            let mut message = Msg::empty();
+            message.mtype = 1;
+            dst_task_inner.message_holder = Some(message);
+            drop(dst_task_inner);
+            return_task_to_manager(dst_task);
+        },
+        _ => {
+            dst_task_inner.interrupt_flag = true;
+        },
+    }
+    Ok(())
+}
+
+fn get_dst_task_or_err(dst_pid: usize) -> Result<Arc<TaskStruct>, SysError> {
     let wrapped_dst_task = get_task_by_pid(dst_pid);
     match wrapped_dst_task {
         Some(task) => Ok(task),
@@ -118,6 +144,14 @@ fn check_deadlock(src_task: Arc<TaskStruct>, mut dst_task: Arc<TaskStruct>) -> R
     }
 
     Ok(())
+}
+
+fn build_and_move_interrupt_message_to(msg_ptr: usize) {
+    let mut message = Msg::empty();
+    message.mtype = 1;
+    unsafe {
+        (msg_ptr as *mut Msg).write(message);
+    }
 }
 
 fn find_possible_sending_task_index(src_task_inner:& MutexGuard<TaskStructInner>, dst_pid: isize) -> Option<usize> {

@@ -17,6 +17,8 @@ use share::ffi::c_char;
 use crate::mm::available_frame;
 use crate::syscall::device::{kcall_read_dev, kcall_write_dev};
 
+pub use ipc::notify;
+
 
 pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {

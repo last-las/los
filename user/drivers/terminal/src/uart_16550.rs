@@ -24,6 +24,6 @@ fn write_reg(reg: usize, byte: u8) {
     dev_write_u8(UART_BASE_ADDRESS + reg, byte).unwrap();
 }
 
-fn read_reg(reg: usize) -> u8 {
+pub fn read_reg(reg: usize) -> u8 {
     dev_read_u8(UART_BASE_ADDRESS + reg).unwrap() as u8
 }

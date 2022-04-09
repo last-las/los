@@ -1,5 +1,6 @@
 use riscv::register::sie;
 use crate::mm::address::PhysicalAddress;
+use crate::syscall::notify;
 
 // TODO-FUTURE: plic implement is only worked at single hart right now!!!
 
@@ -12,7 +13,7 @@ const PLIC_PENDING: usize = PLIC_START_ADDRESS + 0x1000;
 const PLIC_M_ENABLE: usize = PLIC_START_ADDRESS + 0x2000;
 const PLIC_S_ENABLE: usize = PLIC_START_ADDRESS + 0x2080;
 const PLIC_M_THRESHOLD: usize = PLIC_START_ADDRESS + 0x20_0000;
-const PLIC_S_THRESHOLD: usize  = PLIC_START_ADDRESS + 0x20_1000;
+const PLIC_S_THRESHOLD: usize = PLIC_START_ADDRESS + 0x20_1000;
 const PLIC_M_CLAIM: usize = PLIC_START_ADDRESS + 0x20_0004;
 const PLIC_S_CLAIM: usize = PLIC_START_ADDRESS + 0x20_1004;
 const PLIC_M_COMPLETE: usize = PLIC_M_CLAIM;
@@ -30,6 +31,20 @@ pub fn init() {
     enable(UART_IRQ);
 }
 
+pub fn handle_interrupt() {
+    if let Some(interrupt) = next_interrupt_number() {
+        match interrupt {
+            UART_IRQ => {
+                notify(1);
+            },
+            _ => {
+                panic!("Unknown external interrupt: {}", interrupt);
+            },
+        }
+        complete(interrupt);
+    }
+}
+
 pub fn set_priority(id: u32, prio: u8) {
     let prio_reg: *mut u32 = PhysicalAddress::new(PLIC_PRIORITY).as_raw_mut();
     let actual_prio = prio as u32 & 7;
@@ -39,7 +54,7 @@ pub fn set_priority(id: u32, prio: u8) {
 }
 
 pub fn set_threshold(tsh: u8) {
-    let tsh_reg:*mut u32 = PhysicalAddress::new(PLIC_S_THRESHOLD).as_raw_mut();
+    let tsh_reg: *mut u32 = PhysicalAddress::new(PLIC_S_THRESHOLD).as_raw_mut();
     let actual_tsh = tsh & 7;
     unsafe {
         tsh_reg.write_volatile(actual_tsh as u32);
@@ -55,22 +70,21 @@ pub fn enable(id: u32) {
 }
 
 
-pub fn next_interrupt_no() -> Option<u32> {
-    let claim_reg: *mut u32 = PhysicalAddress::new(PLIC_M_CLAIM).as_raw_mut();
-    let claim_no;
+pub fn next_interrupt_number() -> Option<u32> {
+    let claim_reg: *mut u32 = PhysicalAddress::new(PLIC_S_CLAIM).as_raw_mut();
+    let claim_number;
     unsafe {
-        claim_no = claim_reg.read_volatile();
+        claim_number = claim_reg.read_volatile();
     }
-    if claim_no == 0 {
+    if claim_number == 0 {
         None
-    }
-    else {
-        Some(claim_no)
+    } else {
+        Some(claim_number)
     }
 }
 
 pub fn complete(id: u32) {
-    let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_M_CLAIM).as_raw_mut();
+    let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_S_COMPLETE).as_raw_mut();
     unsafe {
         complete_reg.write_volatile(id);
     }

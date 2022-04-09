@@ -9,13 +9,27 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use crate::uart_16550::{REG_THR_OFFSET, REG_RHR_OFFSET};
+use crate::uart_16550::{REG_THR_OFFSET, REG_RHR_OFFSET, read_reg};
+use share::ipc::Msg;
+use user_lib::syscall::receive;
+
+pub const INTERRUPT: usize = 1;
 
 #[no_mangle]
 fn main() {
     uart_16550::init();
+
     loop {
-        // let chr = uart_16550::read_reg(REG_THR_OFFSET);
-        // uart_16550::write_reg(REG_RHR_OFFSET, chr);
+        let mut message = Msg::empty();
+        receive(-1, &mut message).unwrap();
+        match message.mtype {
+            INTERRUPT => {
+                let chr = read_reg(REG_RHR_OFFSET);
+                println!("{}", chr as char);
+            },
+            _ => {
+                continue;
+            }
+        };
     }
 }

@@ -42,6 +42,7 @@ fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_
         flag: RuntimeFlags::READY,
         task_context,
         message_holder: None,
+        interrupt_flag: false,
         mem_manager,
         priority: parent_inner.priority,
         children: Vec::new(),

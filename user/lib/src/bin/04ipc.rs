@@ -44,7 +44,9 @@ fn test_send_before_receive() {
     } else {
         let msg = unsafe { MESSAGE.clone() };
         send(ret, &msg);
-        waitpid(ret as isize, None, 0).unwrap();
+        let mut status = 0;
+        waitpid(ret as isize,Some(&mut status), 0).unwrap();
+        assert_eq!(status, 0);
         println!("test_send_before_receive success!");
     }
 }
@@ -63,7 +65,9 @@ fn test_receive_before_send() {
         yield_();
         let msg = unsafe { MESSAGE.clone() };
         send(ret, &msg);
-        waitpid(ret as isize, None, 0).unwrap();
+        let mut status = 0;
+        waitpid(ret as isize,Some(&mut status), 0).unwrap();
+        assert_eq!(status, 0);
         println!("test_receive_before_send success!");
     }
 }
@@ -89,7 +93,10 @@ fn test_receive_after_multiple_send() {
         unsafe {
             assert_eq!(msg, MESSAGE);
         }
-        waitpid(-1, None, 0);
+
+        let mut status = 0;
+        waitpid(-1,Some(&mut status), 0).unwrap();
+        assert_eq!(status, 0);
     }
 
     println!("test_receive_after_multiple_send success!");
@@ -116,7 +123,10 @@ fn test_receive_before_multiple_send() {
         unsafe {
             assert_eq!(msg, MESSAGE);
         }
-        waitpid(-1, None, 0);
+
+        let mut status = 0;
+        waitpid(-1,Some(&mut status), 0).unwrap();
+        assert_eq!(status, 0);
     }
 
     println!("test_receive_before_multiple_send success!");

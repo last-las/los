@@ -61,6 +61,7 @@ checksum = "13287b4da9d1207a4f4929ac390916d64eacfe236a487e9a9f5b3be392be5162"
 name = "terminal"
 version = "0.1.0"
 dependencies = [
+ "share",
  "user_lib",
 ]
 
