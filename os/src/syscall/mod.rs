@@ -21,7 +21,7 @@ use crate::syscall::device::{kcall_read_dev, kcall_write_dev};
 pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {
         KCALL_SEND => sys_send(args[0], args[1]),
-        KCALL_RECEIVE => sys_receive(args[0], args[1]),
+        KCALL_RECEIVE => sys_receive(args[0] as isize, args[1]),
         KCALL_READ_DEV => kcall_read_dev(args[0] as usize, args[1] as usize),
         KCALL_WRITE_DEV => kcall_write_dev(args[0] as usize, args[1] as usize, args[2] as usize),
 

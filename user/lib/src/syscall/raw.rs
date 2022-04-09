@@ -81,9 +81,9 @@ pub fn sys_send(dst_pid: usize, msg: &Msg) -> isize {
     syscall2(KCALL_SEND, dst_pid, msg_ptr)
 }
 
-pub fn sys_receive(dst_pid: usize, msg: &mut Msg) -> isize {
+pub fn sys_receive(dst_pid: isize, msg: &mut Msg) -> isize {
     let msg_ptr = msg as *mut _ as usize;
-    syscall2(KCALL_RECEIVE, dst_pid, msg_ptr)
+    syscall2(KCALL_RECEIVE, dst_pid as usize, msg_ptr)
 }
 
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {

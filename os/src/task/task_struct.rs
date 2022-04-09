@@ -8,6 +8,7 @@ use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
 use share::syscall::error::{SysError, EAGAIN};
 use crate::mm::address::PhysicalAddress;
+use share::ipc::Msg;
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -19,7 +20,7 @@ pub struct TaskStructInner {
     pub wait_queue: Vec<Arc<TaskStruct>>,
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
-    pub msg_ptr: Option<usize>,
+    pub message_holder: Option<Msg>,
     pub mem_manager: MemoryManager,
     pub priority: usize,
 
@@ -41,7 +42,7 @@ impl TaskStruct {
             wait_queue: Vec::new(),
             flag: RuntimeFlags::READY,
             task_context,
-            msg_ptr: None,
+            message_holder: None,
             mem_manager,
             priority: 7,
             children: Vec::new(),
@@ -79,9 +80,8 @@ impl TaskStructInner {
 
     pub fn is_receiving_from(&self, another_task: &Arc<TaskStruct>) -> bool {
         match self.flag {
-            RuntimeFlags::RECEIVING(ReceiveProc::SPECIFIC(target_pid)) =>
-                target_pid == another_task.pid(),
-            RuntimeFlags::RECEIVING(ReceiveProc::ANY) => true,
+            RuntimeFlags::RECEIVING(target_pid) =>
+                target_pid < 0 || target_pid as usize == another_task.pid(),
             _ => false
         }
     }
@@ -96,15 +96,9 @@ impl TaskStructInner {
 
 #[derive(Copy, Clone)]
 pub enum RuntimeFlags {
-    RECEIVING(ReceiveProc),
+    RECEIVING(isize),
     SENDING(usize),
     READY,
     ZOMBIE(usize),
     RUNNING,
-}
-
-#[derive(Copy, Clone)]
-pub enum ReceiveProc {
-    ANY,
-    SPECIFIC(usize),
 }

@@ -5,6 +5,7 @@ use share::syscall::error::{SysError, ENOMEM};
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
+use share::ipc::Msg;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -16,6 +17,10 @@ fn isize2result(ret: isize) -> Result<usize, SysError> {
 
 pub fn exit(exit_code: usize) -> isize {
     sys_exit(exit_code)
+}
+
+pub fn yield_() {
+    sys_yield();
 }
 
 pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
@@ -97,6 +102,14 @@ pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result
         None => 0,
     };
     isize2result(sys_waitpid(pid as usize, status_ptr, options))
+}
+
+pub fn send(dst_pid: usize, msg: &Msg) -> Result<usize, SysError> {
+    isize2result(sys_send(dst_pid, msg))
+}
+
+pub fn receive(dst_pid: isize, msg: &mut Msg) -> Result<usize, SysError> {
+    isize2result(sys_receive(dst_pid, msg))
 }
 
 pub fn dev_read_u8(dev_phys_addr: usize) -> Result<usize, SysError> {

@@ -10,7 +10,7 @@ use crate::loader::{get_app_ref_data, get_app_names};
 use spin::Mutex;
 
 pub use kernel_stack::KernelStack;
-pub use task_struct::{TaskStruct, TaskStructInner, RuntimeFlags, ReceiveProc};
+pub use task_struct::{TaskStruct, TaskStructInner, RuntimeFlags};
 pub use task_manager::{fetch_a_task_from_manager, add_a_task_to_manager, get_task_by_pid};
 pub use task_context::TaskContext;
 pub use trap_context::TrapContext;

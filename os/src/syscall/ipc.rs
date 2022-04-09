@@ -1,37 +1,39 @@
-use crate::task::{get_task_by_pid, RuntimeFlags, ReceiveProc, TaskStruct,block_current_and_run_next_task, return_task_to_manager};
+use crate::task::{get_task_by_pid, RuntimeFlags, TaskStruct, block_current_and_run_next_task, return_task_to_manager, TaskStructInner};
 use crate::processor::clone_cur_task_in_this_hart;
 use alloc::sync::Arc;
 use share::ipc::Msg;
-use share::syscall::error::{EINVAL, SysError};
+use share::syscall::error::{EINVAL, SysError, EDLOCK};
+use spin::MutexGuard;
 
+// TODO-FUTURE: using registers to pass the message could improve performance. L4 stuff.
+
+/// Send a message, which `msg_ptr` points to, from current task to `dst_pid` task.
+///
+/// Before any real work, caller task checks whether there is a deadlock situation.
+/// Caller task reads the message from `msg_ptr`, and If `dst_pid` task is receiving,
+/// it moves the message to dst task's [`TaskStruct`] and wakes it up. Otherwise it stores the message
+/// inside caller task's [`TaskStruct`] and blocks itself.
 pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
-    let wrapped_dst_task = get_task_by_pid(dst_pid);
-    if wrapped_dst_task.is_none() {
-        return Err(SysError::new(EINVAL));
-    }
-    let dst_task = wrapped_dst_task.unwrap();
+    let dst_task = get_dst_receiving_task(dst_pid)?;
     let caller_task = clone_cur_task_in_this_hart();
-    check_deadlock(caller_task.clone(), dst_task.clone());
+    check_deadlock(caller_task.clone(), dst_task.clone())?;
 
+    let message = unsafe { (msg_ptr as *const Msg).read() };
+    let mut dst_task_inner =
+        dst_task.acquire_inner_lock(); // acquire lock to avoid race condition
 
-    let mut dst_task_inner = dst_task.acquire_inner_lock();
     if dst_task_inner.is_receiving_from(&caller_task) {
-        // copy current message to dst_task's msg_ptr
-        unsafe {
-            let dst_msg_ptr = dst_task_inner.msg_ptr.take().unwrap() as * mut Msg;
-            let src_msg = (msg_ptr as *const Msg).read();
-            dst_msg_ptr.write(src_msg);
-        }
+        assert!(dst_task_inner.message_holder.is_none());
+        dst_task_inner.message_holder = Some(message);
+        dst_task_inner.flag = RuntimeFlags::READY;
+        drop(dst_task_inner);
 
         return_task_to_manager(dst_task.clone());
-        dst_task_inner.flag = RuntimeFlags::READY;
     } else {
         let mut src_task_inner = caller_task.acquire_inner_lock();
         src_task_inner.flag = RuntimeFlags::SENDING(dst_pid);
-        src_task_inner.msg_ptr = Some(msg_ptr);
-
+        src_task_inner.message_holder = Some(message);
         dst_task_inner.wait_queue.push(caller_task.clone());
-
         drop(src_task_inner);
         drop(dst_task_inner);
 
@@ -41,58 +43,66 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     Ok(0)
 }
 
-pub fn sys_receive(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError>{
+/// Receive a [`Msg`] from `dst_pid` task, and save it to `msg_ptr` address.
+///
+/// Caller task finds out possible sending tasks, if there is someone sending, it moves the [`Msg`]
+/// from sending task to address where `msg_ptr` points to and wakes the sending task up. Otherwise
+/// it blocks itself, and after it is waked up, it moves message to that address.
+pub fn sys_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
     let src_task = clone_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
-    let mut exist_possible_task = false;
-    let mut idx = None;
+    let idx = find_possible_sending_task_index(&src_task_inner, dst_pid);
 
-    for i in 0..src_task_inner.wait_queue.len() {
-        if dst_pid == usize::MAX || src_task_inner.wait_queue[i].pid() == dst_pid {
-            idx = Some(i);
-            exist_possible_task = true;
-            break;
-        }
-    }
-
-    if exist_possible_task {
+    if idx.is_some() {
         let idx = idx.unwrap();
         let dst_task = src_task_inner.wait_queue[idx].clone();
         let mut dst_task_inner = dst_task.acquire_inner_lock();
         assert!(dst_task_inner.is_sending_to(&src_task));
+        let message = dst_task_inner.message_holder.take().unwrap();
         unsafe {
-            let dst_msg = (dst_task_inner.msg_ptr.take().unwrap() as *const Msg).read();
-            let src_msg_ptr = msg_ptr as *mut Msg;
-            src_msg_ptr.write(dst_msg);
+            (msg_ptr as *mut Msg).write(message);
         }
-
-        return_task_to_manager(dst_task.clone());
         dst_task_inner.flag = RuntimeFlags::READY;
-
         src_task_inner.wait_queue.remove(idx);
-        debug!("wait_queue length: {}",src_task_inner.wait_queue.len());
+
+        drop(dst_task_inner);
+        return_task_to_manager(dst_task.clone());
         return Ok(0);
     }
 
-    if dst_pid == usize::MAX {
-        src_task_inner.flag = RuntimeFlags::RECEIVING(ReceiveProc::ANY);
-    } else {
-        src_task_inner.flag = RuntimeFlags::RECEIVING(ReceiveProc::SPECIFIC(dst_pid));
-    }
-    src_task_inner.msg_ptr = Some(msg_ptr);
+    src_task_inner.flag = RuntimeFlags::RECEIVING(dst_pid);
     drop(src_task_inner);
-
+    drop(src_task);
     block_current_and_run_next_task();
+
+    // After the task is waked up the message has been received.
+    let src_task = clone_cur_task_in_this_hart();
+    let mut src_task_inner = src_task.acquire_inner_lock();
+    unsafe {
+        (msg_ptr as *mut Msg).write(src_task_inner.message_holder.take().unwrap());
+    }
     Ok(0)
 }
 
-fn check_deadlock(src_task: Arc<TaskStruct>, mut dst_task: Arc<TaskStruct>) {
+fn get_dst_receiving_task(dst_pid: usize) -> Result<Arc<TaskStruct>, SysError> {
+    let wrapped_dst_task = get_task_by_pid(dst_pid);
+    match wrapped_dst_task {
+        Some(task) => Ok(task),
+        None => Err(SysError::new(EINVAL)),
+    }
+}
+
+// If task_a -sending-> task_b -sending-> task_c -sending-> task_a, then there is a dead lock.
+fn check_deadlock(src_task: Arc<TaskStruct>, mut dst_task: Arc<TaskStruct>) -> Result<(), SysError> {
     let src_pid = src_task.pid();
     loop {
         let dst_task_inner = dst_task.acquire_inner_lock();
         match dst_task_inner.flag {
             RuntimeFlags::SENDING(target_pid) => {
-                assert_ne!(target_pid, src_pid);
+                if target_pid == src_pid {
+                    return Err(SysError::new(EDLOCK));
+                }
+
                 drop(dst_task_inner);
                 let wrapped_task = get_task_by_pid(target_pid);
                 if wrapped_task.is_none() {
@@ -106,4 +116,18 @@ fn check_deadlock(src_task: Arc<TaskStruct>, mut dst_task: Arc<TaskStruct>) {
             }
         }
     }
+
+    Ok(())
+}
+
+fn find_possible_sending_task_index(src_task_inner:& MutexGuard<TaskStructInner>, dst_pid: isize) -> Option<usize> {
+    let mut idx = None;
+    for i in 0..src_task_inner.wait_queue.len() {
+        if dst_pid < 0 || src_task_inner.wait_queue[i].pid() == dst_pid as usize {
+            idx = Some(i);
+            break;
+        }
+    }
+
+    idx
 }
