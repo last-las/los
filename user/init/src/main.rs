@@ -11,30 +11,21 @@ use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid};
 
 #[no_mangle]
 fn main() {
-    start_terminal_driver();
+    fork_and_exec("terminal"); // pid = 1
+    fork_and_exec("idle"); // pid = 2
+    fork_and_exec("shell"); // pid = 3
 
-    let ret = fork().unwrap();
-    if ret == 0 {
-        let path = "shell";
-        exec(path, vec![path]).unwrap();
-    } else {
-        loop {
-            match waitpid(-1, None, 0) {
-                Ok(_) => continue,
-                Err(_) => sys_yield(),
-            };
-        }
+    loop {
+        match waitpid(-1, None, 0) {
+            Ok(_) => continue,
+            Err(_) => sys_yield(),
+        };
     }
 }
 
-fn start_terminal_driver() {
+fn fork_and_exec(path: &str) {
     let ret = fork().unwrap();
     if ret == 0 {
-        assert_eq!(
-            getpid(),
-            1
-        );
-        let path = "terminal";
         exec(path, vec![path]).unwrap();
         exit(0); // never reach here.
     }

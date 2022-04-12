@@ -67,6 +67,16 @@ impl<T: Allocator> PageTable<T> {
         }
     }
 
+    pub fn translate_va(&self, virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
+        let ppn = self.translate(virtual_address.floor());
+        if ppn.is_none() {
+            return None;
+        }
+        let ppn = ppn.unwrap();
+
+        Some(PhysicalAddress::from(ppn).add(virtual_address.offset()))
+    }
+
     pub fn find_pte_create(&mut self, virtual_page_num: VirtualPageNum) -> Result<&mut PageTableEntry, SysError> {
         let mut table: &mut [PageTableEntry; PAGE_TABLE_ENTRY_NUM] =
             PhysicalAddress::from(self.root_table_frame.0).as_mut();

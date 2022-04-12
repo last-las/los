@@ -100,6 +100,7 @@ pub fn notify(dst_pid: usize) -> Result<(), SysError> {
             let mut message = Msg::empty();
             message.mtype = 1;
             dst_task_inner.message_holder = Some(message);
+            dst_task_inner.flag = RuntimeFlags::READY;
             drop(dst_task_inner);
             return_task_to_manager(dst_task);
         },

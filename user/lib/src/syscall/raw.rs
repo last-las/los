@@ -58,6 +58,21 @@ fn syscall3(id: usize, arg1: usize, arg2: usize, arg3: usize) -> isize {
     ret
 }
 
+fn syscall4(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize) -> isize {
+    let ret;
+    unsafe {
+        asm!(
+        "ecall",
+        inout("a0") arg1 => ret,
+        in("a1") arg2,
+        in("a2") arg3,
+        in("a3") arg4,
+        in("a7") id,
+        );
+    }
+    ret
+}
+
 #[inline(always)]
 fn syscall5(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5: usize) -> isize {
     let ret;
@@ -88,6 +103,10 @@ pub fn sys_receive(dst_pid: isize, msg: &mut Msg) -> isize {
 
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
     syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn _sys_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(_SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }
 
 pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
@@ -152,4 +171,8 @@ pub fn k_read_dev(dev_phys_addr: usize, byte_size: usize) -> isize {
 
 pub fn k_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> isize {
     syscall3(KCALL_WRITE_DEV, dev_phys_addr, val, byte_size)
+}
+
+pub fn k_virt_copy(src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> isize {
+    syscall4(KCALL_VIRT_COPY, src_ptr, dst_proc, dst_ptr, length)
 }

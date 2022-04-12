@@ -27,6 +27,10 @@ pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
     isize2result(sys_read(fd, buf))
 }
 
+pub fn _read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(_sys_read(fd, buf))
+}
+
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
@@ -118,4 +122,12 @@ pub fn dev_read_u8(dev_phys_addr: usize) -> Result<usize, SysError> {
 
 pub fn dev_write_u8(dev_phys_addr: usize, val: u8) -> Result<usize, SysError> {
     isize2result(k_write_dev(dev_phys_addr, val as usize, 1))
+}
+
+pub fn dev_write_u32(dev_phys_addr: usize, val: u32) -> Result<usize, SysError> {
+    isize2result(k_write_dev(dev_phys_addr, val as usize, 4))
+}
+
+pub fn virt_copy(src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> Result<usize, SysError> {
+    isize2result(k_virt_copy(src_ptr, dst_proc, dst_ptr, length))
 }

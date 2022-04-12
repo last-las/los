@@ -36,6 +36,7 @@ pub fn handle_interrupt() {
         match interrupt {
             UART_IRQ => {
                 notify(1);
+                disable_uart_interrupt();
             },
             _ => {
                 panic!("Unknown external interrupt: {}", interrupt);
@@ -87,5 +88,15 @@ pub fn complete(id: u32) {
     let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_S_COMPLETE).as_raw_mut();
     unsafe {
         complete_reg.write_volatile(id);
+    }
+}
+
+fn disable_uart_interrupt() {
+    const UART_BASE_ADDRESS: usize = 0x1000_0000;
+    const REG_IER_OFFSET: usize = 1;
+    let pa = PhysicalAddress::new(UART_BASE_ADDRESS + REG_IER_OFFSET);
+    let byte: *mut u8 = pa.as_raw_mut();
+    unsafe {
+        byte.write_volatile(0);
     }
 }

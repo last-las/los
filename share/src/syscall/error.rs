@@ -23,6 +23,7 @@ impl Debug for SysError {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let info = match self.errno {
             ENOENT => "ENOENT: No such file or directory",
+            EIO => "EIO: input/output error",
             ENOEXEC => "ENOEXEC: Exec format error",
             EBADF => "EBADF: Bad file number",
             ECHILD => "ECHILD: No child processes",
@@ -40,6 +41,7 @@ impl Debug for SysError {
 }
 
 pub const ENOENT: i32 = 2;
+pub const EIO: i32 = 5;
 pub const ENOEXEC: i32 = 8;
 pub const EBADF: i32 = 9;
 pub const ECHILD: i32 = 10;
