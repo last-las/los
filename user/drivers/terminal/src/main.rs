@@ -89,6 +89,26 @@ pub fn do_read(uart: &mut Uart, message: Msg) {
 }
 
 pub fn do_write(uart: &mut Uart, message: Msg) {
+    const BUFFER_SIZE: usize = 512;
+
+    let proc_nr = message.args[PROC_NR];
+    let mut buf_ptr = message.args[BUFFER];
+    let mut buf_len = message.args[LENGTH];
+    let mut buffer: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
+    let mut cnt = 0;
+    while buf_len != 0 {
+        let length = BUFFER_SIZE.min(buf_len);
+        virt_copy(proc_nr, buf_ptr, getpid(), buffer.as_ptr() as usize, length).unwrap();
+        buf_ptr += length;
+        buf_len -= length;
+        cnt += length;
+
+        for i in 0..length {
+            uart.dev_write(buffer[i]);
+        }
+    }
+
+    reply(message.src_pid, REPLY, proc_nr, cnt);
 }
 
 pub fn do_close(uart: &mut Uart, message: Msg) {

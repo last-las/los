@@ -35,6 +35,10 @@ pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
 
+pub fn _write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+    isize2result(_sys_write(fd, buf))
+}
+
 pub fn sleep(seconds: usize) {
     let start_time = get_time();
     let mseconds = seconds * 1000;

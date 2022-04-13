@@ -113,6 +113,10 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }
 
+pub fn _sys_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(_SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
 pub fn sys_exit(exit_code: usize) -> isize{
     syscall1(SYSCALL_EXIT, exit_code)
 }

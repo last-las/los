@@ -31,6 +31,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_READ => do_read(args[0], args[1] as *mut u8, args[2]),
         _SYSCALL_READ => _do_read(args[0], args[1], args[2]),
         SYSCALL_WRITE => do_write(args[0], args[1] as *const u8, args[2]),
+        _SYSCALL_WRITE => _do_write(args[0], args[1], args[2]),
         SYSCALL_EXIT => do_exit(args[0] as isize),
         SYSCALL_YIELD => do_yield(),
         SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),
