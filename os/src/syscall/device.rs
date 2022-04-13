@@ -46,25 +46,33 @@ pub fn kcall_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> Re
 
     Ok(0)
 }
-/// Copy a slice from caller task to `dst_proc` task.
-pub fn kcall_virt_copy(src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> Result<usize, SysError> {
-    let dst_task = get_task_by_pid(dst_proc);
-    if dst_task.is_none() {
-        return Err(SysError::new(EINVAL));
-    }
-    let dst_task = dst_task.unwrap();
-    let dst_task_inner = dst_task.acquire_inner_lock();
-    let dst_ptr_pa =
-        dst_task_inner.mem_manager.page_table.translate_va(VirtualAddress::new(dst_ptr))
-            .ok_or(SysError::new(EINVAL))?;
-
-    let mut dst_data: &mut [u8] = unsafe {
-        core::slice::from_raw_parts_mut(dst_ptr_pa.as_raw_mut(), length)
-    };
-    let src_data: & [u8] = unsafe {
-        core::slice::from_raw_parts(src_ptr as *const u8, length)
-    };
+/// Copy a slice from `src_proc` task to `dst_proc` task.
+pub fn kcall_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> Result<usize, SysError> {
+    let src_data = get_byte_slice_in_proc(src_proc, src_ptr, length)?;
+    let dst_data = get_mut_byte_slice_in_proc(dst_proc, dst_ptr, length)?;
     dst_data.copy_from_slice(src_data);
 
     Ok(0)
+}
+
+fn get_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&'static [u8], SysError> {
+    let task = get_task_by_pid(pid).ok_or(SysError::new(EINVAL))?;
+    let task_inner = task.acquire_inner_lock();
+    let ptr_va = VirtualAddress::new(ptr);
+    let ptr_pa = task_inner.mem_manager.page_table.translate_va(ptr_va)
+        .ok_or(SysError::new(EINVAL))?;
+    unsafe {
+        Ok(core::slice::from_raw_parts(ptr_pa.as_raw(), length))
+    }
+}
+
+fn get_mut_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&'static mut [u8], SysError> {
+    let task = get_task_by_pid(pid).ok_or(SysError::new(EINVAL))?;
+    let task_inner = task.acquire_inner_lock();
+    let ptr_va = VirtualAddress::new(ptr);
+    let ptr_pa = task_inner.mem_manager.page_table.translate_va(ptr_va)
+        .ok_or(SysError::new(EINVAL))?;
+    unsafe {
+        Ok(core::slice::from_raw_parts_mut(ptr_pa.as_raw_mut(), length))
+    }
 }

@@ -12,7 +12,7 @@ extern crate lazy_static;
 
 use crate::uart_16550::{REG_THR_OFFSET, REG_RHR_OFFSET, read_reg, Uart, write_reg, REG_IER_OFFSET};
 use share::ipc::Msg;
-use user_lib::syscall::{receive, dev_write_u8, virt_copy, send};
+use user_lib::syscall::{receive, dev_write_u8, virt_copy, send, getpid};
 use share::ipc::*;
 use share::syscall::terminal::Clflag;
 
@@ -120,7 +120,7 @@ pub fn transfer_to_usr(uart: &mut Uart) {
         let buffer = uart.usr_buffer.as_slice();
         let buffer_ptr = buffer.as_ptr() as usize;
         let length = buffer.len();
-        virt_copy(buffer_ptr, uart.in_proc, uart.buf_ptr, length);
+        virt_copy(getpid(), buffer_ptr, uart.in_proc, uart.buf_ptr, length);
         uart.usr_buffer.clear();
         reply(uart.in_caller, REPLY, uart.in_proc, length);
     }

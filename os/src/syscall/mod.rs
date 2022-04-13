@@ -26,7 +26,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         KCALL_RECEIVE => sys_receive(args[0] as isize, args[1]),
         KCALL_READ_DEV => kcall_read_dev(args[0], args[1]),
         KCALL_WRITE_DEV => kcall_write_dev(args[0], args[1], args[2]),
-        KCALL_VIRT_COPY => kcall_virt_copy(args[0], args[1], args[2], args[3]),
+        KCALL_VIRT_COPY => kcall_virt_copy(args[0], args[1], args[2], args[3], args[4]),
 
         SYSCALL_READ => do_read(args[0], args[1] as *mut u8, args[2]),
         _SYSCALL_READ => _do_read(args[0], args[1], args[2]),

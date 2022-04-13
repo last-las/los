@@ -128,6 +128,6 @@ pub fn dev_write_u32(dev_phys_addr: usize, val: u32) -> Result<usize, SysError> 
     isize2result(k_write_dev(dev_phys_addr, val as usize, 4))
 }
 
-pub fn virt_copy(src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> Result<usize, SysError> {
-    isize2result(k_virt_copy(src_ptr, dst_proc, dst_ptr, length))
+pub fn virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> Result<usize, SysError> {
+    isize2result(k_virt_copy(src_proc, src_ptr, dst_proc, dst_ptr, length))
 }

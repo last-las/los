@@ -173,6 +173,6 @@ pub fn k_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> isize 
     syscall3(KCALL_WRITE_DEV, dev_phys_addr, val, byte_size)
 }
 
-pub fn k_virt_copy(src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> isize {
-    syscall4(KCALL_VIRT_COPY, src_ptr, dst_proc, dst_ptr, length)
+pub fn k_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> isize {
+    syscall5(KCALL_VIRT_COPY, src_proc, src_ptr, dst_proc, dst_ptr, length)
 }
