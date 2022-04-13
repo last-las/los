@@ -131,13 +131,13 @@ pub fn do_ioctl(uart: &mut Uart, message: Msg) {
             virt_copy(proc_nr, termios_ptr, getpid(), dst_ptr, size).unwrap();
         },
         TC_GET_PGRP => {
-
+            unimplemented!();
         },
         TC_SET_PGRP => {
-
+            unimplemented!();
         },
         _ => {
-
+            panic!("Unknown IOCTL message: {}", message.args[IOCTL_TYPE]);
         }
     }
 

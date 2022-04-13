@@ -4,7 +4,7 @@ pub const TC_GET_PGRP: usize = 18;
 pub const TC_SET_PGRP: usize = 19;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Termios {
     pub c_iflag: Ciflag,
     pub c_oflag: Coflag,

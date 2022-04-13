@@ -1,6 +1,6 @@
 use core::fmt;
 use core::fmt::Write;
-use crate::syscall::write;
+use crate::syscall::_write;
 
 const STDOUT: usize = 1;
 
@@ -8,7 +8,7 @@ struct Stdout;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        write(STDOUT, s.as_bytes());
+        _write(STDOUT, s.as_bytes());
         Ok(())
     }
 }
