@@ -1,3 +1,37 @@
+pub const TC_GET_ATTR: usize = 8;
+pub const TC_SET_ATTR: usize = 9;
+pub const TC_GET_PGRP: usize = 18;
+pub const TC_SET_PGRP: usize = 19;
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct Termios {
+    pub c_iflag: Ciflag,
+    pub c_oflag: Coflag,
+    pub c_cflag: Ccflag,
+    pub c_lflag: Clflag,
+}
+
+impl Termios {
+    pub fn empty() -> Self {
+        Self {
+            c_iflag: Ciflag::empty(),
+            c_oflag: Coflag::empty(),
+            c_cflag: Ccflag::empty(),
+            c_lflag: Clflag::empty(),
+        }
+    }
+
+    pub fn default() -> Self {
+        Self {
+            c_iflag: Ciflag::ICRNL,
+            c_oflag: Coflag::empty(),
+            c_cflag: Ccflag::empty(),
+            c_lflag: Clflag::ECHO | Clflag::ECHOE | Clflag::ICANON,
+        }
+    }
+}
+
 bitflags! {
     pub struct Ciflag: u16 {
         const BRKINT = 0x0001;    /* signal interrupt on break */
@@ -27,24 +61,5 @@ bitflags! {
         const ISIG	 = 0x0040;	/* enable signals */
         const NOFLSH = 0x0080;  /* disable flush after interrupt or quit */
         const TOSTOP = 0x0100;	/* send SIGTTOU (job control, not implemented*/
-    }
-}
-
-#[repr(C)]
-pub struct Termios {
-    pub c_iflag: Ciflag,
-    pub c_oflag: Coflag,
-    pub c_cflag: Ccflag,
-    pub c_lflag: Clflag,
-}
-
-impl Termios {
-    pub fn default() -> Self {
-        Self {
-            c_iflag: Ciflag::empty(),
-            c_oflag: Coflag::empty(),
-            c_cflag: Ccflag::empty(),
-            c_lflag: Clflag::ECHO | Clflag::ECHOE | Clflag::ICANON,
-        }
     }
 }

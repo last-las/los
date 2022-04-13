@@ -17,6 +17,7 @@ pub mod console;
 pub mod syscall;
 pub mod env;
 pub mod io;
+pub mod termios;
 mod panic;
 mod heap;
 

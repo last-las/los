@@ -34,7 +34,9 @@ impl Debug for SysError {
 
             EUNKOWN => "Unknown error nnn.",
             EDLOCK => "EDLOCK: Ipc dead lock",
-            _ => "Unknown errno",
+            _ => {
+                return f.write_fmt(format_args!("Unknown errno: {}", self.errno));
+            },
         };
         f.write_fmt(format_args!("{}", info))
     }

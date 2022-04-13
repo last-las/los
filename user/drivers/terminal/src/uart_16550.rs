@@ -2,7 +2,7 @@ use user_lib::syscall::{dev_read_u8, dev_write_u8};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloc::collections::VecDeque;
-use share::syscall::terminal::Termios;
+use share::terminal::Termios;
 
 pub const UART_BASE_ADDRESS: usize = 0x1000_0000;
 pub const REG_RHR_OFFSET: usize = 0;
@@ -24,6 +24,7 @@ pub struct Uart {
     pub in_proc: usize,
     pub in_left: usize,
     pub buf_ptr: usize,
+    pub pgrp: Option<usize>,
 
     pub termios: Termios,
 }
@@ -37,6 +38,7 @@ impl Uart {
             in_proc: 0,
             in_left: 0,
             buf_ptr: 0,
+            pgrp: None,
             termios: Termios::default(),
         }
     }

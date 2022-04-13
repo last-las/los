@@ -1,4 +1,5 @@
 use core::fmt::{Debug, Formatter};
+use crate::syscall::error::SysError;
 
 /* Message Type */
 pub const INTERRUPT: usize = 1;
@@ -17,14 +18,18 @@ pub const MSG_ARGS_3: usize = 3;
 pub const MSG_ARGS_4: usize = 4;
 pub const MSG_ARGS_5: usize = 5;
 
+/* read write message */
 pub const DEVICE: usize = MSG_ARGS_0;
 pub const PROC_NR: usize = MSG_ARGS_1;
 pub const BUFFER: usize = MSG_ARGS_2;
 pub const LENGTH: usize = MSG_ARGS_3;
-
+/* ioctl message */
+pub const IOCTL_TYPE: usize = MSG_ARGS_2;
+pub const ADDRESS: usize = MSG_ARGS_3;
 /* Reply message */
 pub const REPLY_PROC_NR: usize = MSG_ARGS_0;
 pub const REPLY_STATUS: usize = MSG_ARGS_1;
+pub const STATUS_OK: usize = 0;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -46,6 +51,16 @@ impl Msg {
             src_pid: 0,
             mtype: 0,
             args: [0; 6],
+        }
+    }
+
+    pub fn cvt_reply_message_to_result(&self) -> Result<usize, SysError> {
+        assert_eq!(self.mtype, REPLY);
+        let status = self.args[REPLY_STATUS] as isize;
+        if status >= 0 {
+            Ok(status as usize)
+        } else {
+            Err(SysError::new(status as i32))
         }
     }
 }

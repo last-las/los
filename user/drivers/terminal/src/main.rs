@@ -14,7 +14,8 @@ use crate::uart_16550::{REG_THR_OFFSET, REG_RHR_OFFSET, read_reg, Uart, write_re
 use share::ipc::Msg;
 use user_lib::syscall::{receive, dev_write_u8, virt_copy, send, getpid};
 use share::ipc::*;
-use share::syscall::terminal::Clflag;
+use share::terminal::{Clflag, TC_GET_ATTR, TC_SET_ATTR, TC_GET_PGRP, TC_SET_PGRP, Termios, Ciflag};
+use core::mem::size_of;
 
 const BS: u8 = 0x08;
 const LF: u8 = 0x0a;
@@ -39,6 +40,7 @@ fn main() {
             OPEN => do_open(&mut uart, message),
             READ => do_read(&mut uart, message),
             WRITE => do_write(&mut uart, message),
+            IOCTL => do_ioctl(&mut uart, message),
             CLOSE => do_close(&mut uart, message),
 
             _ => {
@@ -50,27 +52,27 @@ fn main() {
 
 pub fn do_interrupt(uart: &mut Uart) {
     let mut byte = uart.dev_read();
+    write_reg(REG_IER_OFFSET, 0x01);
+
+    /* Map CR to LF, ignore CR, or map LF to CR. */
+    if byte == CR {
+        if uart.termios.c_iflag.contains(Ciflag::IGNCR) {
+            return;
+        }
+        if uart.termios.c_iflag.contains(Ciflag::ICRNL) {
+            byte = LF;
+        }
+    } else if byte == LF {
+        if uart.termios.c_iflag.contains(Ciflag::INLCR) {
+            byte = CR;
+        }
+    }
 
     if uart.termios.c_lflag.contains(Clflag::ECHO) {
-        match byte {
-            DL => {
-                uart.dev_write(BS);
-                uart.dev_write(' ' as u8);
-                uart.dev_write(BS);
-            },
-            CR | LF => {
-                byte = LF;
-                uart.dev_write(LF);
-            }
-            _ => {
-                uart.dev_write(byte);
-            }
-        }
+        echo(uart, byte);
     }
     uart.read_buffer.push_back(byte);
     transfer_to_usr(uart);
-
-    write_reg(REG_IER_OFFSET, 0x01);
 }
 
 pub fn do_open(uart: &mut Uart, message: Msg) {
@@ -108,13 +110,57 @@ pub fn do_write(uart: &mut Uart, message: Msg) {
         }
     }
 
-    reply(message.src_pid, REPLY, proc_nr, cnt);
+    reply(message.src_pid, REPLY, proc_nr, cnt as isize);
+}
+
+pub fn do_ioctl(uart: &mut Uart, message: Msg) {
+    let proc_nr = message.args[PROC_NR];
+    let mut ret = STATUS_OK;
+
+    match message.args[IOCTL_TYPE] {
+        TC_GET_ATTR => {
+            let src_ptr = &uart.termios as *const _ as usize;
+            let size = size_of::<Termios>();
+            let dst_ptr = message.args[ADDRESS];
+            virt_copy(getpid(), src_ptr, proc_nr, dst_ptr, size).unwrap();
+        },
+        TC_SET_ATTR => {
+            let termios_ptr = message.args[ADDRESS];
+            let size = size_of::<Termios>();
+            let dst_ptr = &mut uart.termios as *mut _ as usize;
+            virt_copy(proc_nr, termios_ptr, getpid(), dst_ptr, size).unwrap();
+        },
+        TC_GET_PGRP => {
+
+        },
+        TC_SET_PGRP => {
+
+        },
+        _ => {
+
+        }
+    }
+
+    reply(message.src_pid, REPLY, proc_nr, ret as isize);
 }
 
 pub fn do_close(uart: &mut Uart, message: Msg) {
 }
 
-pub fn transfer_to_usr(uart: &mut Uart) {
+fn echo(uart: &mut Uart, byte: u8) {
+    match byte {
+        DL => {
+            uart.dev_write(BS);
+            uart.dev_write(' ' as u8);
+            uart.dev_write(BS);
+        },
+        _ => {
+            uart.dev_write(byte);
+        }
+    }
+}
+
+fn transfer_to_usr(uart: &mut Uart) {
     if uart.in_left == 0 {
         return;
     }
@@ -142,15 +188,15 @@ pub fn transfer_to_usr(uart: &mut Uart) {
         let length = buffer.len();
         virt_copy(getpid(), buffer_ptr, uart.in_proc, uart.buf_ptr, length);
         uart.usr_buffer.clear();
-        reply(uart.in_caller, REPLY, uart.in_proc, length);
+        reply(uart.in_caller, REPLY, uart.in_proc, length as isize);
     }
 }
 
-fn reply(caller: usize, mtype: usize, proc_nr: usize, status: usize) {
+fn reply(caller: usize, mtype: usize, proc_nr: usize, status: isize) {
     let mut message = Msg::empty();
     message.mtype = mtype;
     message.args[REPLY_PROC_NR] = proc_nr;
-    message.args[REPLY_STATUS] = status;
+    message.args[REPLY_STATUS] = status as usize;
 
     send(caller, &message).unwrap();
 }
