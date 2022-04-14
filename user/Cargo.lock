@@ -85,3 +85,11 @@ dependencies = [
  "share",
  "spin 0.7.1",
 ]
+
+[[package]]
+name = "virtio-blk"
+version = "0.1.0"
+dependencies = [
+ "share",
+ "user_lib",
+]
