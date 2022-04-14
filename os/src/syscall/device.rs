@@ -1,6 +1,9 @@
 use share::syscall::error::{SysError, EINVAL};
 use crate::mm::address::{PhysicalAddress, VirtualAddress};
 use crate::task::get_task_by_pid;
+use crate::processor::clone_cur_task_in_this_hart;
+use crate::mm::memory_manager::{RegionFlags, RegionType};
+use crate::config::FRAME_SIZE;
 
 pub fn kcall_read_dev(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
     let dev_pa = PhysicalAddress::new(dev_phys_addr);
@@ -54,6 +57,28 @@ pub fn kcall_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr
 
     Ok(0)
 }
+
+pub fn kcall_continuous_alloc(size: usize) -> Result<usize, SysError> {
+    let task = clone_cur_task_in_this_hart();
+    let mut inner = task.acquire_inner_lock();
+    let size = (size + FRAME_SIZE) & !(FRAME_SIZE - 1);
+    let start = inner.mem_manager.alloc_area(
+        size, RegionFlags::W | RegionFlags::R, RegionType::CONTINUOUS
+    )?;
+
+    Ok(start.0)
+}
+
+pub fn kcall_virt_to_phys(virt_addr: usize) -> Result<usize, SysError> {
+    let task = clone_cur_task_in_this_hart();
+    let inner = task.acquire_inner_lock();
+    let va = VirtualAddress::new(virt_addr);
+    let pa =
+        inner.mem_manager.page_table.translate_va(va).ok_or(SysError::new(EINVAL))?;
+
+    Ok(pa.0)
+}
+
 
 fn get_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&'static [u8], SysError> {
     let task = get_task_by_pid(pid).ok_or(SysError::new(EINVAL))?;

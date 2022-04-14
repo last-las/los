@@ -180,3 +180,11 @@ pub fn k_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> isize 
 pub fn k_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> isize {
     syscall5(KCALL_VIRT_COPY, src_proc, src_ptr, dst_proc, dst_ptr, length)
 }
+
+pub fn k_continuous_alloc(size: usize) -> isize {
+    syscall1(KCALL_CONTINUOUS_ALLOC, size)
+}
+
+pub fn k_virt_to_phys(virt_addr: usize) -> isize {
+    syscall1(KCALL_VIRT_TO_PHYS, virt_addr)
+}

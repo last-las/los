@@ -12,7 +12,12 @@ extern crate bitflags;
 extern crate volatile;
 extern crate log;
 
+use user_lib::syscall::{continuous_alloc, virt_to_phys};
+
 #[no_mangle]
 fn main() {
-    println!("Hello, world!");
+    let start_va = continuous_alloc(0x4000).unwrap();
+    let start_pa = virt_to_phys(start_va).unwrap();
+    println!("alloc start_va: {:#x}", start_va);
+    println!("alloc start_pa: {:#x}", start_pa);
 }
