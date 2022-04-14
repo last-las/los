@@ -6,6 +6,7 @@ BOOTLOADER := ./bootloader/opensbi-qemu.bin
 export CPU_NUMS = 1
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
+FS_IMG := ./fs.img
 
 all: user
 	@cd ./os && cargo build --release
@@ -26,7 +27,9 @@ run:
 		-nographic \
 		-bios $(BOOTLOADER) \
 		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
-		-smp $(CPU_NUMS)
+		-smp $(CPU_NUMS) \
+		-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+		-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 debug:
 	@echo "you should run command below in another terminal(same path):"
@@ -36,6 +39,9 @@ debug:
 	 	-nographic \
  		-bios $(BOOTLOADER) \
  		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
- 		-s -S
+ 		-s -S \
+ 		-smp $(CPU_NUMS) \
+		-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+		-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 .PHONY: user
