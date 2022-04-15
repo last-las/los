@@ -1,6 +1,6 @@
 use super::PAGE_SIZE;
 use bitflags::*;
-use volatile::{ReadOnly, Volatile, WriteOnly};
+use super::volatile::{ReadOnly, Volatile, WriteOnly};
 
 /// MMIO Device Legacy Register Interface.
 ///

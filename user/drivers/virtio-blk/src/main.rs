@@ -9,7 +9,6 @@ extern crate user_lib;
 extern crate alloc;
 #[macro_use]
 extern crate bitflags;
-extern crate volatile;
 extern crate log;
 
 use user_lib::syscall::{continuous_alloc, virt_to_phys};

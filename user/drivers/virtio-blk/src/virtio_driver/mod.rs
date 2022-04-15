@@ -4,6 +4,7 @@ mod blk;
 mod header;
 mod queue;
 mod hal;
+mod volatile;
 
 use hal::*;
 

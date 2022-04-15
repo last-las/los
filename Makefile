@@ -18,6 +18,7 @@ test:
 	@cross test --target riscv64gc-unknown-linux-gnu
 
 user:
+	@rm -rf $(USER_PATH)/deps
 	@cd ./user && python build.py && cargo build --release
 
 run:

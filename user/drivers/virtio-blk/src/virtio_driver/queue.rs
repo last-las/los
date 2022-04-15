@@ -4,9 +4,9 @@ use core::sync::atomic::{fence, Ordering};
 
 use super::*;
 use super::header::VirtIOHeader;
+use super::volatile::Volatile;
 use bitflags::*;
 
-use volatile::Volatile;
 
 /// The mechanism for bulk data transport on virtio devices.
 ///

@@ -120,6 +120,14 @@ pub fn receive(dst_pid: isize, msg: &mut Msg) -> Result<usize, SysError> {
     isize2result(sys_receive(dst_pid, msg))
 }
 
+pub fn dev_read(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
+    isize2result(k_read_dev(dev_phys_addr, byte_size))
+}
+
+pub fn dev_write(dev_phys_addr: usize, val: usize, byte_size: usize) -> Result<usize, SysError> {
+    isize2result(k_write_dev(dev_phys_addr, val, byte_size))
+}
+
 pub fn dev_read_u8(dev_phys_addr: usize) -> Result<usize, SysError> {
     isize2result(k_read_dev(dev_phys_addr, 1))
 }
