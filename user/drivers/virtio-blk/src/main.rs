@@ -12,8 +12,10 @@ extern crate bitflags;
 extern crate log;
 extern crate volatile;
 
-use user_lib::syscall::{continuous_alloc, virt_to_phys};
+use user_lib::syscall::{continuous_alloc, virt_to_phys, receive, virt_copy, getppid, getpid, send};
 use crate::virtio_driver::{VirtIOBlk, VirtIOHeader};
+use share::ipc::{Msg, READ, WRITE, POSITION, PROC_NR, BUFFER, REPLY_PROC_NR, REPLY_STATUS, REPLY};
+use share::syscall::error::EINVAL;
 
 /*
     Module virtio_driver is an userspace version of https://github.com/rcore-os/virtio-drivers,
@@ -30,6 +32,7 @@ use crate::virtio_driver::{VirtIOBlk, VirtIOHeader};
 */
 
 const VIRTIO0: usize = 0x10001000;
+const BLOCK_SZ: usize = 512;
 
 #[no_mangle]
 fn main() {
@@ -37,19 +40,54 @@ fn main() {
         VirtIOBlk::new(&mut *(VIRTIO0 as *mut VirtIOHeader)).unwrap()
     };
 
-    let mut buffer = [0; 512];
-    for i in 0..1024 {
-        virtio_blk.read_block(i, &mut buffer).unwrap();
-        buffer.fill((i % 0xff) as u8);
-        virtio_blk.write_block(i, &buffer).unwrap();
+    let mut message = Msg::empty();
+
+    loop {
+        receive(-1, &mut message).unwrap();
+
+        let ret = match message.mtype {
+            READ => do_read(&mut virtio_blk, message),
+            WRITE => do_write(&mut virtio_blk, message),
+            _ => {
+                panic!("Unknown message type:{}", message.mtype);
+            }
+        };
+
+        reply(message.src_pid, REPLY, message.args[PROC_NR], ret);
+    }
+}
+
+pub fn do_read(virtio_blk: &mut VirtIOBlk, message: Msg) -> isize{
+    let proc_nr = message.args[PROC_NR];
+    let dst_ptr = message.args[BUFFER];
+    let block_id = message.args[POSITION];
+    let mut buffer = [0; BLOCK_SZ];
+    if virtio_blk.read_block(block_id, &mut buffer).is_err() {
+        return -EINVAL as isize;
+    }
+    virt_copy(getpid(), buffer.as_ptr() as usize, proc_nr, dst_ptr, BLOCK_SZ).unwrap();
+
+    BLOCK_SZ as isize
+}
+
+pub fn do_write(virtio_blk: &mut VirtIOBlk, message: Msg) -> isize {
+    let proc_nr = message.args[PROC_NR];
+    let src_ptr = message.args[BUFFER];
+    let block_id = message.args[POSITION];
+    let mut buffer = [0; BLOCK_SZ];
+    virt_copy(proc_nr, src_ptr, getpid(), buffer.as_mut_ptr() as usize, BLOCK_SZ).unwrap();
+    if virtio_blk.write_block(block_id, &buffer).is_err() {
+        return -EINVAL as isize;
     }
 
-    let mut compared_buffer = [0; 512];
-    for i in 0..1024 {
-        virtio_blk.read_block(i, &mut buffer).unwrap();
-        compared_buffer.fill((i % 0xff) as u8);
-        assert_eq!(buffer, compared_buffer);
-    }
+    BLOCK_SZ as isize
+}
 
-    println!("test virtio blk device success!");
+fn reply(caller: usize, mtype: usize, proc_nr: usize, status: isize) {
+    let mut message = Msg::empty();
+    message.mtype = mtype;
+    message.args[REPLY_PROC_NR] = proc_nr;
+    message.args[REPLY_STATUS] = status as usize;
+
+    send(caller, &message).unwrap();
 }

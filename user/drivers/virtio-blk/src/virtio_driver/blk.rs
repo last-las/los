@@ -30,11 +30,11 @@ impl VirtIOBlk<'_> {
 
         // read configuration space
         let config = unsafe { &mut *(header.config_space() as *mut BlkConfig) };
-        println!("config: {:?}", config);
+        /*println!("config: {:?}", config);
         println!(
             "found a block device of size {}KB",
             config.capacity.read() / 2
-        );
+        );*/
 
         let queue = VirtQueue::new(header, 0, 16)?;
         header.finish_init();

@@ -79,6 +79,7 @@ pub fn stop_current_and_run_next_task() {
 
 pub fn exit_current_and_run_next_task(exit_code: usize) {
     let cur_task = take_task_in_current_hart();
+    info!("task {} exit with exit_code:{}",cur_task.pid(), exit_code);
     let mut cur_task_inner = cur_task.acquire_inner_lock();
     // mark current task as zombie
     cur_task_inner.flag = RuntimeFlags::ZOMBIE(exit_code);

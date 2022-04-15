@@ -18,11 +18,12 @@ pub const MSG_ARGS_3: usize = 3;
 pub const MSG_ARGS_4: usize = 4;
 pub const MSG_ARGS_5: usize = 5;
 
-/* read write message */
+/* read write message FOR block and character device drivers */
 pub const DEVICE: usize = MSG_ARGS_0;
 pub const PROC_NR: usize = MSG_ARGS_1;
 pub const BUFFER: usize = MSG_ARGS_2;
 pub const LENGTH: usize = MSG_ARGS_3;
+pub const POSITION: usize =MSG_ARGS_4;
 /* ioctl message */
 pub const IOCTL_TYPE: usize = MSG_ARGS_2;
 pub const ADDRESS: usize = MSG_ARGS_3;
