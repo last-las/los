@@ -4,8 +4,9 @@ use core::sync::atomic::{fence, Ordering};
 
 use super::*;
 use super::header::VirtIOHeader;
-use super::volatile::Volatile;
+use crate::volatile::Volatile;
 use bitflags::*;
+use user_lib::syscall::virt_to_phys;
 
 
 /// The mechanism for bulk data transport on virtio devices.
@@ -215,7 +216,7 @@ struct Descriptor {
 
 impl Descriptor {
     fn set_buf(&mut self, buf: &[u8]) {
-        self.addr.write(virt_to_phys(buf.as_ptr() as usize) as u64);
+        self.addr.write(virt_to_phys(buf.as_ptr() as usize).unwrap() as u64);
         self.len.write(buf.len() as u32);
     }
 }

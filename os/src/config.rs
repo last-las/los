@@ -7,3 +7,4 @@ pub const RAM_SIZE: usize = 0x8_000_000;
 pub const MAX_USER_ADDRESS: usize = 0x4_000_000_000;
 pub const MMAP_START_ADDRESS: usize = 0x2_000_000_000;
 pub const UART_BASE_ADDRESS: usize = 0x1000_0000;
+pub const VIRTIO0_START_ADDRESS: usize = 0x1000_1000;

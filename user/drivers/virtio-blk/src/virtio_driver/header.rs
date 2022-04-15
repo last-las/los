@@ -168,6 +168,7 @@ impl VirtIOHeader {
     ///
     /// Ref: virtio 3.1.1 Device Initialization
     pub fn begin_init(&mut self, negotiate_features: impl FnOnce(u64) -> u64) {
+        assert!(self.verify());
         self.status.write(DeviceStatus::ACKNOWLEDGE);
         self.status.write(DeviceStatus::DRIVER);
 

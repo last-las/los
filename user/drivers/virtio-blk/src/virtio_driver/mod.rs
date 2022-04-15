@@ -7,6 +7,8 @@ mod hal;
 mod volatile;
 
 use hal::*;
+pub use blk::VirtIOBlk;
+pub use header::VirtIOHeader;
 
 const PAGE_SIZE: usize = 0x1000;
 

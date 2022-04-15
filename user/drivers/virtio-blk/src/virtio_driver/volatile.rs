@@ -1,27 +1,34 @@
 use user_lib::syscall::{dev_read, dev_write};
+use core::fmt::{Debug, Formatter};
 
 #[derive(Debug, Clone, Default)]
-pub struct ReadOnly<T: Copy>(Volatile<T>);
+pub struct ReadOnly<T: Copy + Debug>(Volatile<T>);
 
-impl<T: Copy> ReadOnly<T> {
+impl<T: Copy + Debug> ReadOnly<T> {
     pub fn read(&self) -> T {
         self.0.read()
     }
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct WriteOnly<T: Copy>(Volatile<T>);
+pub struct WriteOnly<T: Copy + Debug>(Volatile<T>);
 
-impl<T: Copy> WriteOnly<T> {
+impl<T: Copy + Debug> WriteOnly<T> {
     pub fn write(&mut self, value: T) {
         self.0.write(value);
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Volatile<T: Copy>(T);
+#[derive(Clone, Default)]
+pub struct Volatile<T: Copy + Debug>(T);
 
-impl<T: Copy> Volatile<T> {
+impl<T: Copy + Debug> Debug for Volatile<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!("{:#?}", self.read()))
+    }
+}
+
+impl<T: Copy + Debug> Volatile<T> {
     pub fn new(value: T) -> Volatile<T>{
         Volatile(value)
     }

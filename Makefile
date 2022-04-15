@@ -21,7 +21,10 @@ user:
 	@rm -rf $(USER_PATH)/deps
 	@cd ./user && python build.py && cargo build --release
 
-run:
+fs-img:
+	@dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024
+
+run: fs-img
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \

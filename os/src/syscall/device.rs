@@ -17,8 +17,16 @@ pub fn kcall_read_dev(dev_phys_addr: usize, byte_size: usize) -> Result<usize, S
                 let word: *const u16 = dev_pa.as_raw();
                 word.read_volatile() as usize
             }
+            4 => {
+                let word: *const u32 = dev_pa.as_raw();
+                word.read_volatile() as usize
+            },
+            8 => {
+                let word: *const u64 = dev_pa.as_raw();
+                word.read_volatile() as usize
+            },
             _ => {
-                panic!("kcall_read_dev: unknown size")
+                panic!("kcall_read_dev: unknown size: {}", byte_size);
             }
         }
     };
@@ -41,8 +49,12 @@ pub fn kcall_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> Re
                 let dword: *mut u32 = dev_pa.as_raw_mut();
                 dword.write_volatile(val as u32)
             },
+            8 => {
+                let dword: *mut u64 = dev_pa.as_raw_mut();
+                dword.write_volatile(val as u64)
+            },
             _ => {
-                panic!("kcall_write_dev: unknown size")
+                panic!("kcall_write_dev: unknown size: {}", byte_size);
             }
         }
     }

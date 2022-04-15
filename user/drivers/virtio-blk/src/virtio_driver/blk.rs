@@ -4,7 +4,8 @@ use super::queue::VirtQueue;
 use bitflags::*;
 use core::hint::spin_loop;
 use log::*;
-use volatile::Volatile;
+use super::volatile::Volatile;
+use user_lib::syscall::yield_;
 
 /// The virtio block device is a simple virtual block device (ie. disk).
 ///
@@ -21,7 +22,7 @@ impl VirtIOBlk<'_> {
     pub fn new(header: &'static mut VirtIOHeader) -> Result<Self> {
         header.begin_init(|features| {
             let features = BlkFeature::from_bits_truncate(features);
-            info!("device features: {:?}", features);
+            // println!("device features: {:?}", features);
             // negotiate these flags only
             let supported_features = BlkFeature::empty();
             (features & supported_features).bits()
@@ -29,8 +30,8 @@ impl VirtIOBlk<'_> {
 
         // read configuration space
         let config = unsafe { &mut *(header.config_space() as *mut BlkConfig) };
-        info!("config: {:?}", config);
-        info!(
+        println!("config: {:?}", config);
+        println!(
             "found a block device of size {}KB",
             config.capacity.read() / 2
         );
@@ -62,7 +63,8 @@ impl VirtIOBlk<'_> {
         self.queue.add(&[req.as_buf()], &[buf, resp.as_buf_mut()])?;
         self.header.notify(0);
         while !self.queue.can_pop() {
-            spin_loop();
+            // spin_loop();
+            yield_();
         }
         self.queue.pop_used()?;
         match resp.status {
