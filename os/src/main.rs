@@ -67,7 +67,7 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
 
         task::print_app_names();
         task::load_init_task();
-        enable_other_harts();
+        // enable_other_harts();
         info!("start running");
         processor::run_on_current_hart();
     } else {
