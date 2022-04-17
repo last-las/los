@@ -1,5 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
+#![feature(arbitrary_self_types)]
 
 mod vfs;
 mod fs;

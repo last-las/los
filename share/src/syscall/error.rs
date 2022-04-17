@@ -31,6 +31,7 @@ impl Debug for SysError {
             ENOMEM => "ENOMEM: Out of memory",
             EACCES => "EACCES: Permission denied",
             EINVAL => "EINVAL: Invalid argument",
+            ENFILE => "ENFILE: File table overflow",
 
             EUNKOWN => "Unknown error nnn.",
             EDLOCK => "EDLOCK: Ipc dead lock",
@@ -51,6 +52,7 @@ pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;
 pub const EINVAL: i32 = 22;
+pub const ENFILE: i32 = 23;
 
 // Self designed error numbers..
 pub const EUNKOWN: i32 = 400;

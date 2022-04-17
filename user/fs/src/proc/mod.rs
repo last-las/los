@@ -1,7 +1,7 @@
 use crate::proc::fs_struct::FsStruct;
 use alloc::rc::Rc;
 
-mod fs_struct;
+pub mod fs_struct;
 
 pub fn get_fs_struct_by_pid(pid: usize) -> Option<Rc<FsStruct>> {
     unimplemented!();
