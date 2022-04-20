@@ -67,8 +67,8 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
         asm! {
         "csrw stvec, {stvec}",
         "add sp, sp, {k_offset}",
-        "sfence.vma",
         "csrw satp, {satp}",
+        "sfence.vma",
         "call kmain", // When pc runs here, load fault occurs and stvec will be set to pc,
                       // so this instruction will never be executed.
         stvec = in(reg) kmain as usize + KERNEL_MAPPING_OFFSET,

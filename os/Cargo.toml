@@ -14,3 +14,7 @@ riscv = { git = "https://github.com/rust-embedded/riscv" }
 bitflags = "1.2.1"
 ipc = {path = "../ipc"}
 xmas-elf = "0.7.0"
+
+[features]
+board_qemu = []
+board_k210 = []
