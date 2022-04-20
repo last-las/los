@@ -29,7 +29,7 @@ pub fn trap_handler() {
         },
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             stop_current_and_run_next_task();
-        }
+        },
         _ => {
             info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
             exit_current_and_run_next_task();
