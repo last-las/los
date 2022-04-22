@@ -22,10 +22,26 @@ pub fn register_filesystem(filesystem: FileSystem) -> bool {
 }
 
 pub fn alloc_super_block(fs_name: &str) -> Option<Rc<RefCell<SuperBlock>>> {
-    unimplemented!()
+    let mut filesystems_inner = FILE_SYSTEMS.lock();
+    for exist_filesystem in filesystems_inner.iter() {
+        if exist_filesystem.name.as_str() == fs_name {
+            return  Some((exist_filesystem.get_sb)());
+        }
+    }
+
+    None
 }
 
 pub struct FileSystem {
     name: String,
     get_sb: fn() -> Rc<RefCell<SuperBlock>>,
+}
+
+impl FileSystem {
+    pub fn new(name: &str, get_sb: fn() -> Rc<RefCell<SuperBlock>>)-> Self {
+        Self {
+            name: String::from(name),
+            get_sb,
+        }
+    }
 }

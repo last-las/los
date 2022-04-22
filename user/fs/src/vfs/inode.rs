@@ -2,10 +2,12 @@ use alloc::rc::Rc;
 use crate::vfs::dentry::Dentry;
 use crate::vfs::file::FileOperations;
 use core::cell::RefCell;
+use crate::vfs::super_block::SuperBlock;
 
 pub struct Inode {
     pub ino: usize,
 
+    pub super_block: Rc<RefCell<SuperBlock>>,
     pub iop: Rc<dyn InodeOperations>,
     pub fop: Rc<dyn FileOperations>,
 }

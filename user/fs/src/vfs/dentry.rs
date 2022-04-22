@@ -20,15 +20,17 @@ pub struct VfsMount {
 }
 
 impl Dentry {
-    pub fn new(name: &str, inode: Rc<RefCell<Inode>>) -> Self {
-        Self {
-            name: String::from(name),
-            inode,
-            parent: None,
-            children: Vec::new(),
+    pub fn new(name: &str, inode: Rc<RefCell<Inode>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(
+            Self {
+                name: String::from(name),
+                inode,
+                parent: None,
+                children: Vec::new(),
 
-            mnt: None,
-        }
+                mnt: None,
+            }
+        ))
     }
 
     /// find out if the target dentry is already exists.
