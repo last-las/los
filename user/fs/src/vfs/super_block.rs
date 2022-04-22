@@ -8,11 +8,11 @@ pub struct SuperBlock {
     ///
     /// There might be more than one filesystem instance in the same filesystem type, so this field
     /// is used to select the right one.
-    dev: usize,
+    pub dev: usize,
     /// Root Directory Entry, it's name is always "/".
-    root: Rc<RefCell<Dentry>>,
+    pub root: Rc<RefCell<Dentry>>,
 
-    sop: Rc<dyn SuperBlockOperations>,
+    pub sop: Rc<dyn SuperBlockOperations>,
 }
 
 pub trait SuperBlockOperations {

@@ -12,7 +12,19 @@ pub struct Inode {
     pub fop: Rc<dyn FileOperations>,
 }
 
-impl Inode {}
+impl Inode {
+    pub fn new(ino: usize, super_block: Rc<RefCell<SuperBlock>>,
+               iop: Rc<dyn InodeOperations>, fop: Rc<dyn FileOperations>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(
+            Inode {
+                ino,
+                super_block,
+                iop,
+                fop,
+            }
+        ))
+    }
+}
 
 pub trait InodeOperations {
     fn lookup(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;

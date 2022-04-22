@@ -7,6 +7,10 @@ use core::cell::RefCell;
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::vfs::filesystem::{register_filesystem, FileSystem};
+use crate::vfs::inode::Inode;
+use crate::vfs::super_block::SuperBlock;
+use crate::fs::ramfs::vfs_interface::{RamFsInodeOperations, RamFsFileOperations};
+use alloc::boxed::Box;
 
 pub fn register_ramfs() {
     let mut filesystem = FileSystem::new("ramfs", vfs_interface::alloc_ramfs_super_block);
@@ -28,12 +32,21 @@ impl RamFileSystem {
         }
     }
 
-    pub fn alloc_ramfs_inode(&mut self) -> Rc<RefCell<RamFsInode>> {
-        unimplemented!()
+    pub fn alloc_ramfs_inode(&mut self,) -> Rc<RefCell<RamFsInode>> {
+        let ino = self.ino_allocator.alloc();
+        let new_ramfs_inode =  RamFsInode::empty(ino);
+        self.inode_searcher.push_back(Rc::clone(&new_ramfs_inode));
+        new_ramfs_inode
     }
 
     pub fn search_ramfs_inode(&self, ino: usize) -> Option<Rc<RefCell<RamFsInode>>> {
-        unimplemented!()
+        for ramfs_inode in self.inode_searcher.iter() {
+            if ramfs_inode.borrow().ino == ino {
+                return Some(Rc::clone(ramfs_inode));
+            }
+        }
+
+        None
     }
 }
 
@@ -74,28 +87,81 @@ pub struct RamFsInode {
 }
 
 impl RamFsInode {
-    pub fn new_dir(ino: usize, name: &str) -> Self {
-        Self {
-            ino,
-            name: String::from(name),
-            file_type: FileType::DIRECTORY,
-            sub_nodes: Vec::new(),
-            content: Vec::new(),
-        }
+    pub fn empty(ino: usize) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(
+            Self {
+                ino,
+                name: String::new(),
+                file_type: FileType::UNKNOWN,
+                sub_nodes: Vec::new(),
+                content: Vec::new(),
+            }
+        ))
     }
 
-    pub fn new_file(ino: usize, name: &str) -> Self {
-        Self {
-            ino,
-            name: String::from(name),
-            file_type: FileType::NORMAL,
-            sub_nodes: Vec::new(),
-            content: Vec::new(),
+    pub fn mark_as_file(&mut self) {
+        self.file_type = FileType::NORMAL;
+    }
+
+    pub fn mark_as_dir(&mut self) {
+        self.file_type = FileType::DIRECTORY;
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = String::from(name);
+    }
+
+    pub fn lookup(&self, name: &str) -> Option<Rc<RefCell<RamFsInode>>> {
+        assert_eq!(self.file_type, FileType::DIRECTORY);
+        for sub_node in self.sub_nodes.iter() {
+            if sub_node.borrow().name.as_str() == name {
+                return Some(Rc::clone(sub_node));
+            }
         }
+
+        None
+    }
+
+    pub fn read(&self, pos: usize, size: usize) -> Vec<u8> {
+        let length = self.content.len();
+        if pos >= length {
+            return Vec::new();
+        }
+        let slice: &[u8] = &self.content.as_slice()[pos..usize::min(length, size + pos)];
+        Vec::from(slice)
+    }
+
+    pub fn write(&mut self, pos: usize, content: Vec<u8>) {
+        let length = self.content.len();
+        if pos > length - 1 {
+            for _ in 0..pos - length {
+                self.content.push(0);
+            }
+        } else if pos < length - 1 {
+            self.content.drain(pos..);
+        }
+
+        self.content.extend(content);
+    }
+
+    pub fn read_dir(&self) -> Vec<Rc<RefCell<RamFsInode>>> {
+        assert_eq!(self.file_type, FileType::DIRECTORY);
+        self.sub_nodes.clone()
+    }
+
+    pub fn get_vfs_inode(&self, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Inode>> {
+        Inode::new(
+            self.ino,
+            super_block,
+            Rc::new(RamFsInodeOperations),
+            Rc::new(RamFsFileOperations),
+        )
     }
 }
 
+#[derive(Eq, PartialEq, Debug)]
 pub enum FileType {
     NORMAL,
     DIRECTORY,
+    UNKNOWN,
 }
