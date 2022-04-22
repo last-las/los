@@ -14,4 +14,8 @@ impl Inode {}
 
 pub trait InodeOperations {
     fn lookup(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
+    /// Create a normal file.
+    fn create(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
+    /// Create a directory.
+    fn mkdir(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
 }

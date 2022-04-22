@@ -2,6 +2,7 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::vfs::dentry::Dentry;
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 pub struct File {
     pub fop: Rc<dyn FileOperations>,
@@ -23,4 +24,6 @@ impl File {
 
 pub trait FileOperations {
     fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Box<[u8]>;
+    fn write(&self, file: Rc<RefCell<File>>, content: Box<[u8]>);
+    fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Dentry>;
 }
