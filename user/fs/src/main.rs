@@ -11,6 +11,8 @@ mod syscall;
 extern crate user_lib;
 #[macro_use]
 extern crate alloc;
+#[macro_use]
+extern crate lazy_static;
 
 #[no_mangle]
 fn main() {
