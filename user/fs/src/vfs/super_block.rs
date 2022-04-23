@@ -10,29 +10,25 @@ pub struct SuperBlock {
     /// is used to select the right one.
     pub dev: usize,
     /// Root Directory Entry, it's name is always "/".
-    pub root: Rc<RefCell<Dentry>>,
+    pub root: Option<Rc<RefCell<Dentry>>>,
 
-    pub sop: Rc<dyn SuperBlockOperations>,
+    // pub sop: Rc<dyn SuperBlockOperations>,
 }
 
-pub trait SuperBlockOperations {
+/*pub trait SuperBlockOperations {
     fn read_inode(&self, ino: usize, dev: usize) -> Option<Rc<RefCell<Inode>>>;
     fn alloc_inode(&self, dev: usize) -> Option<Rc<RefCell<Inode>>>;
     fn write_inode(&self, inode: Rc<RefCell<Inode>>);
 
     fn sync(&self);
 }
-
+*/
 impl SuperBlock {
-    pub fn new(dev: usize, sop: Rc<dyn SuperBlockOperations>) -> Rc<RefCell<Self>> {
-        let inode = sop.alloc_inode(dev).unwrap();
-        let root = Dentry::new("/", inode);
-
+    pub fn new(dev: usize) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Self {
                 dev,
-                root,
-                sop,
+                root: None,
             }
         ))
     }

@@ -2,7 +2,7 @@ use crate::vfs::inode::{InodeOperations, Inode};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::vfs::dentry::Dentry;
-use crate::vfs::super_block::{SuperBlock, SuperBlockOperations};
+use crate::vfs::super_block::SuperBlock;
 use super::RAM_FILE_SYSTEMS;
 use crate::fs::ramfs::{RamFileSystem, RamFsInode, FileType};
 use crate::vfs::file::{FileOperations, File};
@@ -17,16 +17,19 @@ pub fn alloc_ramfs_super_block() -> Rc<RefCell<SuperBlock>> {
         dev = RAM_FILE_SYSTEMS.len();
         RAM_FILE_SYSTEMS.push(RamFileSystem::new());
     }
-    let new_ramfs_sb = SuperBlock::new(dev,Rc::new(RamFsSuperBlockOperations));
+    let new_ramfs_sb = SuperBlock::new(dev);
+    let root_ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, 0).unwrap();
+    let root_dir_entry = create_dentry_from_ramfs_inode(root_ramfs_inode, new_ramfs_sb.clone());
+    new_ramfs_sb.borrow_mut().root = Some(root_dir_entry);
 
     new_ramfs_sb
 }
 
-pub struct RamFsSuperBlockOperations;
+// pub struct RamFsSuperBlockOperations;
 pub struct RamFsInodeOperations;
 pub struct RamFsFileOperations;
 
-impl SuperBlockOperations for RamFsSuperBlockOperations {
+/*impl SuperBlockOperations for RamFsSuperBlockOperations {
     fn read_inode(&self, ino: usize, dev: usize) -> Option<Rc<RefCell<Inode>>> {
         todo!()
     }
@@ -42,11 +45,12 @@ impl SuperBlockOperations for RamFsSuperBlockOperations {
     fn sync(&self) {
         todo!()
     }
-}
+}*/
 
 impl InodeOperations for RamFsInodeOperations {
     fn lookup(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>> {
-        let dev = inode.borrow().super_block.borrow().dev;
+        let super_block = inode.borrow().super_block.clone();
+        let dev = super_block.borrow().dev;
         let ino = inode.borrow().ino;
         let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
@@ -57,11 +61,12 @@ impl InodeOperations for RamFsInodeOperations {
         }
         let target_ramfs_inode = result.unwrap();
 
-        Some(create_dentry_from_ramfs_inode(target_ramfs_inode, inode))
+        Some(create_dentry_from_ramfs_inode(target_ramfs_inode, super_block))
     }
 
     fn create(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>> {
-        let dev = inode.borrow().super_block.borrow().dev;
+        let super_block = inode.borrow().super_block.clone();
+        let dev = super_block.borrow().dev;
         let ino = inode.borrow().ino;
         let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
@@ -73,11 +78,12 @@ impl InodeOperations for RamFsInodeOperations {
         new_ramfs_inode.borrow_mut().mark_as_file();
         new_ramfs_inode.borrow_mut().set_name(name);
 
-        Some(create_dentry_from_ramfs_inode(new_ramfs_inode, inode))
+        Some(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))
     }
 
     fn mkdir(&self, name: &str, inode: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>> {
-        let dev = inode.borrow().super_block.borrow().dev;
+        let super_block = inode.borrow().super_block.clone();
+        let dev = super_block.borrow().dev;
         let ino = inode.borrow().ino;
         let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
@@ -89,7 +95,7 @@ impl InodeOperations for RamFsInodeOperations {
         new_ramfs_inode.borrow_mut().mark_as_dir();
         new_ramfs_inode.borrow_mut().set_name(name);
 
-        Some(create_dentry_from_ramfs_inode(new_ramfs_inode, inode))
+        Some(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))
     }
 }
 
@@ -127,7 +133,8 @@ impl FileOperations for RamFsFileOperations {
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<Dentry>>> {
         let mut file_mut_ref = file.borrow_mut();
 
-        let dev = file_mut_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
+        let super_block = file_mut_ref.dentry.borrow().inode.borrow().super_block.clone();
+        let dev = super_block.borrow().dev;
         let ino = file_mut_ref.dentry.borrow().inode.borrow().ino;
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
@@ -138,16 +145,15 @@ impl FileOperations for RamFsFileOperations {
         let mut ans = Vec::new();
         let inode = file_mut_ref.dentry.borrow().inode.clone();
         for sub_ramfs_inode in sub_ramfs_inodes {
-            ans.push(create_dentry_from_ramfs_inode(sub_ramfs_inode, inode.clone()));
+            ans.push(create_dentry_from_ramfs_inode(sub_ramfs_inode,super_block.clone()));
         }
 
         ans
     }
 }
 
-fn create_dentry_from_ramfs_inode(new_ramfs_inode: Rc<RefCell<RamFsInode>>, inode: Rc<RefCell<Inode>>) -> Rc<RefCell<Dentry>> {
+fn create_dentry_from_ramfs_inode(new_ramfs_inode: Rc<RefCell<RamFsInode>>, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Dentry>> {
     let name = new_ramfs_inode.borrow().name.clone();
-    let super_block = inode.borrow().super_block.clone();
     let target_inode = new_ramfs_inode.borrow().get_vfs_inode(super_block);
     let target_dentry = Dentry::new(name.as_str(), target_inode);
 

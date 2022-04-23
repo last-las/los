@@ -21,26 +21,37 @@ pub static mut RAM_FILE_SYSTEMS: Vec<RamFileSystem> = Vec::new();
 
 pub struct RamFileSystem {
     ino_allocator: InoAllocator,
-    inode_searcher: VecDeque<Rc<RefCell<RamFsInode>>>,
+    inode_queue: VecDeque<Rc<RefCell<RamFsInode>>>,
 }
 
 impl RamFileSystem {
     pub fn new() -> Self {
+        // create root node, which is a directory and it's name is "/".
+        let mut ino_allocator = InoAllocator::new();
+        let ino = ino_allocator.alloc();
+        assert_eq!(ino, 0);
+        let mut root_ramfs_inode = RamFsInode::empty(ino);
+        root_ramfs_inode.borrow_mut().mark_as_dir();
+        root_ramfs_inode.borrow_mut().set_name("/");
+
+        let mut inode_queue = VecDeque::new();
+        inode_queue.push_back(root_ramfs_inode);
+
         Self {
-            ino_allocator: InoAllocator::new(),
-            inode_searcher: VecDeque::new(),
+            ino_allocator,
+            inode_queue,
         }
     }
 
     pub fn alloc_ramfs_inode(&mut self,) -> Rc<RefCell<RamFsInode>> {
         let ino = self.ino_allocator.alloc();
         let new_ramfs_inode =  RamFsInode::empty(ino);
-        self.inode_searcher.push_back(Rc::clone(&new_ramfs_inode));
+        self.inode_queue.push_back(Rc::clone(&new_ramfs_inode));
         new_ramfs_inode
     }
 
     pub fn search_ramfs_inode(&self, ino: usize) -> Option<Rc<RefCell<RamFsInode>>> {
-        for ramfs_inode in self.inode_searcher.iter() {
+        for ramfs_inode in self.inode_queue.iter() {
             if ramfs_inode.borrow().ino == ino {
                 return Some(Rc::clone(ramfs_inode));
             }
