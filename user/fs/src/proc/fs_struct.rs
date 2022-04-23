@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use core::cell::RefCell;
 use crate::vfs::dentry::{Dentry, VfsMount};
 use crate::vfs::file::File;
-use share::syscall::error::{SysError, ENFILE};
+use share::syscall::error::{SysError, ENFILE, EBADF};
 
 const FD_LIMIT: usize = 0xFF;
 
@@ -40,5 +40,26 @@ impl FsStruct {
         } else {
             Err(SysError::new(ENFILE))
         }
+    }
+
+    pub fn get_file(&self, fd: usize) -> Result<Rc<RefCell<File>>, SysError> {
+        if fd >= self.fd_table.len() || self.fd_table[fd].is_none() {
+            Err(SysError::new(EBADF))
+        } else {
+            Ok(self.fd_table[fd].clone().unwrap())
+        }
+    }
+
+    pub fn add_file(&mut self, fd: usize, file: Rc<RefCell<File>>) -> Result<(), SysError> {
+        if fd >= FD_LIMIT {
+            return Err(SysError::new(ENFILE));
+        }
+        for _ in self.fd_table.len()..fd + 1 {
+            self.fd_table.push(None);
+        }
+        assert!(self.fd_table[fd].is_none());
+        self.fd_table[fd] = Some(file);
+
+        Ok(())
     }
 }

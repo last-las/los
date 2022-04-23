@@ -6,6 +6,7 @@ use share::syscall::error::{SysError, ENOENT, EBADF};
 use crate::vfs::file::File;
 use alloc::sync::Arc;
 use user_lib::syscall::{virt_copy, getpid};
+use share::file::OpenFlag;
 
 pub struct NameIdata {
     dentry: Rc<RefCell<Dentry>>,
@@ -21,20 +22,27 @@ impl NameIdata {
     }
 }
 
-pub fn do_getcwd() {
-    unimplemented!()
+pub fn do_getcwd(buf: usize, size: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let path = cur_fs.borrow().pwd.borrow().name.as_str();
+    let slice = path.as_bytes();
+    virt_copy(getpid(), slice.as_ptr() as usize, proc_nr, buf, size).unwrap();
+
+    Ok(0)
 }
 
-pub fn do_pipe2() {
-    unimplemented!();
+pub fn do_dup(old_fd: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let file = cur_fs.borrow().get_file(old_fd)?;
+    let new_fd = cur_fs.borrow_mut().alloc_fd()?;
+    cur_fs.borrow_mut().add_file(new_fd, file)?;
+
+    Ok(new_fd)
 }
 
-pub fn do_dup() {
-    unimplemented!()
-}
+pub fn do_dup3(old_fd: usize, new_fd: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let file = cur_fs.borrow().get_file(old_fd)?;
+    cur_fs.borrow_mut().add_file(new_fd, file)?;
 
-pub fn do_dup3() {
-    unimplemented!()
+    Ok(new_fd)
 }
 
 pub fn do_chdir(path: &str) {
@@ -55,21 +63,13 @@ pub fn do_open(path: &str, flag: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result
     Ok(0)
 }
 
-pub fn do_close() {
-    unimplemented!()
+pub fn do_close(fd: usize, cur_fs: Rc<RefCell<FsStruct>>) ->Result<usize, SysError> {
+    cur_fs.borrow_mut().fd_table[fd].take().ok_or(SysError::new(EBADF))?;
+    Ok(0)
 }
 
 pub fn do_read(fs: usize, cur_fs: Rc<RefCell<FsStruct>>, buf: usize, count: usize, proc_nr: usize) -> Result<usize, SysError> {
-    let cur_fs_ref = cur_fs.borrow();
-    if fs >= cur_fs_ref.fd_table.len() {
-        return Err(SysError::new(EBADF));
-    }
-    let result = cur_fs_ref.fd_table[fs].as_ref();
-    if result.is_none() {
-        return Err(SysError::new(EBADF));
-    }
-
-    let file = result.unwrap().clone();
+    let file = cur_fs.borrow().get_file(fs)?;
     let content = file.borrow().fop.read(file.clone(), count);
     let length = content.len();
     virt_copy(getpid(), (*content).as_ptr() as usize, proc_nr, buf, length).unwrap();
