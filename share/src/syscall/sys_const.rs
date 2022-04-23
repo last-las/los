@@ -1,7 +1,18 @@
+// filesystem syscall.
+pub const SYSCALL_GETCWD: usize = 17;
+pub const SYSCALL_DUP: usize = 23;
+pub const SYSCALL_DUP3: usize = 24;
+pub const SYSCALL_MKDIRAT: usize = 34;
+pub const SYSCALL_UNMOUNT: usize = 39;
+pub const SYSCALL_MOUNT: usize = 40;
+pub const SYSCALL_CHDIR: usize = 49;
+pub const SYSCALL_OPEN: usize = 56;
+pub const SYSCALL_CLOSE: usize = 57;
 pub const SYSCALL_READ: usize = 63;
 pub const _SYSCALL_READ: usize = KCALL_MASK | SYSCALL_READ;
 pub const SYSCALL_WRITE: usize = 64;
 pub const _SYSCALL_WRITE: usize = KCALL_MASK | SYSCALL_WRITE;
+
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;
 pub const SYSCALL_GET_PRIORITY: usize = 140;

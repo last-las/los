@@ -9,6 +9,9 @@ pub const WRITE: usize = 4;
 pub const IOCTL: usize = 5;
 pub const CLOSE: usize = 6;
 pub const REPLY: usize = 7;
+pub const FORK: usize = 8;  // process to filesystem
+pub const EXIT: usize = 9; // process to filesystem
+pub const FSYSCALL: usize = 10; // process to filesystem, when process inovke filesystem syscall like 'open'
 
 /* Args position constant */
 pub const MSG_ARGS_0: usize = 0;
