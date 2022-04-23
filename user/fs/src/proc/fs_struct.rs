@@ -17,6 +17,16 @@ pub struct FsStruct {
 }
 
 impl FsStruct {
+    pub fn new(pwd: Rc<RefCell<Dentry>>, pwd_mnt: Rc<VfsMount>, root: Rc<RefCell<Dentry>>, root_mnt: Rc<VfsMount>) -> Rc<RefCell<FsStruct>> {
+        Rc::new(RefCell::new(FsStruct {
+            pwd,
+            pwd_mnt,
+            root,
+            root_mnt,
+            fd_table: Vec::new(),
+        }))
+    }
+
     pub fn alloc_fd(&mut self) -> Result<usize, SysError>{
         let result = self.fd_table.iter().enumerate().find(|(_, opt)| {
             opt.is_none()

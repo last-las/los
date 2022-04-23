@@ -1,7 +1,7 @@
 use crate::vfs::inode::{InodeOperations, Inode};
 use alloc::rc::Rc;
 use core::cell::RefCell;
-use crate::vfs::dentry::Dentry;
+use crate::vfs::dentry::{Dentry, VfsMount};
 use crate::vfs::super_block::SuperBlock;
 use super::RAM_FILE_SYSTEMS;
 use crate::fs::ramfs::{RamFileSystem, RamFsInode, FileType};
@@ -17,9 +17,13 @@ pub fn alloc_ramfs_super_block() -> Rc<RefCell<SuperBlock>> {
         dev = RAM_FILE_SYSTEMS.len();
         RAM_FILE_SYSTEMS.push(RamFileSystem::new());
     }
+    // find out root ramfs inode and init related dir entry.
     let new_ramfs_sb = SuperBlock::new(dev);
     let root_ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, 0).unwrap();
     let root_dir_entry = create_dentry_from_ramfs_inode(root_ramfs_inode, new_ramfs_sb.clone());
+    let mnt = VfsMount::new(root_dir_entry.clone(), new_ramfs_sb.clone());
+    root_dir_entry.borrow_mut().mnt = Some(mnt);
+
     new_ramfs_sb.borrow_mut().root = Some(root_dir_entry);
 
     new_ramfs_sb

@@ -1,4 +1,3 @@
-use crate::proc::get_fs_struct_by_pid;
 use alloc::rc::Rc;
 use crate::proc::fs_struct::FsStruct;
 use core::cell::RefCell;
@@ -79,6 +78,10 @@ pub fn do_read(fs: usize, cur_fs: Rc<RefCell<FsStruct>>, buf: usize, count: usiz
 }
 
 pub fn do_write() {
+    unimplemented!()
+}
+
+pub fn do_mkdir_at(path: &str, mode: usize) -> Result<usize, SysError> {
     unimplemented!()
 }
 

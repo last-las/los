@@ -1,2 +1,2 @@
-mod ramfs;
+pub mod ramfs;
 

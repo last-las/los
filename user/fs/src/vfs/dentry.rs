@@ -46,3 +46,12 @@ impl Dentry {
         }
     }
 }
+
+impl VfsMount {
+    pub fn new(mountpoint: Rc<RefCell<Dentry>>, mnt_sb: Rc<RefCell<SuperBlock>>) -> Rc<Self> {
+        Rc::new( Self {
+            mountpoint,
+            mnt_sb,
+        })
+    }
+}
