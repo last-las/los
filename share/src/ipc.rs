@@ -21,7 +21,8 @@ pub const MSG_ARGS_3: usize = 3;
 pub const MSG_ARGS_4: usize = 4;
 pub const MSG_ARGS_5: usize = 5;
 
-/* read write message FOR block and character device drivers */
+/* device drivers */
+/* read write message */
 pub const DEVICE: usize = MSG_ARGS_0;
 pub const PROC_NR: usize = MSG_ARGS_1;
 pub const BUFFER: usize = MSG_ARGS_2;
@@ -36,12 +37,15 @@ pub const REPLY_STATUS: usize = MSG_ARGS_1;
 pub const STATUS_OK: usize = 0;
 
 /* filesystem server */
+/* fs syscall message */
 pub const SYSCALL_TYPE: usize = MSG_ARGS_0;
 pub const FS_SYSCALL_ARG0: usize = MSG_ARGS_1;
 pub const FS_SYSCALL_ARG1: usize = MSG_ARGS_2;
 pub const FS_SYSCALL_ARG2: usize = MSG_ARGS_3;
 pub const FS_SYSCALL_ARG3: usize = MSG_ARGS_4;
 pub const FS_SYSCALL_ARG4: usize = MSG_ARGS_5;
+/* fork message */
+pub const FORK_PARENT: usize = MSG_ARGS_0;
 
 #[repr(C)]
 #[derive(Copy, Clone)]

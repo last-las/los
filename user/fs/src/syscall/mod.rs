@@ -88,7 +88,7 @@ pub fn do_close(fd: usize, cur_fs: Rc<RefCell<FsStruct>>) ->Result<usize, SysErr
     Ok(0)
 }
 
-pub fn do_read(fd: usize, cur_fs: Rc<RefCell<FsStruct>>, buf: usize, count: usize, proc_nr: usize) -> Result<usize, SysError> {
+pub fn do_read(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let file = cur_fs.borrow().get_file(fd)?;
     let content = file.borrow().fop.read(file.clone(), count);
     let length = content.len();

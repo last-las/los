@@ -7,6 +7,7 @@ use share::syscall::error::{SysError, ENFILE, EBADF};
 
 const FD_LIMIT: usize = 0xFF;
 
+#[derive(Clone)]
 pub struct FsStruct {
     pub pwd: Rc<RefCell<Dentry>>,
     pub pwd_mnt: Rc<VfsMount>,
