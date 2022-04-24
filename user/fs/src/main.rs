@@ -38,7 +38,6 @@ fn main() {
     let mnt = root.borrow().mnt.clone().unwrap();
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());
     init_fs_struct_of_proc(fs_struct, cur_pid);
-    println!("Hello, world!");
 
     let mut message = Msg::empty();
     loop {
