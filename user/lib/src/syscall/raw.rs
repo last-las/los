@@ -101,6 +101,30 @@ pub fn sys_receive(dst_pid: isize, msg: &mut Msg) -> isize {
     syscall2(KCALL_RECEIVE, dst_pid as usize, msg_ptr)
 }
 
+pub fn sys_getcwd(buf: &mut [u8]) -> isize {
+    syscall2(SYSCALL_GETCWD, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn sys_dup(old_fd: usize) -> isize {
+    syscall1(SYSCALL_DUP, old_fd)
+}
+
+pub fn sys_dup3(old_fd: usize, new_fd: usize) -> isize {
+    syscall2(SYSCALL_DUP3, old_fd, new_fd)
+}
+
+pub fn sys_chdir(path_ptr: usize) -> isize {
+    syscall1(SYSCALL_CHDIR, path_ptr)
+}
+
+pub fn sys_open(path_ptr: usize, flags: u32, mode: u32) -> isize {
+    syscall3(SYSCALL_OPEN, path_ptr, flags as usize, mode as usize)
+}
+
+pub fn sys_close(fd: usize) -> isize {
+    syscall1(SYSCALL_CLOSE, fd)
+}
+
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
     syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }
@@ -109,12 +133,24 @@ pub fn _sys_read(fd: usize, buf: &mut [u8]) -> isize {
     syscall3(_SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }
 
+pub fn __sys_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(__SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
 pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }
 
 pub fn _sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(_SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn __sys_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(__SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn sys_mkdir_at(dir_fd: usize, path_ptr: usize, mode: u32) -> isize {
+    syscall3(SYSCALL_MKDIRAT, dir_fd, path_ptr, mode as usize)
 }
 
 pub fn sys_exit(exit_code: usize) -> isize{

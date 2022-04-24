@@ -11,8 +11,10 @@ pub const SYSCALL_CLOSE: usize = 57;
 pub const SYSCALL_GETDENTS: usize = 61;
 pub const SYSCALL_READ: usize = 63;
 pub const _SYSCALL_READ: usize = KCALL_MASK | SYSCALL_READ;
+pub const __SYSCALL_READ: usize = SYSCALL_READ + 0x2000;
 pub const SYSCALL_WRITE: usize = 64;
 pub const _SYSCALL_WRITE: usize = KCALL_MASK | SYSCALL_WRITE;
+pub const __SYSCALL_WRITE: usize = SYSCALL_WRITE + 0x2000;
 
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;

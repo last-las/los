@@ -6,7 +6,8 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
 use share::ipc::Msg;
-use share::file::MAX_PATH_LENGTH;
+use share::file::{MAX_PATH_LENGTH, OpenFlag};
+use share::ffi::CString;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -14,6 +15,37 @@ fn isize2result(ret: isize) -> Result<usize, SysError> {
     } else {
         Result::Ok(ret as usize)
     }
+}
+
+pub fn getcwd() -> Result<String, SysError> {
+    let mut buf: [u8; MAX_PATH_LENGTH] = [0; MAX_PATH_LENGTH];
+    isize2result(sys_getcwd(&mut buf))?;
+    let str = core::str::from_utf8(&buf).unwrap();
+
+    Ok(String::from(str))
+}
+
+pub fn dup(old_fd : usize) -> Result<usize, SysError> {
+    isize2result(sys_dup(old_fd))
+}
+
+pub fn dup3(old_fd: usize, new_fd: usize) -> Result<usize, SysError> {
+    isize2result(sys_dup3(old_fd, new_fd))
+}
+
+pub fn chdir(path: &str) -> Result<usize, SysError> {
+    let cstring = CString::from(path);
+    isize2result(sys_chdir(cstring.as_ptr() as usize))
+}
+
+pub fn open(path: &str, flags: OpenFlag, mode: u32) -> Result<usize, SysError> {
+    let cstring = CString::from(path);
+
+    isize2result(sys_open(cstring.as_ptr() as usize, flags.bits(), mode))
+}
+
+pub fn close(fd: usize) -> Result<usize, SysError> {
+    isize2result(sys_close(fd))
 }
 
 pub fn exit(exit_code: usize) -> isize {
@@ -32,12 +64,25 @@ pub fn _read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
     isize2result(_sys_read(fd, buf))
 }
 
+pub fn __read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(__sys_read(fd, buf))
+}
+
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
 
 pub fn _write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
     isize2result(_sys_write(fd, buf))
+}
+
+pub fn __write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+    isize2result(__sys_write(fd, buf))
+}
+
+pub fn mkdir_at(dir_fd: usize, path: &str, mode: u32) -> Result<usize, SysError> {
+    let cstring = CString::from(path);
+    isize2result(sys_mkdir_at(dir_fd, cstring.as_ptr() as usize, mode))
 }
 
 pub fn sleep(seconds: usize) {

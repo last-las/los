@@ -32,6 +32,13 @@ impl CString {
     }
 }
 
+impl From<&str> for CString {
+    fn from(s: &str) -> Self {
+        let string = String::from(s);
+        Self::new(string)
+    }
+}
+
 impl Debug for CString {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("{}", self.inner))
