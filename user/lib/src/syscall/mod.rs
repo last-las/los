@@ -6,6 +6,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
 use share::ipc::Msg;
+use share::file::MAX_PATH_LENGTH;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -150,4 +151,11 @@ pub fn continuous_alloc(size: usize) -> Result<usize, SysError> {
 
 pub fn virt_to_phys(virt_addr: usize) -> Result<usize, SysError> {
     isize2result(k_virt_to_phys(virt_addr))
+}
+
+pub fn copy_path_from(proc: usize, path_ptr: usize) -> Result<String, SysError> {
+    let buffer: [u8; MAX_PATH_LENGTH] = [0; MAX_PATH_LENGTH];
+    let length = isize2result(k_copy_c_path(proc, path_ptr, buffer.as_ptr() as usize, MAX_PATH_LENGTH))?;
+    let str = core::str::from_utf8(&buffer[..length]).unwrap();
+    Ok(String::from(str))
 }

@@ -23,6 +23,7 @@ impl Debug for SysError {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let info = match self.errno {
             ENOENT => "ENOENT: No such file or directory",
+            ESRCH => "ESRCH: No such process",
             EIO => "EIO: input/output error",
             ENOEXEC => "ENOEXEC: Exec format error",
             EBADF => "EBADF: Bad file number",
@@ -30,9 +31,11 @@ impl Debug for SysError {
             EAGAIN => "EAGAIN: Try again",
             ENOMEM => "ENOMEM: Out of memory",
             EACCES => "EACCES: Permission denied",
+            EFAULT => "EFAULT: Bad address",
             ENOTDIR => "ENOTDIR: Not a directory",
             EINVAL => "EINVAL: Invalid argument",
             ENFILE => "ENFILE: File table overflow",
+            ENAMETOOLONG => "ENAMETOOLONG: File name too long",
 
             EUNKOWN => "Unknown error nnn.",
             EDLOCK => "EDLOCK: Ipc dead lock",
@@ -45,6 +48,7 @@ impl Debug for SysError {
 }
 
 pub const ENOENT: i32 = 2;
+pub const ESRCH: i32 = 3;
 pub const EIO: i32 = 5;
 pub const ENOEXEC: i32 = 8;
 pub const EBADF: i32 = 9;
@@ -52,9 +56,11 @@ pub const ECHILD: i32 = 10;
 pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;
+pub const EFAULT: i32 = 14;
 pub const ENOTDIR: i32 = 20;
 pub const EINVAL: i32 = 22;
 pub const ENFILE: i32 = 23;
+pub const ENAMETOOLONG: i32 = 36;
 
 // Self designed error numbers..
 pub const EUNKOWN: i32 = 400;

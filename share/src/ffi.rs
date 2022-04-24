@@ -63,6 +63,12 @@ impl<'a> CStr<'a> {
             inner,
         }
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        let len = self.inner.len();
+        &self.inner[0..len-1]
+    }
+
 }
 
 impl<'a> Into<String> for CStr<'a> {

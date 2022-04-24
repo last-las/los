@@ -35,6 +35,14 @@ pub const REPLY_PROC_NR: usize = MSG_ARGS_0;
 pub const REPLY_STATUS: usize = MSG_ARGS_1;
 pub const STATUS_OK: usize = 0;
 
+/* filesystem server */
+pub const SYSCALL_TYPE: usize = MSG_ARGS_0;
+pub const FS_SYSCALL_ARG0: usize = MSG_ARGS_1;
+pub const FS_SYSCALL_ARG1: usize = MSG_ARGS_2;
+pub const FS_SYSCALL_ARG2: usize = MSG_ARGS_3;
+pub const FS_SYSCALL_ARG3: usize = MSG_ARGS_4;
+pub const FS_SYSCALL_ARG4: usize = MSG_ARGS_5;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Msg {

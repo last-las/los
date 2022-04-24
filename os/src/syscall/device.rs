@@ -1,9 +1,11 @@
-use share::syscall::error::{SysError, EINVAL};
+use share::syscall::error::{SysError, EINVAL, ESRCH, EFAULT, ENAMETOOLONG};
 use crate::mm::address::{PhysicalAddress, VirtualAddress};
 use crate::task::get_task_by_pid;
 use crate::processor::clone_cur_task_in_this_hart;
 use crate::mm::memory_manager::{RegionFlags, RegionType};
 use crate::config::FRAME_SIZE;
+use share::ffi::CStr;
+use share::file::MAX_PATH_LENGTH;
 
 pub fn kcall_read_dev(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
     let dev_pa = PhysicalAddress::new(dev_phys_addr);
@@ -86,9 +88,29 @@ pub fn kcall_virt_to_phys(virt_addr: usize) -> Result<usize, SysError> {
     let inner = task.acquire_inner_lock();
     let va = VirtualAddress::new(virt_addr);
     let pa =
-        inner.mem_manager.page_table.translate_va(va).ok_or(SysError::new(EINVAL))?;
+        inner.mem_manager.page_table.translate_va(va).ok_or(SysError::new(EFAULT))?;
 
     Ok(pa.0)
+}
+
+pub fn kcall_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usize) -> Result<usize, SysError> {
+    let path_proc = get_task_by_pid(proc).ok_or(SysError::new(ESRCH))?;
+    let path_proc_inner = path_proc.acquire_inner_lock();
+    let path_va = VirtualAddress::new(path_ptr);
+    let path_pa =
+        path_proc_inner.mem_manager.page_table.translate_va(path_va).ok_or(SysError::new(EFAULT))?;
+
+    let c_str = CStr::from_ptr(path_pa.as_raw());
+    if c_str.as_bytes().len() > size {
+        return Err(SysError::new(ENAMETOOLONG));
+    }
+
+    let dst_slice = unsafe {
+        core::slice::from_raw_parts_mut(buf_ptr as *mut u8, size)
+    };
+    dst_slice.copy_from_slice(c_str.as_bytes());
+
+    Ok(c_str.as_bytes().len())
 }
 
 
@@ -97,7 +119,7 @@ fn get_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&'sta
     let task_inner = task.acquire_inner_lock();
     let ptr_va = VirtualAddress::new(ptr);
     let ptr_pa = task_inner.mem_manager.page_table.translate_va(ptr_va)
-        .ok_or(SysError::new(EINVAL))?;
+        .ok_or(SysError::new(EFAULT))?;
     unsafe {
         Ok(core::slice::from_raw_parts(ptr_pa.as_raw(), length))
     }
@@ -108,7 +130,7 @@ fn get_mut_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&
     let task_inner = task.acquire_inner_lock();
     let ptr_va = VirtualAddress::new(ptr);
     let ptr_pa = task_inner.mem_manager.page_table.translate_va(ptr_va)
-        .ok_or(SysError::new(EINVAL))?;
+        .ok_or(SysError::new(EFAULT))?;
     unsafe {
         Ok(core::slice::from_raw_parts_mut(ptr_pa.as_raw_mut(), length))
     }

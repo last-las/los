@@ -188,3 +188,7 @@ pub fn k_continuous_alloc(size: usize) -> isize {
 pub fn k_virt_to_phys(virt_addr: usize) -> isize {
     syscall1(KCALL_VIRT_TO_PHYS, virt_addr)
 }
+
+pub fn k_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usize) -> isize {
+    syscall4(KCALL_COPY_C_PATH, proc, path_ptr, buf_ptr, size)
+}

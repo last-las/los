@@ -38,3 +38,5 @@ bitflags! {
         const DT_LNK = 0xa;
     }
 }
+
+pub const MAX_PATH_LENGTH: usize = 64;
