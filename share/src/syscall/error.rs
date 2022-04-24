@@ -30,6 +30,7 @@ impl Debug for SysError {
             EAGAIN => "EAGAIN: Try again",
             ENOMEM => "ENOMEM: Out of memory",
             EACCES => "EACCES: Permission denied",
+            ENOTDIR => "ENOTDIR: Not a directory",
             EINVAL => "EINVAL: Invalid argument",
             ENFILE => "ENFILE: File table overflow",
 
@@ -51,6 +52,7 @@ pub const ECHILD: i32 = 10;
 pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;
+pub const ENOTDIR: i32 = 20;
 pub const EINVAL: i32 = 22;
 pub const ENFILE: i32 = 23;
 

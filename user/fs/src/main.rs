@@ -13,6 +13,8 @@ extern crate user_lib;
 extern crate alloc;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate bitflags;
 
 use crate::fs::ramfs::register_ramfs;
 use crate::vfs::filesystem::alloc_super_block;

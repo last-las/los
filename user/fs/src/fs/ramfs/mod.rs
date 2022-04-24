@@ -11,6 +11,7 @@ use crate::vfs::inode::Inode;
 use crate::vfs::super_block::SuperBlock;
 use crate::fs::ramfs::vfs_interface::{RamFsInodeOperations, RamFsFileOperations};
 use alloc::boxed::Box;
+use share::file::FileTypeFlag;
 
 pub fn register_ramfs() {
     let mut filesystem = FileSystem::new("ramfs", vfs_interface::alloc_ramfs_super_block);
@@ -161,8 +162,15 @@ impl RamFsInode {
     }
 
     pub fn get_vfs_inode(&self, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Inode>> {
+        let file_type = match self.file_type {
+            FileType::DIRECTORY => FileTypeFlag::DT_DIR,
+            FileType::NORMAL => FileTypeFlag::DT_REG,
+            FileType::UNKNOWN => FileTypeFlag::DT_UNKNOWN,
+        };
+
         Inode::new(
             self.ino,
+            file_type,
             super_block,
             Rc::new(RamFsInodeOperations),
             Rc::new(RamFsFileOperations),

@@ -3,21 +3,24 @@ use crate::vfs::dentry::Dentry;
 use crate::vfs::file::FileOperations;
 use core::cell::RefCell;
 use crate::vfs::super_block::SuperBlock;
+use share::file::FileTypeFlag;
 
 pub struct Inode {
     pub ino: usize,
 
+    pub file_type: FileTypeFlag,
     pub super_block: Rc<RefCell<SuperBlock>>,
     pub iop: Rc<dyn InodeOperations>,
     pub fop: Rc<dyn FileOperations>,
 }
 
 impl Inode {
-    pub fn new(ino: usize, super_block: Rc<RefCell<SuperBlock>>,
+    pub fn new(ino: usize, file_type: FileTypeFlag, super_block: Rc<RefCell<SuperBlock>>,
                iop: Rc<dyn InodeOperations>, fop: Rc<dyn FileOperations>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Inode {
                 ino,
+                file_type,
                 super_block,
                 iop,
                 fop,

@@ -105,41 +105,35 @@ impl InodeOperations for RamFsInodeOperations {
 
 impl FileOperations for RamFsFileOperations {
     fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8> {
-        let mut file_mut_ref = file.borrow_mut();
+        let mut file_ref = file.borrow();
 
-        let dev = file_mut_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
-        let ino = file_mut_ref.dentry.borrow().inode.borrow().ino;
+        let dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
+        let ino = file_ref.dentry.borrow().inode.borrow().ino;
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
         // read content
-        let pos =  file_mut_ref.pos;
-        let content = ram_fs_inode.borrow().read(pos, size);
-
-        // increase position
-        file_mut_ref.pos += content.len();
+        let content = ram_fs_inode.borrow().read(file_ref.pos, size);
 
         content
     }
 
-    fn write(&self, file: Rc<RefCell<File>>, content: Vec<u8>) {
-        let mut file_mut_ref = file.borrow_mut();
+    fn write(&self, file: Rc<RefCell<File>>, content: &[u8]) {
+        let mut file_ref = file.borrow();
 
-        let dev = file_mut_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
-        let ino = file_mut_ref.dentry.borrow().inode.borrow().ino;
+        let dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
+        let ino = file_ref.dentry.borrow().inode.borrow().ino;
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
-        // increase position and write the content.
-        let pos = file_mut_ref.pos;
-        file_mut_ref.pos += content.len();
-        ram_fs_inode.borrow_mut().write(pos, content);
+        let content = Vec::from(content);
+        ram_fs_inode.borrow_mut().write(file_ref.pos, content);
     }
 
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<Dentry>>> {
-        let mut file_mut_ref = file.borrow_mut();
+        let mut file_ref = file.borrow();
 
-        let super_block = file_mut_ref.dentry.borrow().inode.borrow().super_block.clone();
+        let super_block = file_ref.dentry.borrow().inode.borrow().super_block.clone();
         let dev = super_block.borrow().dev;
-        let ino = file_mut_ref.dentry.borrow().inode.borrow().ino;
+        let ino = file_ref.dentry.borrow().inode.borrow().ino;
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
         // read the sub directories
@@ -147,7 +141,7 @@ impl FileOperations for RamFsFileOperations {
 
         // convert `RamFsInode` to `Dentry`
         let mut ans = Vec::new();
-        let inode = file_mut_ref.dentry.borrow().inode.clone();
+        let inode = file_ref.dentry.borrow().inode.clone();
         for sub_ramfs_inode in sub_ramfs_inodes {
             ans.push(create_dentry_from_ramfs_inode(sub_ramfs_inode,super_block.clone()));
         }
