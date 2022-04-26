@@ -27,6 +27,10 @@ impl Inode {
             }
         ))
     }
+
+    pub fn is_dir(&self) -> bool {
+        self.file_type.contains(FileTypeFlag::DT_DIR)
+    }
 }
 
 pub trait InodeOperations {

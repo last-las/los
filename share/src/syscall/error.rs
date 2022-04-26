@@ -26,15 +26,17 @@ impl Debug for SysError {
             ESRCH => "ESRCH: No such process",
             EIO => "EIO: input/output error",
             ENOEXEC => "ENOEXEC: Exec format error",
-            EBADF => "EBADF: Bad file number",
+            EBADF => "EBADF: fd is not a valid file descriptor or is not open for reading/writing",
             ECHILD => "ECHILD: No child processes",
             EAGAIN => "EAGAIN: Try again",
             ENOMEM => "ENOMEM: Out of memory",
             EACCES => "EACCES: Permission denied",
             EFAULT => "EFAULT: Bad address",
+            EEXIST => "EEXIST: File exists",
             ENOTDIR => "ENOTDIR: Not a directory",
             EINVAL => "EINVAL: Invalid argument",
             ENFILE => "ENFILE: File table overflow",
+            ERANGE => "ERANGE: The argument is less than the length of the absolute pathname",
             ENAMETOOLONG => "ENAMETOOLONG: File name too long",
 
             EUNKOWN => "Unknown error nnn.",
@@ -57,9 +59,11 @@ pub const EAGAIN: i32 = 11;
 pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;
 pub const EFAULT: i32 = 14;
+pub const EEXIST: i32 = 17;
 pub const ENOTDIR: i32 = 20;
 pub const EINVAL: i32 = 22;
 pub const ENFILE: i32 = 23;
+pub const ERANGE: i32 = 34;
 pub const ENAMETOOLONG: i32 = 36;
 
 // Self designed error numbers..

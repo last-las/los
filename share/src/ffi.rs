@@ -76,6 +76,9 @@ impl<'a> CStr<'a> {
         &self.inner[0..len-1]
     }
 
+    pub fn as_str(&self) -> &str {
+        core::str::from_utf8(self.as_bytes()).unwrap()
+    }
 }
 
 impl<'a> Into<String> for CStr<'a> {

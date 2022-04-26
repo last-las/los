@@ -5,7 +5,7 @@ use crate::task::stop_current_and_run_next_task;
 use crate::syscall::ipc::{sys_send, sys_receive};
 use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4};
 use crate::processor::clone_cur_task_in_this_hart;
-use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT};
+use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS};
 
 const FS_PID: usize = 5;
 
@@ -31,6 +31,10 @@ pub fn do_open(path_ptr: usize, flags: usize, mode: usize) -> Result<usize, SysE
 
 pub fn do_close(fd: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_CLOSE, [fd, 0, 0, 0, 0])
+}
+
+pub fn do_get_dents(fd: usize, buf: usize, length: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_GETDENTS, [fd, buf, length, 0, 0])
 }
 
 pub fn do_write(fd: usize, buf_ptr: *const u8, length: usize) -> Result<usize, SysError>{
@@ -108,7 +112,7 @@ pub fn _do_read(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysEr
 
 ///TODO-FUTURE: current read behaviour is not the same as MINIX..
 pub fn __do_read(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysError> {
-    send_receive_fs(__SYSCALL_WRITE, [fd, buf_ptr, length, 0, 0])
+    send_receive_fs(__SYSCALL_READ, [fd, buf_ptr, length, 0, 0])
 }
 
 pub fn do_mkdir_at(dir_fd: usize, path_ptr: usize, mode: usize) -> Result<usize, SysError> {

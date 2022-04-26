@@ -2,20 +2,22 @@ use alloc::rc::Rc;
 use crate::proc::fs_struct::FsStruct;
 use core::cell::RefCell;
 use crate::vfs::dentry::{Dentry, VfsMount};
-use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR};
+use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ERANGE};
 use crate::vfs::file::File;
 use alloc::sync::Arc;
 use user_lib::syscall::{virt_copy, getpid};
-use share::file::{OpenFlag, FileTypeFlag};
+use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ};
 use alloc::vec::Vec;
 use alloc::string::String;
+use share::ffi::CString;
+use alloc::collections::VecDeque;
 
 /// The return value of `path_lookup` function.
 pub struct NameIdata {
     /// The target file Dentry.
     dentry: Rc<RefCell<Dentry>>,
     /// The target file's mount point.
-    mnt: Rc<VfsMount>,
+    mnt: Rc<RefCell<VfsMount>>,
     ///  The remaining path name.
     ///
     /// When `LookupFlags::PARENT` is set, `path_lookup` will only find the target file's parent directory.
@@ -26,7 +28,7 @@ pub struct NameIdata {
 }
 
 impl NameIdata {
-    pub fn new(dentry: Rc<RefCell<Dentry>>, mnt: Rc<VfsMount>, left_path_name: String) -> NameIdata {
+    pub fn new(dentry: Rc<RefCell<Dentry>>, mnt: Rc<RefCell<VfsMount>>, left_path_name: String) -> NameIdata {
         NameIdata {
             dentry,
             mnt,
@@ -36,9 +38,33 @@ impl NameIdata {
 }
 
 pub fn do_getcwd(buf: usize, size: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
-    let path = cur_fs.borrow().pwd.borrow().name.clone();
-    let slice = path.as_bytes();
-    virt_copy(getpid(), slice.as_ptr() as usize, proc_nr, buf, size).unwrap();
+    let mut names = VecDeque::new();
+    let mut cur_dentry = cur_fs.borrow().pwd.clone();
+    loop {
+        names.push_front(cur_dentry.borrow().name.clone());
+        if cur_dentry.borrow().parent.is_none() {
+            break;
+        }
+        let parent_dentry = cur_dentry.borrow().parent.as_ref().unwrap().clone();
+        cur_dentry = parent_dentry;
+    }
+
+    let mut path = String::new();
+    println!("getcwd: {}", names.len());
+    for i in 0..names.len() {
+        path.push_str(names[i].as_str());
+        if i == 0 || i == names.len() - 1 {
+            continue;
+        }
+        path.push_str("/");
+    }
+    let mut cstring = CString::new(path);
+    let length = cstring.as_bytes_with_nul().len();
+    if length > size {
+        return Err(SysError::new(ERANGE));
+    }
+
+    virt_copy(getpid(),cstring.as_ptr() as usize, proc_nr, buf, length).unwrap();
 
     Ok(0)
 }
@@ -59,8 +85,7 @@ pub fn do_dup3(old_fd: usize, new_fd: usize, cur_fs: Rc<RefCell<FsStruct>>) -> R
 }
 
 pub fn do_chdir(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
-    let lookup_flag = LookupFlags::DIRECTORY;
-    let nameidata = path_lookup(path,Rc::clone(&cur_fs), lookup_flag)?;
+    let nameidata = path_lookup(path, Rc::clone(&cur_fs), LookupFlags::DIRECTORY, None)?;
     cur_fs.borrow_mut().pwd = nameidata.dentry;
     cur_fs.borrow_mut().pwd_mnt = nameidata.mnt;
 
@@ -70,40 +95,109 @@ pub fn do_chdir(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysE
 pub fn do_open(path: &str, flag: u32, mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let open_flag = OpenFlag::from_bits(flag).unwrap();
     let nameidata =
-        path_lookup(path, Rc::clone(&cur_fs),LookupFlags::PARENT | LookupFlags::DIRECTORY)?;
+        path_lookup(path, Rc::clone(&cur_fs), LookupFlags::PARENT | LookupFlags::DIRECTORY, None)?;
 
-    let target_dentry = get_target_dentry_by_parent(nameidata, open_flag)?;
+    let (target_dentry, target_mnt) = get_target_dentry_and_mnt_by_parent(nameidata, open_flag)?;
     let fop = target_dentry.borrow().inode.borrow().fop.clone();
-    let file = File::new(fop, target_dentry, open_flag);
+    let file = File::new(fop, target_dentry, open_flag, target_mnt);
+    println!("open ino:{}", file.dentry.borrow().inode.borrow().ino);
 
     let mut cur_fs_refmut = cur_fs.borrow_mut();
     let new_fd = cur_fs_refmut.alloc_fd()?;
+    assert!(cur_fs_refmut.fd_table[new_fd].is_none());
     cur_fs_refmut.fd_table[new_fd] = Some(Rc::new(RefCell::new(file)));
 
-    Ok(0)
+    Ok(new_fd)
 }
 
-pub fn do_close(fd: usize, cur_fs: Rc<RefCell<FsStruct>>) ->Result<usize, SysError> {
+pub fn do_close(fd: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    assert!(cur_fs.borrow_mut().fd_table[fd].is_some());
     cur_fs.borrow_mut().fd_table[fd].take().ok_or(SysError::new(EBADF))?;
     Ok(0)
 }
 
+pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let file = cur_fs.borrow().get_file(fd)?;
+    if !file.borrow().is_directory() {
+        return Err(SysError::new(ENOTDIR));
+    }
+
+    let dentry = file.borrow().dentry.clone();
+    if !dentry.borrow().read_dir_flag { // if true,we will search on the real filesystem.
+        // because `do_mkdir_at` may be invoked before `do_get_dents`, so we have to compare contents
+        // on the cache and the real filesystem to make sure it's not duplicated.
+        let filesystem_dentries = file.borrow().fop.readdir(file.clone());
+        let uncached_dentries = find_uncached_dentries(dentry.clone(), filesystem_dentries);
+        dentry.borrow_mut().children.extend(uncached_dentries);
+        dentry.borrow_mut().read_dir_flag = true;
+    }
+
+    // construct dirent array buffer.
+    let mut buffer: [u8; DIRENT_BUFFER_SZ] = [0; DIRENT_BUFFER_SZ];
+    let mut offset = 0;
+    let mut dirent_size = core::mem::size_of::<Dirent>();
+    for child_dentry in dentry.borrow().children.iter() {
+        let child_dentry_ref = child_dentry.borrow();
+        let cstring_name = CString::new(child_dentry_ref.name.clone());
+        let mut reclen = dirent_size + cstring_name.as_bytes_with_nul().len();
+        if buffer.len() - offset < reclen {
+            return Err(SysError::new(EINVAL));
+        }
+
+        let dirent = Dirent {
+            d_ino: child_dentry_ref.inode.borrow().ino as u64,
+            d_offset: 0,
+            d_reclen: reclen as u16,
+            d_type: child_dentry_ref.inode.borrow().file_type,
+            d_name: unsafe {
+                (buf + offset + dirent_size) as *const u8
+            },
+        };
+        unsafe {
+            ((buffer.as_mut_ptr() as usize + offset) as *mut Dirent).write(dirent);
+            let dst_slice: &mut [u8] = &mut buffer[offset + dirent_size..offset + reclen];
+            dst_slice.copy_from_slice(cstring_name.as_bytes_with_nul());
+        }
+
+        offset += reclen;
+    }
+
+    if offset > length {
+        return Err(SysError::new(EINVAL));
+    }
+
+    // Copy the buffer to destination
+    virt_copy(getpid(), buffer.as_ptr() as usize, proc_nr, buf, offset).unwrap();
+
+    Ok(offset)
+}
+
 pub fn do_read(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let file = cur_fs.borrow().get_file(fd)?;
+    if !file.borrow().readable() {
+        return Err(SysError::new(EBADF));
+    }
     let content = file.borrow().fop.read(file.clone(), count);
     let length = content.len();
-    virt_copy(getpid(), (*content).as_ptr() as usize, proc_nr, buf, length).unwrap();
+    if length > 0 {
+        virt_copy(getpid(), content.as_ptr() as usize, proc_nr, buf, length).unwrap();
+    }
     file.borrow_mut().pos += length;
 
     Ok(length)
 }
 
 const BUFFER_SIZE: usize = 512;
+
 pub fn do_write(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let file = cur_fs.borrow().get_file(fd)?;
+    if !file.borrow().writable() {
+        return Err(SysError::new(EBADF));
+    }
+
     let buffer = [0; BUFFER_SIZE];
     for offset in (0..count).step_by(BUFFER_SIZE) {
-        let length = usize::max(BUFFER_SIZE, count - offset);
+        let length = usize::min(BUFFER_SIZE, count - offset);
         virt_copy(proc_nr, buf, getpid(), buffer.as_ptr() as usize, length).unwrap();
         file.borrow().fop.write(file.clone(), &buffer[0..length]);
         file.borrow_mut().pos += length;
@@ -112,12 +206,25 @@ pub fn do_write(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<
     Ok(count)
 }
 
-pub fn do_mkdir_at(path: &str, mode: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
-    let nameidata = path_lookup(path, cur_fs, LookupFlags::PARENT | LookupFlags::DIRECTORY)?;
+pub fn do_mkdir_at(dir_fd: usize, path: &str, mode: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let mut dir_fs = None;
+    if dir_fd != AT_FD_CWD as usize {
+        let file = cur_fs.borrow().get_file(dir_fd)?;
+        if !file.borrow().is_directory() {
+            return Err(SysError::new(ENOTDIR));
+        }
+        dir_fs = Some(file);
+    }
+    let nameidata = path_lookup(path, cur_fs, LookupFlags::PARENT | LookupFlags::DIRECTORY, dir_fs)?;
     let parent = nameidata.dentry;
     let parent_inode = parent.borrow().inode.clone();
-    let dir_entry = parent_inode.borrow().iop.mkdir(path, parent_inode.clone()).unwrap();
-    parent.borrow_mut().children.push(dir_entry);
+    let dir_entry =
+        parent_inode.borrow()
+            .iop.mkdir(nameidata.left_path_name.as_str(), parent_inode.clone())
+            .ok_or(SysError::new(EEXIST))?;
+
+    parent.borrow_mut().children.push(dir_entry.clone());
+    dir_entry.borrow_mut().parent = Some(parent.clone());
 
     Ok(0)
 }
@@ -130,7 +237,10 @@ bitflags! {
     }
 }
 
-fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags) -> Result<NameIdata, SysError> {
+/// Lookup `NameIdata` corresponding to `path` and `flag`.
+///
+/// The `dir_fs` is only available when `do_mkdir_at` invokes this function. In other cases it's always `None`.
+fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags, dir_fs: Option<Rc<RefCell<File>>>) -> Result<NameIdata, SysError> {
     let path = path.as_bytes();
     let mut index = 0;
     let mut dentry;
@@ -140,15 +250,21 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags) ->
         index += 1;
     }
 
-    if index == 0 {
-        dentry = current.borrow().pwd.clone();
-        mnt = current.borrow().pwd_mnt.clone();
-    } else {
+    if index == 0 { // relative pathname
+        if dir_fs.is_some() {
+            let file = dir_fs.unwrap();
+            dentry = file.borrow().dentry.clone();
+            mnt = file.borrow().mnt.clone();
+        } else {
+            dentry = current.borrow().pwd.clone();
+            mnt = current.borrow().pwd_mnt.clone();
+        }
+    } else { // absolute pathname
         dentry = current.borrow().root.clone();
         mnt = current.borrow().root_mnt.clone();
     }
 
-    let mut start= index;
+    let mut start = index;
     while index < path.len() {
         // find next dentry
         while index < path.len() && path[index] != '/' as u8 {
@@ -161,7 +277,9 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags) ->
 
         if path[start] == '.' as u8 { // '..' and '.'
             if start + 1 < path.len() && path[start + 1] == '.' as u8 { // ..
-                unimplemented!()
+                let result = follow_dotdot(dentry, mnt, current.clone());
+                dentry = result.0;
+                mnt = result.1;
             }
         } else { // other file names
             let name = core::str::from_utf8(&path[start..index]).unwrap();
@@ -173,9 +291,9 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags) ->
             }
 
             // check mountpoint
-            if dentry.borrow().mnt.is_some() {
+            while dentry.borrow().mnt.is_some() {
                 mnt = dentry.borrow().mnt.as_ref().unwrap().clone();
-                dentry = mnt.mountpoint.clone();
+                dentry = mnt.mount_point.clone();
             }
         }
 
@@ -198,35 +316,49 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags) ->
     Ok(NameIdata::new(dentry, mnt, last_filename))
 }
 
-fn get_target_dentry_by_parent(nameidata: NameIdata, open_flag: OpenFlag) -> Result<Rc<RefCell<Dentry>>, SysError> {
-    let parent_dentry = nameidata.dentry;
-    let parent_inode = parent_dentry.borrow().inode.clone();
+fn get_target_dentry_and_mnt_by_parent(nameidata: NameIdata, open_flag: OpenFlag)
+    -> Result<(Rc<RefCell<Dentry>>, Rc<RefCell<VfsMount>>), SysError> {
     let last_name = nameidata.left_path_name.as_str();
 
     if last_name.len() == 0 { // The open target path is root directory. Now `parent_dentry` is also root directory, so simply return `parent_dentry`
-        Ok(parent_dentry)
+        Ok((nameidata.dentry.clone(), nameidata.mnt.clone()))
     } else { // The open target path is not root directory,so we will search the target on `parent_dentry`.
+        let parent_dentry = nameidata.dentry;
+        let parent_inode = parent_dentry.borrow().inode.clone();
 
+        let mut child_dentry;
         // Find on the cache.
         let result = parent_dentry.borrow().cached_lookup(last_name);
         if result.is_some() {
-            return Ok(result.unwrap());
-        }
-
-        // Find on the real filesystem, if target doesn't exist and `OpenFlag::CREAT` is set, create on the real filesystem.
-        let result = parent_inode.borrow().iop.lookup(last_name, parent_inode.clone());
-        let mut child_dentry;
-        if result.is_some() {
             child_dentry = result.unwrap();
-        } else if open_flag.contains(OpenFlag::CREAT) {
-            child_dentry = parent_inode.borrow().iop.create(last_name, parent_inode.clone()).unwrap();
-        } else {
-            return Err(SysError::new(ENOENT));
-        }
-        parent_dentry.borrow_mut().children.push(child_dentry.clone());
-        child_dentry.borrow_mut().parent = Some(parent_dentry.clone());
+        } else {  // Find on the real filesystem, if target doesn't exist and `OpenFlag::CREAT` is set, create on the real filesystem.
+            let result = parent_inode.borrow().iop.lookup(last_name, parent_inode.clone());
+            if result.is_some() {
+                child_dentry = result.unwrap();
+            } else if open_flag.contains(OpenFlag::CREAT) {
+                child_dentry = parent_inode.borrow().iop.create(last_name, parent_inode.clone()).ok_or(SysError::new(EEXIST))?;
+            } else {
+                return Err(SysError::new(ENOENT));
+            }
 
-        Ok(child_dentry)
+            // successfully find, set the cache
+            parent_dentry.borrow_mut().children.push(child_dentry.clone());
+            child_dentry.borrow_mut().parent = Some(parent_dentry.clone());
+        }
+
+        // ENOTDIR situation
+        if open_flag.contains(OpenFlag::DIRECTORY) && !child_dentry.borrow().inode.borrow().is_dir() {
+            return Err(SysError::new(ENOTDIR));
+        }
+
+        // child dentry might be a mountpoint
+        let mut child_mnt = nameidata.mnt;
+        while child_dentry.borrow().mnt.is_some() {
+            child_mnt = child_dentry.borrow().mnt.as_ref().unwrap().clone();
+            child_dentry = child_mnt.mount_point.clone();
+        }
+
+        Ok((child_dentry, child_mnt))
     }
 }
 
@@ -244,7 +376,7 @@ fn reach_the_end(path: &[u8], mut index: usize) -> bool {
 
 /// go to the low-level filesystem and lookup.
 fn real_lookup(dentry: Rc<RefCell<Dentry>>, name: &str) -> Option<Rc<RefCell<Dentry>>> {
-    let inode =dentry.borrow().inode.clone();
+    let inode = dentry.borrow().inode.clone();
     let result = inode.borrow().iop.lookup(name, inode.clone());
 
     if result.is_some() {
@@ -255,4 +387,34 @@ fn real_lookup(dentry: Rc<RefCell<Dentry>>, name: &str) -> Option<Rc<RefCell<Den
     } else {
         None
     }
+}
+
+fn find_uncached_dentries(parent: Rc<RefCell<Dentry>>, filesystem_dentries: Vec<Rc<RefCell<Dentry>>>) -> Vec<Rc<RefCell<Dentry>>> {
+    let mut uncached_dentries = Vec::new();
+    for filesystem_dentry in filesystem_dentries {
+        let mut is_the_same_name = false;
+        for cached_dentry in parent.borrow().children.iter() {
+            if cached_dentry.borrow().name == filesystem_dentry.borrow().name {
+                is_the_same_name = true;
+                break;
+            }
+        }
+
+        if !is_the_same_name {
+            uncached_dentries.push(filesystem_dentry);
+        }
+    }
+
+    uncached_dentries
+}
+
+fn follow_dotdot(dentry: Rc<RefCell<Dentry>>, mnt: Rc<RefCell<VfsMount>>, current: Rc<RefCell<FsStruct>>)
+    -> (Rc<RefCell<Dentry>>, Rc<RefCell<VfsMount>>) {
+    loop {
+        if mnt == current.borrow().root_mnt && dentry == mnt.mount_point {
+            // reach root mountpoint, can't follow anymore
+            break;
+        }
+    }
+    unimplemented!()
 }

@@ -101,12 +101,13 @@ pub fn kcall_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usi
         path_proc_inner.mem_manager.page_table.translate_va(path_va).ok_or(SysError::new(EFAULT))?;
 
     let c_str = CStr::from_ptr(path_pa.as_raw());
-    if c_str.as_bytes().len() > size {
+    let path_length = c_str.as_bytes().len();
+    if path_length > size {
         return Err(SysError::new(ENAMETOOLONG));
     }
 
     let dst_slice = unsafe {
-        core::slice::from_raw_parts_mut(buf_ptr as *mut u8, size)
+        core::slice::from_raw_parts_mut(buf_ptr as *mut u8, path_length)
     };
     dst_slice.copy_from_slice(c_str.as_bytes());
 

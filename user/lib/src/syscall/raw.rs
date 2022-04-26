@@ -125,6 +125,10 @@ pub fn sys_close(fd: usize) -> isize {
     syscall1(SYSCALL_CLOSE, fd)
 }
 
+pub fn sys_get_dents(fd: usize, buf: usize, length: usize) -> isize {
+    syscall3(SYSCALL_GETDENTS, fd, buf, length)
+}
+
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
     syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }

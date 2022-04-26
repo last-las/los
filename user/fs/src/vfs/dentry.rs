@@ -4,6 +4,7 @@ use crate::vfs::inode::Inode;
 use core::cell::{RefCell, Ref};
 use alloc::vec::Vec;
 use crate::vfs::super_block::SuperBlock;
+use share::file::Dirent;
 
 pub struct Dentry {
     pub name: String,
@@ -11,11 +12,16 @@ pub struct Dentry {
     pub parent: Option<Rc<RefCell<Dentry>>>,
     pub children: Vec<Rc<RefCell<Dentry>>>,
 
-    pub mnt: Option<Rc<VfsMount>>,
+    pub mnt: Option<Rc<RefCell<VfsMount>>>,
+    /// `read_dir_flag` indicates whether `inode.borrow().iop.readdir()` has been invoked before, if so,
+    /// there is no need to search on the real filesystem once again, because all the child directories
+    /// can be found in `children` field.
+    pub read_dir_flag: bool,
 }
 
 pub struct VfsMount {
-    pub mountpoint: Rc<RefCell<Dentry>>,
+    pub mount_point: Rc<RefCell<Dentry>>,
+    pub mount_parent: Option<Rc<RefCell<VfsMount>>>,
     pub mnt_sb: Rc<RefCell<SuperBlock>>,
 }
 
@@ -27,8 +33,8 @@ impl Dentry {
                 inode,
                 parent: None,
                 children: Vec::new(),
-
                 mnt: None,
+                read_dir_flag: false,
             }
         ))
     }
@@ -48,10 +54,13 @@ impl Dentry {
 }
 
 impl VfsMount {
-    pub fn new(mountpoint: Rc<RefCell<Dentry>>, mnt_sb: Rc<RefCell<SuperBlock>>) -> Rc<Self> {
-        Rc::new( Self {
-            mountpoint,
-            mnt_sb,
-        })
+    pub fn new(mountpoint: Rc<RefCell<Dentry>>, mnt_sb: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(
+            Self {
+                mount_point: mountpoint,
+                mount_parent: None,
+                mnt_sb,
+            }
+        ))
     }
 }

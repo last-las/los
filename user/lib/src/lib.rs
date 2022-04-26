@@ -10,6 +10,7 @@ use core::ptr;
 use core::ffi::c_void;
 use share::ffi::c_char;
 
+#[macro_use]
 extern crate alloc;
 
 #[macro_use]

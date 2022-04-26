@@ -98,6 +98,7 @@ impl InodeOperations for RamFsInodeOperations {
         let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(dev);
         new_ramfs_inode.borrow_mut().mark_as_dir();
         new_ramfs_inode.borrow_mut().set_name(name);
+        ramfs_inode.borrow_mut().sub_nodes.push(new_ramfs_inode.clone());
 
         Some(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))
     }
@@ -109,6 +110,7 @@ impl FileOperations for RamFsFileOperations {
 
         let dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
+        println!("read ino:{}", ino);
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
         // read content
@@ -122,6 +124,7 @@ impl FileOperations for RamFsFileOperations {
 
         let dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
+        println!("write ino:{}", ino);
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
 
         let content = Vec::from(content);

@@ -6,8 +6,8 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
 use share::ipc::Msg;
-use share::file::{MAX_PATH_LENGTH, OpenFlag};
-use share::ffi::CString;
+use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ};
+use share::ffi::{CString, CStr};
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -20,9 +20,9 @@ fn isize2result(ret: isize) -> Result<usize, SysError> {
 pub fn getcwd() -> Result<String, SysError> {
     let mut buf: [u8; MAX_PATH_LENGTH] = [0; MAX_PATH_LENGTH];
     isize2result(sys_getcwd(&mut buf))?;
-    let str = core::str::from_utf8(&buf).unwrap();
+    let cstr = CStr::from_ptr(buf.as_ptr());
 
-    Ok(String::from(str))
+    Ok(String::from(cstr.as_str()))
 }
 
 pub fn dup(old_fd : usize) -> Result<usize, SysError> {
@@ -33,9 +33,10 @@ pub fn dup3(old_fd: usize, new_fd: usize) -> Result<usize, SysError> {
     isize2result(sys_dup3(old_fd, new_fd))
 }
 
-pub fn chdir(path: &str) -> Result<usize, SysError> {
+pub fn chdir(path: &str) -> Result<(), SysError> {
     let cstring = CString::from(path);
-    isize2result(sys_chdir(cstring.as_ptr() as usize))
+    isize2result(sys_chdir(cstring.as_ptr() as usize))?;
+    Ok(())
 }
 
 pub fn open(path: &str, flags: OpenFlag, mode: u32) -> Result<usize, SysError> {
@@ -46,6 +47,26 @@ pub fn open(path: &str, flags: OpenFlag, mode: u32) -> Result<usize, SysError> {
 
 pub fn close(fd: usize) -> Result<usize, SysError> {
     isize2result(sys_close(fd))
+}
+
+static mut DENTS_BUFFER: [u8; DIRENT_BUFFER_SZ] = [0; DIRENT_BUFFER_SZ];
+pub fn get_dents(fd: usize) -> Result<Vec<RDirent>, SysError> {
+    let buffer_ptr = unsafe { DENTS_BUFFER.as_ptr() as usize };
+    let buffer_length = unsafe { DENTS_BUFFER.len() };
+    let nbytes = isize2result(sys_get_dents(fd,buffer_ptr,buffer_length))?;
+    let mut rdirents = Vec::new();
+
+    let mut pos = 0;
+    while pos < nbytes {
+        let dirent = unsafe {
+            ((buffer_ptr + pos) as *const Dirent).read()
+        };
+
+        pos += dirent.d_reclen as usize;
+        rdirents.push(dirent.into());
+    }
+
+    Ok(rdirents)
 }
 
 pub fn exit(exit_code: usize) -> isize {
