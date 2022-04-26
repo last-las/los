@@ -93,7 +93,7 @@ impl InoAllocator {
 pub struct RamFsInode {
     ino: usize,
     name: String,
-    file_type: FileType,
+    file_type: FileTypeFlag,
     sub_nodes: Vec<Rc<RefCell<RamFsInode>>>,
     content: Vec<u8>,
 }
@@ -104,7 +104,7 @@ impl RamFsInode {
             Self {
                 ino,
                 name: String::new(),
-                file_type: FileType::UNKNOWN,
+                file_type: FileTypeFlag::DT_UNKNOWN,
                 sub_nodes: Vec::new(),
                 content: Vec::new(),
             }
@@ -112,11 +112,15 @@ impl RamFsInode {
     }
 
     pub fn mark_as_file(&mut self) {
-        self.file_type = FileType::NORMAL;
+        self.file_type = FileTypeFlag::DT_REG;
     }
 
     pub fn mark_as_dir(&mut self) {
-        self.file_type = FileType::DIRECTORY;
+        self.file_type = FileTypeFlag::DT_DIR;
+    }
+
+    pub fn set_file_type(&mut self, file_type: FileTypeFlag) {
+        self.file_type = file_type;
     }
 
     pub fn set_name(&mut self, name: &str) {
@@ -124,7 +128,7 @@ impl RamFsInode {
     }
 
     pub fn lookup(&self, name: &str) -> Option<Rc<RefCell<RamFsInode>>> {
-        assert_eq!(self.file_type, FileType::DIRECTORY);
+        assert_eq!(self.file_type, FileTypeFlag::DT_DIR);
         for sub_node in self.sub_nodes.iter() {
             if sub_node.borrow().name.as_str() == name {
                 return Some(Rc::clone(sub_node));
@@ -132,6 +136,27 @@ impl RamFsInode {
         }
 
         None
+    }
+
+    pub fn set_rdev(&mut self, rdev: usize) {
+        assert!(self.file_type.is_device());
+        self.content.clear();
+
+        for i in 0..core::mem::size_of::<usize>() {
+            let byte = ((rdev >> (8 * i)) & 0xFF) as u8;
+            self.content.push(byte);
+        }
+    }
+
+    pub fn read_rdev(&mut self) -> usize {
+        assert!(self.file_type.is_device());
+
+        let mut rdev = 0;
+        for i in 0..core::mem::size_of::<usize>() {
+            rdev |= (self.content[i] << (8 * i)) as usize;
+        }
+
+        rdev
     }
 
     pub fn read(&self, pos: usize, size: usize) -> Vec<u8> {
@@ -157,30 +182,17 @@ impl RamFsInode {
     }
 
     pub fn read_dir(&self) -> Vec<Rc<RefCell<RamFsInode>>> {
-        assert_eq!(self.file_type, FileType::DIRECTORY);
+        assert_eq!(self.file_type, FileTypeFlag::DT_DIR);
         self.sub_nodes.clone()
     }
 
     pub fn get_vfs_inode(&self, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Inode>> {
-        let file_type = match self.file_type {
-            FileType::DIRECTORY => FileTypeFlag::DT_DIR,
-            FileType::NORMAL => FileTypeFlag::DT_REG,
-            FileType::UNKNOWN => FileTypeFlag::DT_UNKNOWN,
-        };
-
         Inode::new(
             self.ino,
-            file_type,
+            self.file_type,
             super_block,
             Rc::new(RamFsInodeOperations),
             Rc::new(RamFsFileOperations),
         )
     }
-}
-
-#[derive(Eq, PartialEq, Debug)]
-pub enum FileType {
-    NORMAL,
-    DIRECTORY,
-    UNKNOWN,
 }

@@ -61,6 +61,13 @@ bitflags! {
     }
 }
 
+impl FileTypeFlag {
+    pub fn is_device(&self) -> bool {
+        self.contains(FileTypeFlag::DT_BLK) ||
+            self.contains(FileTypeFlag::DT_CHR)
+    }
+}
+
 pub const MAX_PATH_LENGTH: usize = 64;
 pub const AT_FD_CWD: isize = -100;
 pub const DIRENT_BUFFER_SZ: usize = 2048;

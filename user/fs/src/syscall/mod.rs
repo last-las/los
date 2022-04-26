@@ -92,6 +92,14 @@ pub fn do_chdir(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysE
     Ok(0)
 }
 
+pub fn unmount() -> Result<usize, SysError> {
+    unimplemented!()
+}
+
+pub fn mount() -> Result<usize, SysError> {
+    unimplemented!()
+}
+
 pub fn do_open(path: &str, flag: u32, mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let open_flag = OpenFlag::from_bits(flag).unwrap();
     let nameidata =
