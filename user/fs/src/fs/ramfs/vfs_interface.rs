@@ -1,26 +1,28 @@
-use crate::vfs::inode::{InodeOperations, Inode};
+use crate::vfs::inode::{InodeOperations, Inode, Rdev};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::vfs::dentry::{Dentry, VfsMount};
 use crate::vfs::super_block::SuperBlock;
 use super::RAM_FILE_SYSTEMS;
-use crate::fs::ramfs::{RamFileSystem, RamFsInode};
+use crate::fs::ramfs::{RamFileSystem, RamFsInode, RAMFS_MAJOR_DEV};
 use crate::vfs::file::{FileOperations, File};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use share::file::FileTypeFlag;
 
-/// Create a new ram filesystem,
-/// append it to global vector `RAM_FILE_SYSTEMS`, and return a `SuperBlock` structure.
-pub fn alloc_ramfs_super_block() -> Rc<RefCell<SuperBlock>> {
-    let dev;
+/// Though it's name includes "read", it actually creates a new ram filesystem, append it to global
+/// vector `RAM_FILE_SYSTEMS`, and return a `SuperBlock` structure.
+pub fn read_ramfs_super_block(minor_dev: u32) -> Rc<RefCell<SuperBlock>> {
     unsafe {
-        dev = RAM_FILE_SYSTEMS.len();
-        RAM_FILE_SYSTEMS.push(RamFileSystem::new());
+        while minor_dev as usize + 1 > RAM_FILE_SYSTEMS.len() {
+            RAM_FILE_SYSTEMS.push(None);
+        }
+        assert!(RAM_FILE_SYSTEMS[minor_dev as usize].is_none());
+        RAM_FILE_SYSTEMS[minor_dev as usize] = Some(RamFileSystem::new());
     }
     // find out root ramfs inode and init related dir entry.
-    let new_ramfs_sb = SuperBlock::new(dev);
-    let root_ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, 0).unwrap();
+    let new_ramfs_sb = SuperBlock::new( Rdev::new(minor_dev, RAMFS_MAJOR_DEV));
+    let root_ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, 0).unwrap();
     let root_dir_entry = create_dentry_from_ramfs_inode(root_ramfs_inode, new_ramfs_sb.clone());
     let mnt = VfsMount::new(root_dir_entry.clone(), new_ramfs_sb.clone());
     root_dir_entry.borrow_mut().mnt = Some(mnt);
@@ -55,9 +57,9 @@ pub struct RamFsFileOperations;
 impl InodeOperations for RamFsInodeOperations {
     fn lookup(&self, name: &str, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>> {
         let super_block = parent.borrow().super_block.clone();
-        let dev = super_block.borrow().dev;
+        let minor_dev = super_block.borrow().rdev.minor;
         let ino = parent.borrow().ino;
-        let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         // lookup on the `ramfs_inode`
         let result = ramfs_inode.borrow().lookup(name);
@@ -71,15 +73,15 @@ impl InodeOperations for RamFsInodeOperations {
 
     fn create(&self, name: &str, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>> {
         let super_block = parent.borrow().super_block.clone();
-        let dev = super_block.borrow().dev;
+        let minor_dev = super_block.borrow().rdev.minor;
         let ino = parent.borrow().ino;
-        let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         // lookup on `ramfs_inode`, if `name` already exists return None.
         if ramfs_inode.borrow().lookup(name).is_some() {
             return None;
         }
-        let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(dev);
+        let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(minor_dev);
         new_ramfs_inode.borrow_mut().mark_as_file();
         new_ramfs_inode.borrow_mut().set_name(name);
 
@@ -88,15 +90,15 @@ impl InodeOperations for RamFsInodeOperations {
 
     fn mkdir(&self, name: &str, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>> {
         let super_block = parent.borrow().super_block.clone();
-        let dev = super_block.borrow().dev;
+        let minor_dev = super_block.borrow().rdev.minor;
         let ino = parent.borrow().ino;
-        let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         // lookup on `ramfs_inode`, if `name` already exists then return None.
         if ramfs_inode.borrow().lookup(name).is_some() {
             return None;
         }
-        let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(dev);
+        let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(minor_dev);
         new_ramfs_inode.borrow_mut().mark_as_dir();
         new_ramfs_inode.borrow_mut().set_name(name);
         ramfs_inode.borrow_mut().sub_nodes.push(new_ramfs_inode.clone());
@@ -104,17 +106,17 @@ impl InodeOperations for RamFsInodeOperations {
         Some(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))
     }
 
-    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: usize, parent: Rc<RefCell<Inode>>)
+    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<Inode>>)
         -> Option<Rc<RefCell<Dentry>>> {
         let super_block = parent.borrow().super_block.clone();
-        let dev = super_block.borrow().dev;
+        let minor_dev = super_block.borrow().rdev.minor;
         let ino = parent.borrow().ino;
-        let ramfs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         if ramfs_inode.borrow().lookup(name).is_some() {
             return None;
         }
-        let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(dev);
+        let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(minor_dev);
         new_ramfs_inode.borrow_mut().set_file_type(file_type);
         new_ramfs_inode.borrow_mut().set_rdev(rdev);
 
@@ -127,10 +129,10 @@ impl FileOperations for RamFsFileOperations {
     fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8> {
         let mut file_ref = file.borrow();
 
-        let dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
+        let minor_dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().rdev.minor;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
         println!("read ino:{}", ino);
-        let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ram_fs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         // read content
         let content = ram_fs_inode.borrow().read(file_ref.pos, size);
@@ -141,10 +143,10 @@ impl FileOperations for RamFsFileOperations {
     fn write(&self, file: Rc<RefCell<File>>, content: &[u8]) {
         let mut file_ref = file.borrow();
 
-        let dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().dev;
+        let minor_dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().rdev.minor;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
         println!("write ino:{}", ino);
-        let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ram_fs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         let content = Vec::from(content);
         ram_fs_inode.borrow_mut().write(file_ref.pos, content);
@@ -154,9 +156,9 @@ impl FileOperations for RamFsFileOperations {
         let mut file_ref = file.borrow();
 
         let super_block = file_ref.dentry.borrow().inode.borrow().super_block.clone();
-        let dev = super_block.borrow().dev;
+        let minor_dev = super_block.borrow().rdev.minor;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
-        let ram_fs_inode = get_ramfs_inode_from_related_ramfs(dev, ino).unwrap();
+        let ram_fs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         // read the sub directories
         let sub_ramfs_inodes = ram_fs_inode.borrow_mut().read_dir();
@@ -180,17 +182,17 @@ fn create_dentry_from_ramfs_inode(new_ramfs_inode: Rc<RefCell<RamFsInode>>, supe
     target_dentry
 }
 
-fn get_ramfs_inode_from_related_ramfs(dev: usize, ino: usize) -> Option<Rc<RefCell<RamFsInode>>> {
+fn get_ramfs_inode_from_related_ramfs(minor_dev: u32, ino: usize) -> Option<Rc<RefCell<RamFsInode>>> {
     let target_ramfs = unsafe {
-        &mut RAM_FILE_SYSTEMS[dev]
+        RAM_FILE_SYSTEMS[minor_dev as usize].as_ref().unwrap()
     };
 
     target_ramfs.search_ramfs_inode(ino)
 }
 
-fn alloc_ramfs_inode_on_related_ramfs(dev: usize) -> Rc<RefCell<RamFsInode>> {
+fn alloc_ramfs_inode_on_related_ramfs(minor_dev: u32) -> Rc<RefCell<RamFsInode>> {
     let target_ramfs = unsafe {
-        &mut RAM_FILE_SYSTEMS[dev]
+        RAM_FILE_SYSTEMS[minor_dev as usize].as_mut().unwrap()
     };
 
     target_ramfs.alloc_ramfs_inode()

@@ -1,14 +1,10 @@
-use crate::vfs::inode::Inode;
+use crate::vfs::inode::{Inode, Rdev};
 use crate::vfs::dentry::Dentry;
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
 pub struct SuperBlock {
-    /// To distinguish from other `SuperBlock` in the same filesystem type.
-    ///
-    /// There might be more than one filesystem instance in the same filesystem type, so this field
-    /// is used to select the right one.
-    pub dev: usize,
+    pub rdev: Rdev,
     /// Root Directory Entry, it's name is always "/".
     pub root: Option<Rc<RefCell<Dentry>>>,
 
@@ -24,10 +20,10 @@ pub struct SuperBlock {
 }
 */
 impl SuperBlock {
-    pub fn new(dev: usize) -> Rc<RefCell<Self>> {
+    pub fn new(rdev: Rdev) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Self {
-                dev,
+                rdev,
                 root: None,
             }
         ))

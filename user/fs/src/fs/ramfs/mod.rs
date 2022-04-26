@@ -7,18 +7,20 @@ use core::cell::RefCell;
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::vfs::filesystem::{register_filesystem, FileSystem};
-use crate::vfs::inode::Inode;
+use crate::vfs::inode::{Inode, Rdev};
 use crate::vfs::super_block::SuperBlock;
 use crate::fs::ramfs::vfs_interface::{RamFsInodeOperations, RamFsFileOperations};
 use alloc::boxed::Box;
 use share::file::FileTypeFlag;
 
+const RAMFS_MAJOR_DEV: u32 = 0;
+
 pub fn register_ramfs() {
-    let mut filesystem = FileSystem::new("ramfs", vfs_interface::alloc_ramfs_super_block);
-    register_filesystem(filesystem);
+    let mut filesystem = FileSystem::new("ramfs", vfs_interface::read_ramfs_super_block);
+    assert!(register_filesystem(filesystem, RAMFS_MAJOR_DEV));
 }
 
-pub static mut RAM_FILE_SYSTEMS: Vec<RamFileSystem> = Vec::new();
+pub static mut RAM_FILE_SYSTEMS: Vec<Option<RamFileSystem>> = Vec::new();
 
 pub struct RamFileSystem {
     ino_allocator: InoAllocator,
@@ -138,9 +140,11 @@ impl RamFsInode {
         None
     }
 
-    pub fn set_rdev(&mut self, rdev: usize) {
+    pub fn set_rdev(&mut self, rdev: Rdev) {
         assert!(self.file_type.is_device());
         self.content.clear();
+
+        let rdev: u64 =  rdev.into();
 
         for i in 0..core::mem::size_of::<usize>() {
             let byte = ((rdev >> (8 * i)) & 0xFF) as u8;
@@ -148,15 +152,15 @@ impl RamFsInode {
         }
     }
 
-    pub fn read_rdev(&mut self) -> usize {
+    pub fn read_rdev(&mut self) -> Rdev {
         assert!(self.file_type.is_device());
 
         let mut rdev = 0;
         for i in 0..core::mem::size_of::<usize>() {
-            rdev |= (self.content[i] << (8 * i)) as usize;
+            rdev |= (self.content[i] << (8 * i)) as u64;
         }
 
-        rdev
+        rdev.into()
     }
 
     pub fn read(&self, pos: usize, size: usize) -> Vec<u8> {

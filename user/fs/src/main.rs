@@ -17,7 +17,7 @@ extern crate lazy_static;
 extern crate bitflags;
 
 use crate::fs::ramfs::register_ramfs;
-use crate::vfs::filesystem::alloc_super_block;
+use crate::vfs::filesystem::read_super_block;
 use crate::proc::fs_struct::FsStruct;
 use crate::proc::fs_manager::*;
 use crate::syscall::*;
@@ -33,7 +33,7 @@ fn main() {
     let cur_pid = getpid();
 
     register_ramfs();
-    let sp = alloc_super_block("ramfs").unwrap();
+    let sp = read_super_block("ramfs", 0).unwrap();
     let root = sp.borrow().root.clone().unwrap();
     let mnt = root.borrow().mnt.clone().unwrap();
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());
