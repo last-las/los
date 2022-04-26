@@ -96,14 +96,23 @@ fn test_getcwd_and_chdir() {
     assert_eq!(getcwd().unwrap().as_str(), "/");
     chdir("/tmp/").unwrap();
     assert_eq!(getcwd().unwrap().as_str(), "/tmp");
-    chdir("/tmp/relative_dir1").unwrap();
+    chdir("./relative_dir1").unwrap();
     assert_eq!(getcwd().unwrap().as_str(), "/tmp/relative_dir1");
     chdir("../absolute_dir").unwrap();
     assert_eq!(getcwd().unwrap().as_str(), "/tmp/absolute_dir");
-    chdir("/relative_dir2").unwrap();
-    assert_eq!(getcwd().unwrap().as_str(), "/relative_dir2");
+    chdir("../").unwrap();
+    assert_eq!(getcwd().unwrap().as_str(), "/tmp");
     chdir("../").unwrap();
     assert_eq!(getcwd().unwrap().as_str(), "/");
+    chdir("/relative_dir2").unwrap();
+    assert_eq!(getcwd().unwrap().as_str(), "/relative_dir2");
+    // test complicated path name
+    chdir("////tmp/////").unwrap();
+    assert_eq!(getcwd().unwrap().as_str(), "/tmp");
+    chdir("/../../../../../tmp").unwrap();
+    assert_eq!(getcwd().unwrap().as_str(), "/tmp");
+    chdir("././././././././").unwrap();
+    assert_eq!(getcwd().unwrap().as_str(), "/tmp");
 
     println!("[test_getcwd_and_chdir] end");
 }

@@ -50,7 +50,7 @@ pub fn do_getcwd(buf: usize, size: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsS
     }
 
     let mut path = String::new();
-    println!("getcwd: {}", names.len());
+
     for i in 0..names.len() {
         path.push_str(names[i].as_str());
         if i == 0 || i == names.len() - 1 {
@@ -293,7 +293,7 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags, di
             // check mountpoint
             while dentry.borrow().mnt.is_some() {
                 mnt = dentry.borrow().mnt.as_ref().unwrap().clone();
-                dentry = mnt.mount_point.clone();
+                dentry = mnt.borrow().mount_root.clone();
             }
         }
 
@@ -355,7 +355,7 @@ fn get_target_dentry_and_mnt_by_parent(nameidata: NameIdata, open_flag: OpenFlag
         let mut child_mnt = nameidata.mnt;
         while child_dentry.borrow().mnt.is_some() {
             child_mnt = child_dentry.borrow().mnt.as_ref().unwrap().clone();
-            child_dentry = child_mnt.mount_point.clone();
+            child_dentry = child_mnt.borrow().mount_root.clone();
         }
 
         Ok((child_dentry, child_mnt))
@@ -408,13 +408,29 @@ fn find_uncached_dentries(parent: Rc<RefCell<Dentry>>, filesystem_dentries: Vec<
     uncached_dentries
 }
 
-fn follow_dotdot(dentry: Rc<RefCell<Dentry>>, mnt: Rc<RefCell<VfsMount>>, current: Rc<RefCell<FsStruct>>)
+fn follow_dotdot(mut dentry: Rc<RefCell<Dentry>>, mut mnt: Rc<RefCell<VfsMount>>, current: Rc<RefCell<FsStruct>>)
     -> (Rc<RefCell<Dentry>>, Rc<RefCell<VfsMount>>) {
     loop {
-        if mnt == current.borrow().root_mnt && dentry == mnt.mount_point {
-            // reach root mountpoint, can't follow anymore
+        if Rc::ptr_eq(&mnt, &current.borrow().root_mnt)
+            && Rc::ptr_eq(&dentry, &current.borrow().root) {
+            // reach root mountpoint, can't follow anymore.
+            break;
+        }else if !Rc::ptr_eq(&dentry, &mnt.borrow().mount_root) {
+            // `dentry` is not the root dentry of current device,
+            // which means `dentry` and it's parent are on the same device.
+            let parent_dentry = dentry.borrow().parent.clone().unwrap();
+            dentry = parent_dentry;
+            break;
+        } else if mnt.borrow().mount_parent.is_none(){
+            // current mountpoint doesn't have parent. This only happens on the root dentry of ramfs.
             break;
         }
+        // `dentry` is the root dentry of current device, and current device is mounted on another one, so we will follow it's parent.
+        // Parent may mount on other as well, so we continue the loop.
+        dentry = mnt.borrow().mount_point.clone().unwrap();
+        let mnt_parent = mnt.borrow().mount_parent.clone().unwrap();
+        mnt = mnt_parent;
     }
-    unimplemented!()
+
+    (dentry, mnt)
 }

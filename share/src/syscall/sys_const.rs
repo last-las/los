@@ -1,4 +1,5 @@
 // filesystem syscall.
+// TODO: add lseek.
 pub const SYSCALL_GETCWD: usize = 17;
 pub const SYSCALL_DUP: usize = 23;
 pub const SYSCALL_DUP3: usize = 24;

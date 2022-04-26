@@ -20,8 +20,13 @@ pub struct Dentry {
 }
 
 pub struct VfsMount {
-    pub mount_point: Rc<RefCell<Dentry>>,
+    /// Root dentry of the mounted tree.
+    pub mount_root: Rc<RefCell<Dentry>>,
+    /// dentry of mountpoint.
+    pub mount_point: Option<Rc<RefCell<Dentry>>>,
+    /// Fs we are mounted on.
     pub mount_parent: Option<Rc<RefCell<VfsMount>>>,
+    /// Pointer to super block.
     pub mnt_sb: Rc<RefCell<SuperBlock>>,
 }
 
@@ -57,7 +62,8 @@ impl VfsMount {
     pub fn new(mountpoint: Rc<RefCell<Dentry>>, mnt_sb: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Self {
-                mount_point: mountpoint,
+                mount_root: mountpoint,
+                mount_point: None,
                 mount_parent: None,
                 mnt_sb,
             }
