@@ -24,10 +24,9 @@ pub fn read_ramfs_super_block(minor_dev: u32) -> Rc<RefCell<SuperBlock>> {
     let new_ramfs_sb = SuperBlock::new( Rdev::new(minor_dev, RAMFS_MAJOR_DEV));
     let root_ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, 0).unwrap();
     let root_dir_entry = create_dentry_from_ramfs_inode(root_ramfs_inode, new_ramfs_sb.clone());
-    let mnt = VfsMount::new(root_dir_entry.clone(), new_ramfs_sb.clone());
+    new_ramfs_sb.borrow_mut().root = Some(root_dir_entry.clone());
+    let mnt = VfsMount::new(new_ramfs_sb.clone());
     root_dir_entry.borrow_mut().mnt = Some(mnt);
-
-    new_ramfs_sb.borrow_mut().root = Some(root_dir_entry);
 
     new_ramfs_sb
 }

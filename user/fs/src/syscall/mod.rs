@@ -2,7 +2,7 @@ use alloc::rc::Rc;
 use crate::proc::fs_struct::FsStruct;
 use core::cell::RefCell;
 use crate::vfs::dentry::{Dentry, VfsMount};
-use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ERANGE};
+use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ERANGE, ENOTBLK, ENODEV};
 use crate::vfs::file::File;
 use alloc::sync::Arc;
 use user_lib::syscall::{virt_copy, getpid};
@@ -11,6 +11,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use share::ffi::CString;
 use alloc::collections::VecDeque;
+use crate::vfs::filesystem::read_super_block;
 
 /// The return value of `path_lookup` function.
 pub struct NameIdata {
@@ -92,12 +93,41 @@ pub fn do_chdir(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysE
     Ok(0)
 }
 
-pub fn unmount() -> Result<usize, SysError> {
+pub fn do_unmount(target: &str, _: usize) -> Result<usize, SysError> {
     unimplemented!()
 }
 
-pub fn mount() -> Result<usize, SysError> {
-    unimplemented!()
+pub fn do_mount(source: &str, target: &str, fs_type: &str, _: usize, _: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    // Use `source` to find device inode.
+
+    let dev_nameidata = path_lookup(source, cur_fs.clone(), LookupFlags::empty(), None)?;
+    let dev_dentry = dev_nameidata.dentry;
+    let dev_inode = dev_dentry.borrow().inode.clone();
+    if ! dev_inode.borrow().is_blk() {
+        return Err(SysError::new(ENOTBLK));
+    }
+    // Get Super block with minor device number.
+
+    let rdev = dev_inode.borrow().rdev.unwrap();
+    let result = read_super_block(fs_type, rdev.minor);
+    if result.is_none() {
+        return Err(SysError::new(ENODEV));
+    }
+    let super_block = result.unwrap();
+    // Use `target` to find mountpoint. `target` has to be a directory.
+
+    let target_nameidata = path_lookup(target, cur_fs.clone(), LookupFlags::DIRECTORY, None)?;
+    let target_dentry = target_nameidata.dentry;
+    if target_dentry.borrow().mnt.is_some() { //TODO-FUTURE: Vfs only support mount once on a directory for now.
+        return Err(SysError::new(EINVAL))
+    }
+    // Create [`VfsMount`] and attach to `target_dentry`.
+    let vfs_mount = VfsMount::new(super_block);
+    vfs_mount.borrow_mut().set_mnt_point(target_dentry.clone());
+    vfs_mount.borrow_mut().set_mnt_parent(target_nameidata.mnt);
+    target_dentry.borrow_mut().mnt = Some(vfs_mount);
+
+    Ok(0)
 }
 
 pub fn do_open(path: &str, flag: u32, mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {

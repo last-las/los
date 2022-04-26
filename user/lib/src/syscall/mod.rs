@@ -33,6 +33,20 @@ pub fn dup3(old_fd: usize, new_fd: usize) -> Result<usize, SysError> {
     isize2result(sys_dup3(old_fd, new_fd))
 }
 
+pub fn unmount(source: &str, flags: usize) -> Result<usize, SysError> {
+    let c_source = CString::from(source);
+    isize2result(sys_unmount(c_source.as_ptr() as usize, flags))
+}
+
+pub fn mount(source: &str, target: &str, fs_type: &str, flags: usize, data: usize) -> Result<usize, SysError> {
+    let c_source = CString::from(source);
+    let c_target = CString::from(target);
+    let c_fs_type = CString::from(fs_type);
+    isize2result(
+        sys_mount(c_source.as_ptr() as usize, c_target.as_ptr() as usize, c_fs_type.as_ptr() as usize, flags, data)
+    )
+}
+
 pub fn chdir(path: &str) -> Result<(), SysError> {
     let cstring = CString::from(path);
     isize2result(sys_chdir(cstring.as_ptr() as usize))?;

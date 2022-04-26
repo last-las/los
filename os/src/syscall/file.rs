@@ -5,7 +5,7 @@ use crate::task::stop_current_and_run_next_task;
 use crate::syscall::ipc::{sys_send, sys_receive};
 use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4};
 use crate::processor::clone_cur_task_in_this_hart;
-use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS};
+use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT};
 
 const FS_PID: usize = 5;
 
@@ -19,6 +19,14 @@ pub fn do_dup(old_fd: usize) -> Result<usize, SysError> {
 
 pub fn do_dup3(old_fd: usize, new_fd: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_DUP3, [old_fd, new_fd, 0, 0, 0])
+}
+
+pub fn do_unmount(target: usize, flags: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_UNMOUNT, [target, flags, 0, 0, 0])
+}
+
+pub fn do_mount(source: usize, target: usize, fs_type: usize, mount_flags: usize, data: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_MOUNT, [source, target, fs_type, mount_flags, data])
 }
 
 pub fn do_chdir(path_ptr: usize) -> Result<usize, SysError> {

@@ -38,6 +38,10 @@ impl Inode {
     pub fn is_dir(&self) -> bool {
         self.file_type.contains(FileTypeFlag::DT_DIR)
     }
+
+    pub fn is_blk(&self) -> bool {
+        self.file_type.contains(FileTypeFlag::DT_BLK)
+    }
 }
 
 #[derive(Copy, Clone)]

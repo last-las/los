@@ -22,13 +22,13 @@ use crate::proc::fs_struct::FsStruct;
 use crate::proc::fs_manager::*;
 use crate::syscall::*;
 use user_lib::syscall::{getpid, receive, copy_path_from, send};
-use share::ipc::{Msg, FORK, EXIT, MSG_ARGS_0, PROC_NR, MSG_ARGS_1, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, SYSCALL_TYPE, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, REPLY_PROC_NR, REPLY_STATUS, REPLY, FORK_PARENT, FSYSCALL};
+use share::ipc::{Msg, FORK, EXIT, MSG_ARGS_0, PROC_NR, MSG_ARGS_1, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, SYSCALL_TYPE, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, REPLY_PROC_NR, REPLY_STATUS, REPLY, FORK_PARENT, FSYSCALL, FS_SYSCALL_ARG4};
 use share::syscall::sys_const::*;
 use core::cell::RefCell;
 use alloc::rc::Rc;
 use share::syscall::error::SysError;
 use crate::vfs::dentry::Dentry;
-use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR};
+use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR, RAM_MAJOR};
 use crate::vfs::inode::Rdev;
 
 #[no_mangle]
@@ -68,25 +68,32 @@ fn init_device_tree(root_dentry: Rc<RefCell<Dentry>>) {
     let root_inode = root_dentry.borrow().inode.clone();
     // create dev directory
     let dev_dentry = root_inode.borrow().iop.mkdir("dev", root_inode.clone()).unwrap();
-    let dev_inode = dev_dentry.borrow().inode.clone();
     root_dentry.borrow_mut().children.push(dev_dentry.clone());
     dev_dentry.borrow_mut().parent = Some(root_dentry.clone());
 
     // create sda inode.
     let rdev = Rdev::new(0, VIRT_BLK_MAJOR);
     let file_type = FileTypeFlag::DT_BLK;
-    let sda_dentry =
-        dev_inode.borrow().iop.mknod("sda2",file_type, rdev, dev_inode.clone()).unwrap();
-    dev_dentry.borrow_mut().children.push(sda_dentry.clone());
-    sda_dentry.borrow_mut().parent = Some(dev_dentry.clone());
+    attach_device_to(dev_dentry.clone(), "sda2", file_type, rdev);
 
     // create console inode.
     let rdev = Rdev::new(0, CONSOLE_MAJOR);
-    let file_type = FileTypeFlag::DT_CHR;
-    let console_dentry =
-        dev_inode.borrow().iop.mknod("console", file_type, rdev, dev_inode.clone()).unwrap();
-    dev_dentry.borrow_mut().children.push(console_dentry.clone());
-    console_dentry.borrow_mut().parent = Some(dev_dentry.clone());
+    let file_type = FileTypeFlag::DT_BLK;
+    attach_device_to(dev_dentry.clone(), "console", file_type, rdev);
+
+    // create ram inode.
+    for i in 1..4 {
+        let rdev = Rdev::new(i, RAM_MAJOR);
+        let file_type = FileTypeFlag::DT_BLK;
+        attach_device_to(dev_dentry.clone(), format!("ram{}", i).as_str(), file_type, rdev);
+    }
+}
+
+fn attach_device_to(dev_dentry: Rc<RefCell<Dentry>>, name: &str, file_type: FileTypeFlag, rdev: Rdev) {
+    let dev_inode = dev_dentry.borrow().inode.clone();
+    let device_dentry = dev_inode.borrow().iop.mknod(name, file_type, rdev, dev_inode.clone()).unwrap();
+    dev_dentry.borrow_mut().children.push(device_dentry.clone());
+    device_dentry.borrow_mut().parent = Some(dev_dentry.clone());
 }
 
 fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
@@ -98,6 +105,18 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
         SYSCALL_GETCWD => do_getcwd(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], src_pid, cur_fs),
         SYSCALL_DUP => do_dup(message.args[FS_SYSCALL_ARG0], cur_fs),
         SYSCALL_DUP3 => do_dup3(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], cur_fs),
+        SYSCALL_UNMOUNT => {
+            let target = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;
+            do_unmount(target.as_str(), message.args[FS_SYSCALL_ARG1])
+        },
+        SYSCALL_MOUNT => {
+            let source = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;
+            let target = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG1])?;
+            let fs_type = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG2])?;
+            let mount_flags = message.args[FS_SYSCALL_ARG3];
+            let data = message.args[FS_SYSCALL_ARG4];
+            do_mount(source.as_str(), target.as_str(), fs_type.as_str(), mount_flags, data, cur_fs)
+        },
         SYSCALL_CHDIR => {
             let path = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;
             do_chdir(path.as_str(),cur_fs)

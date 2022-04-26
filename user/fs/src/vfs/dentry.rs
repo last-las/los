@@ -59,14 +59,23 @@ impl Dentry {
 }
 
 impl VfsMount {
-    pub fn new(mountpoint: Rc<RefCell<Dentry>>, mnt_sb: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Self>> {
+    pub fn new(mnt_sb: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Self>> {
+        let mount_root = mnt_sb.borrow().root.as_ref().unwrap().clone();
         Rc::new(RefCell::new(
             Self {
-                mount_root: mountpoint,
+                mount_root,
                 mount_point: None,
                 mount_parent: None,
                 mnt_sb,
             }
         ))
+    }
+
+    pub fn set_mnt_point(&mut self, mount_point: Rc<RefCell<Dentry>>) {
+        self.mount_point = Some(mount_point);
+    }
+
+    pub fn set_mnt_parent(&mut self, mount_parent: Rc<RefCell<VfsMount>>) {
+        self.mount_parent = Some(mount_parent);
     }
 }

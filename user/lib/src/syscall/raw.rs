@@ -113,6 +113,14 @@ pub fn sys_dup3(old_fd: usize, new_fd: usize) -> isize {
     syscall2(SYSCALL_DUP3, old_fd, new_fd)
 }
 
+pub fn sys_unmount(target: usize, flags: usize) -> isize {
+    syscall2(SYSCALL_UNMOUNT, target, flags)
+}
+
+pub fn sys_mount(source: usize, target: usize, fs_type: usize, flags: usize, data: usize) -> isize {
+    syscall5(SYSCALL_MOUNT, source, target, fs_type, flags, data)
+}
+
 pub fn sys_chdir(path_ptr: usize) -> isize {
     syscall1(SYSCALL_CHDIR, path_ptr)
 }

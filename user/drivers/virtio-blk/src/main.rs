@@ -57,7 +57,7 @@ fn main() {
     }
 }
 
-pub fn do_read(virtio_blk: &mut VirtIOBlk, message: Msg) -> isize{
+pub fn do_read(virtio_blk: &mut VirtIOBlk, message: Msg) -> isize {
     let proc_nr = message.args[PROC_NR];
     let dst_ptr = message.args[BUFFER];
     let block_id = message.args[POSITION];
