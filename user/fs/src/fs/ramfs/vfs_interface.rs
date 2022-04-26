@@ -119,6 +119,7 @@ impl InodeOperations for RamFsInodeOperations {
         let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(minor_dev);
         new_ramfs_inode.borrow_mut().set_file_type(file_type);
         new_ramfs_inode.borrow_mut().set_rdev(rdev);
+        new_ramfs_inode.borrow_mut().set_name(name);
 
 
         Some(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))

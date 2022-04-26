@@ -27,6 +27,9 @@ use share::syscall::sys_const::*;
 use core::cell::RefCell;
 use alloc::rc::Rc;
 use share::syscall::error::SysError;
+use crate::vfs::dentry::Dentry;
+use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR};
+use crate::vfs::inode::Rdev;
 
 #[no_mangle]
 fn main() {
@@ -36,6 +39,8 @@ fn main() {
     let sp = read_super_block("ramfs", 0).unwrap();
     let root = sp.borrow().root.clone().unwrap();
     let mnt = root.borrow().mnt.clone().unwrap();
+    init_device_tree(root.clone());
+
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());
     init_fs_struct_of_proc(fs_struct, cur_pid);
 
@@ -57,6 +62,31 @@ fn main() {
             reply(message.src_pid, REPLY, reply_status as isize);
         }
     }
+}
+
+fn init_device_tree(root_dentry: Rc<RefCell<Dentry>>) {
+    let root_inode = root_dentry.borrow().inode.clone();
+    // create dev directory
+    let dev_dentry = root_inode.borrow().iop.mkdir("dev", root_inode.clone()).unwrap();
+    let dev_inode = dev_dentry.borrow().inode.clone();
+    root_dentry.borrow_mut().children.push(dev_dentry.clone());
+    dev_dentry.borrow_mut().parent = Some(root_dentry.clone());
+
+    // create sda inode.
+    let rdev = Rdev::new(0, VIRT_BLK_MAJOR);
+    let file_type = FileTypeFlag::DT_BLK;
+    let sda_dentry =
+        dev_inode.borrow().iop.mknod("sda2",file_type, rdev, dev_inode.clone()).unwrap();
+    dev_dentry.borrow_mut().children.push(sda_dentry.clone());
+    sda_dentry.borrow_mut().parent = Some(dev_dentry.clone());
+
+    // create console inode.
+    let rdev = Rdev::new(0, CONSOLE_MAJOR);
+    let file_type = FileTypeFlag::DT_CHR;
+    let console_dentry =
+        dev_inode.borrow().iop.mknod("console", file_type, rdev, dev_inode.clone()).unwrap();
+    dev_dentry.borrow_mut().children.push(console_dentry.clone());
+    console_dentry.borrow_mut().parent = Some(dev_dentry.clone());
 }
 
 fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {

@@ -24,6 +24,7 @@ fn main() {
     test_get_dirent_at();
     test_mkdir_at();
     test_getcwd_and_chdir();
+    list_dir("/dev");
 }
 
 fn send_fork_message() {

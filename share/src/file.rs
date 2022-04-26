@@ -71,3 +71,8 @@ impl FileTypeFlag {
 pub const MAX_PATH_LENGTH: usize = 64;
 pub const AT_FD_CWD: isize = -100;
 pub const DIRENT_BUFFER_SZ: usize = 2048;
+
+// for device driver
+pub const SDCARD_MAJOR: u32 = 1;
+pub const VIRT_BLK_MAJOR: u32 = 1;
+pub const CONSOLE_MAJOR: u32 = 3;
