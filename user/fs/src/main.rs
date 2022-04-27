@@ -27,7 +27,7 @@ use share::syscall::sys_const::*;
 use core::cell::RefCell;
 use alloc::rc::Rc;
 use share::syscall::error::SysError;
-use crate::vfs::dentry::Dentry;
+use crate::vfs::dentry::{Dentry, VfsMount};
 use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR, RAM_MAJOR};
 use crate::vfs::inode::Rdev;
 
@@ -38,7 +38,7 @@ fn main() {
     register_ramfs();
     let sp = read_super_block("ramfs", 0).unwrap();
     let root = sp.borrow().root.clone().unwrap();
-    let mnt = root.borrow().mnt.clone().unwrap();
+    let mnt = VfsMount::new(sp.clone());
     init_device_tree(root.clone());
 
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());

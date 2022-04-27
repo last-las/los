@@ -25,6 +25,7 @@ pub static mut RAM_FILE_SYSTEMS: Vec<Option<RamFileSystem>> = Vec::new();
 pub struct RamFileSystem {
     ino_allocator: InoAllocator,
     inode_queue: VecDeque<Rc<RefCell<RamFsInode>>>,
+    super_block: Option<Rc<RefCell<SuperBlock>>>
 }
 
 impl RamFileSystem {
@@ -43,6 +44,7 @@ impl RamFileSystem {
         Self {
             ino_allocator,
             inode_queue,
+            super_block: None,
         }
     }
 
@@ -152,7 +154,7 @@ impl RamFsInode {
         }
     }
 
-    pub fn read_rdev(&mut self) -> Rdev {
+    pub fn read_rdev(&self) -> Rdev {
         assert!(self.file_type.is_device());
 
         let mut rdev = 0;
@@ -191,8 +193,13 @@ impl RamFsInode {
     }
 
     pub fn get_vfs_inode(&self, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Inode>> {
+        let mut rdev = None;
+        if self.file_type.is_device() {
+            rdev = Some(self.read_rdev());
+        }
         Inode::new(
             self.ino,
+            rdev,
             self.file_type,
             super_block,
             Rc::new(RamFsInodeOperations),

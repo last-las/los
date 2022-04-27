@@ -99,28 +99,28 @@ pub fn do_unmount(target: &str, _: usize) -> Result<usize, SysError> {
 
 pub fn do_mount(source: &str, target: &str, fs_type: &str, _: usize, _: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     // Use `source` to find device inode.
-
     let dev_nameidata = path_lookup(source, cur_fs.clone(), LookupFlags::empty(), None)?;
     let dev_dentry = dev_nameidata.dentry;
     let dev_inode = dev_dentry.borrow().inode.clone();
     if ! dev_inode.borrow().is_blk() {
         return Err(SysError::new(ENOTBLK));
     }
-    // Get Super block with minor device number.
 
-    let rdev = dev_inode.borrow().rdev.unwrap();
+    // Get Super block with minor device number.
+    let rdev = dev_inode.borrow().rdev.clone().unwrap();
     let result = read_super_block(fs_type, rdev.minor);
     if result.is_none() {
         return Err(SysError::new(ENODEV));
     }
     let super_block = result.unwrap();
-    // Use `target` to find mountpoint. `target` has to be a directory.
 
+    // Use `target` to find mountpoint. `target` has to be a directory.
     let target_nameidata = path_lookup(target, cur_fs.clone(), LookupFlags::DIRECTORY, None)?;
     let target_dentry = target_nameidata.dentry;
     if target_dentry.borrow().mnt.is_some() { //TODO-FUTURE: Vfs only support mount once on a directory for now.
         return Err(SysError::new(EINVAL))
     }
+
     // Create [`VfsMount`] and attach to `target_dentry`.
     let vfs_mount = VfsMount::new(super_block);
     vfs_mount.borrow_mut().set_mnt_point(target_dentry.clone());
@@ -138,7 +138,7 @@ pub fn do_open(path: &str, flag: u32, mode: u32, cur_fs: Rc<RefCell<FsStruct>>) 
     let (target_dentry, target_mnt) = get_target_dentry_and_mnt_by_parent(nameidata, open_flag)?;
     let fop = target_dentry.borrow().inode.borrow().fop.clone();
     let file = File::new(fop, target_dentry, open_flag, target_mnt);
-    println!("open ino:{}", file.dentry.borrow().inode.borrow().ino);
+    // println!("open ino:{}", file.dentry.borrow().inode.borrow().ino);
 
     let mut cur_fs_refmut = cur_fs.borrow_mut();
     let new_fd = cur_fs_refmut.alloc_fd()?;
@@ -246,7 +246,7 @@ pub fn do_write(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<
 
 pub fn do_mkdir_at(dir_fd: usize, path: &str, mode: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let mut dir_fs = None;
-    if dir_fd != AT_FD_CWD as usize {
+    if path.as_bytes()[0] != '/' as u8 && dir_fd != AT_FD_CWD as usize {
         let file = cur_fs.borrow().get_file(dir_fd)?;
         if !file.borrow().is_directory() {
             return Err(SysError::new(ENOTDIR));

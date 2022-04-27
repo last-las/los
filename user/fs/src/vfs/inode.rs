@@ -16,12 +16,12 @@ pub struct Inode {
 }
 
 impl Inode {
-    pub fn new(ino: usize, file_type: FileTypeFlag, super_block: Rc<RefCell<SuperBlock>>,
+    pub fn new(ino: usize, rdev: Option<Rdev>, file_type: FileTypeFlag, super_block: Rc<RefCell<SuperBlock>>,
                iop: Rc<dyn InodeOperations>, fop: Rc<dyn FileOperations>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Inode {
                 ino,
-                rdev: None,
+                rdev,
                 file_type,
                 super_block,
                 iop,

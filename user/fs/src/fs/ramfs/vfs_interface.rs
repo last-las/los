@@ -10,23 +10,33 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use share::file::FileTypeFlag;
 
-/// Though it's name includes "read", it actually creates a new ram filesystem, append it to global
-/// vector `RAM_FILE_SYSTEMS`, and return a `SuperBlock` structure.
+/// If there is a ramfs matched to `minor_dev`, it clones its super block and return.
+/// The function will create a new ramfs when it doesn't find one.
 pub fn read_ramfs_super_block(minor_dev: u32) -> Rc<RefCell<SuperBlock>> {
     unsafe {
         while minor_dev as usize + 1 > RAM_FILE_SYSTEMS.len() {
             RAM_FILE_SYSTEMS.push(None);
         }
-        assert!(RAM_FILE_SYSTEMS[minor_dev as usize].is_none());
+        // There is a ramfs matched to `minor_dev`, clone super block and return.
+        if RAM_FILE_SYSTEMS[minor_dev as usize].is_some() {
+            return RAM_FILE_SYSTEMS[minor_dev as usize].as_ref().unwrap().super_block.clone().unwrap();
+        }
+        // Create a new ramfs.
         RAM_FILE_SYSTEMS[minor_dev as usize] = Some(RamFileSystem::new());
     }
-    // find out root ramfs inode and init related dir entry.
+
+    // new super block
     let new_ramfs_sb = SuperBlock::new( Rdev::new(minor_dev, RAMFS_MAJOR_DEV));
+    // create root inode and dentry
     let root_ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, 0).unwrap();
-    let root_dir_entry = create_dentry_from_ramfs_inode(root_ramfs_inode, new_ramfs_sb.clone());
-    new_ramfs_sb.borrow_mut().root = Some(root_dir_entry.clone());
-    let mnt = VfsMount::new(new_ramfs_sb.clone());
-    root_dir_entry.borrow_mut().mnt = Some(mnt);
+    let root_ramfs_dentry = create_dentry_from_ramfs_inode(root_ramfs_inode, new_ramfs_sb.clone());
+    // set root dentry on super block
+    new_ramfs_sb.borrow_mut().root = Some(root_ramfs_dentry.clone());
+
+    // set super block on the ram filesystem
+    unsafe {
+        RAM_FILE_SYSTEMS[minor_dev as usize].as_mut().unwrap().super_block = Some(new_ramfs_sb.clone());
+    }
 
     new_ramfs_sb
 }
