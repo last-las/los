@@ -107,7 +107,7 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
         SYSCALL_DUP3 => do_dup3(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], cur_fs),
         SYSCALL_UNMOUNT => {
             let target = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;
-            do_unmount(target.as_str(), message.args[FS_SYSCALL_ARG1])
+            do_unmount(target.as_str(), message.args[FS_SYSCALL_ARG1], cur_fs)
         },
         SYSCALL_MOUNT => {
             let source = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;

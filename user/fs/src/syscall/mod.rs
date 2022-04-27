@@ -93,8 +93,13 @@ pub fn do_chdir(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysE
     Ok(0)
 }
 
-pub fn do_unmount(target: &str, _: usize) -> Result<usize, SysError> {
-    unimplemented!()
+pub fn do_unmount(target: &str, _: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let target_nameidata = path_lookup(target, cur_fs.clone(), LookupFlags::empty(), None)?;
+    let vfs_mount = target_nameidata.mnt;
+    let mount_point = vfs_mount.borrow().mount_point.clone().unwrap();
+    mount_point.borrow_mut().mnt.take();
+
+    Ok(0)
 }
 
 pub fn do_mount(source: &str, target: &str, fs_type: &str, _: usize, _: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {

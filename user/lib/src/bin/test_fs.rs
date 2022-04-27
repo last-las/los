@@ -6,7 +6,7 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount};
+use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount};
 use share::ipc::{Msg, FORK, FS_SYSCALL_ARG0, FORK_PARENT};
 use share::file::{OpenFlag, AT_FD_CWD};
 use share::syscall::error::SysError;
@@ -121,15 +121,29 @@ fn test_getcwd_and_chdir() {
 fn test_mount() {
     println!("[test_mount] start");
     mkdir_at(0, "/test", 0).unwrap();
+
+    // before mount
     println!("before mount, ls /test/:");
     for i in 0..3 {
         mkdir_at(0, format!("/test/x{}", i).as_str(), 0).unwrap();
     }
     list_dir("/test/");
-    mount("/dev/ram1", "/test", "ramfs", 0, 0).unwrap();
+
+    // after mount
     println!("after mount, ls /test/:");
+    mount("/dev/ram1", "/test", "ramfs", 0, 0).unwrap();
     mkdir_at(0, "/test/123", 0).unwrap();
     list_dir("/test/");
+
+    // after unmount
+    println!("after unmount, ls /test/:");
+    unmount("/test/", 0).unwrap();
+    list_dir("/test");
+
+    // after mount again
+    println!("after mount again, ls /test/:");
+    mount("/dev/ram1", "/test", "ramfs", 0, 0).unwrap();
+    list_dir("/test");
     println!("[test_mount] end\n");
 }
 
