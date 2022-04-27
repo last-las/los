@@ -6,9 +6,9 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount};
+use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek};
 use share::ipc::{Msg, FORK, FS_SYSCALL_ARG0, FORK_PARENT};
-use share::file::{OpenFlag, AT_FD_CWD};
+use share::file::{OpenFlag, AT_FD_CWD, SEEKFlag};
 use share::syscall::error::SysError;
 use alloc::string::{String};
 use alloc::string::ToString;
@@ -25,6 +25,7 @@ fn main() {
     test_mkdir_at();
     test_getcwd_and_chdir();
     test_mount();
+    test_lseek();
 }
 
 fn send_fork_message() {
@@ -145,6 +146,34 @@ fn test_mount() {
     mount("/dev/ram1", "/test", "ramfs", 0, 0).unwrap();
     list_dir("/test");
     println!("[test_mount] end\n");
+}
+
+fn test_lseek() {
+    println!("[test_lseek] start");
+
+    let fd = open("/test_lseek.txt", OpenFlag::CREAT | OpenFlag::RDWR, 0).unwrap();
+    let before = "She   is a crazy woman";
+    let after_ = "He    was such a crazy\0\0\0man";
+    __write(fd, before.as_bytes()).unwrap();
+
+    // SEEK_END flag
+    lseek(fd, 3, SEEKFlag::END).unwrap();
+    __write(fd, "man".as_bytes()).unwrap();
+    // SEEK_SET flag
+    lseek(fd, 0, SEEKFlag::SET).unwrap();
+    __write(fd, "He ".as_bytes()).unwrap();
+    // SEEK_CUR flag
+    lseek(fd, 3, SEEKFlag::CUR).unwrap();
+    __write(fd, "was such a crazy".as_bytes()).unwrap();
+
+    lseek(fd, 0, SEEKFlag::SET).unwrap();
+    let mut content = [0; 32];
+    let size = __read(fd, &mut content).unwrap();
+    assert_eq!(
+        after_.as_bytes(),
+        &content[0..size]
+    );
+    println!("[test_lseek] end\n");
 }
 
 fn list_dir(path: &str) {

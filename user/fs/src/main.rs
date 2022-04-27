@@ -102,6 +102,7 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
     let src_pid = message.src_pid;
     let cur_fs = get_fs_struct_by_pid(src_pid);
     let result = match message.args[SYSCALL_TYPE] {
+        SYSCALL_LSEEK => do_lseek(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], cur_fs),
         SYSCALL_GETCWD => do_getcwd(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], src_pid, cur_fs),
         SYSCALL_DUP => do_dup(message.args[FS_SYSCALL_ARG0], cur_fs),
         SYSCALL_DUP3 => do_dup3(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], cur_fs),

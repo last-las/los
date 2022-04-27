@@ -141,7 +141,6 @@ impl FileOperations for RamFsFileOperations {
 
         let minor_dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().rdev.minor;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
-        println!("read ino:{}", ino);
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
         // read content
@@ -155,10 +154,8 @@ impl FileOperations for RamFsFileOperations {
 
         let minor_dev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().rdev.minor;
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
-        println!("write ino:{}", ino);
         let ram_fs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
 
-        let content = Vec::from(content);
         ram_fs_inode.borrow_mut().write(file_ref.pos, content);
     }
 

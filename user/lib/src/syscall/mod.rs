@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
 use share::ipc::Msg;
-use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ};
+use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag};
 use share::ffi::{CString, CStr};
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
@@ -15,6 +15,10 @@ fn isize2result(ret: isize) -> Result<usize, SysError> {
     } else {
         Result::Ok(ret as usize)
     }
+}
+
+pub fn lseek(fd: usize, offset: usize, whence: SEEKFlag) -> Result<usize, SysError> {
+    isize2result(sys_lseek(fd, offset, whence.bits() as usize))
 }
 
 pub fn getcwd() -> Result<String, SysError> {

@@ -68,6 +68,17 @@ impl FileTypeFlag {
     }
 }
 
+bitflags! {
+    pub struct SEEKFlag: u32 {
+        /// The file offset is set to offset bytes.
+        const SET = 0x0;
+        /// The file offset is set to its current location plus offset bytes.
+        const CUR = 0x1;
+        /// The file offset is set to the size of the file plus offset bytes.
+        const END = 0x2;
+    }
+}
+
 pub const MAX_PATH_LENGTH: usize = 64;
 pub const AT_FD_CWD: isize = -100;
 pub const DIRENT_BUFFER_SZ: usize = 2048;

@@ -31,6 +31,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         KCALL_VIRT_TO_PHYS => kcall_virt_to_phys(args[0]),
         KCALL_COPY_C_PATH => kcall_copy_c_path(args[0], args[1], args[2], args[3]),
 
+        SYSCALL_LSEEK => do_lseek(args[0], args[1], args[2]),
         SYSCALL_GETCWD => do_getcwd(args[0], args[1]),
         SYSCALL_DUP => do_dup(args[0]),
         SYSCALL_DUP3 => do_dup3(args[0], args[1]),

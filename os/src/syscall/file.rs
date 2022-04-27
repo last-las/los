@@ -5,9 +5,13 @@ use crate::task::stop_current_and_run_next_task;
 use crate::syscall::ipc::{sys_send, sys_receive};
 use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4};
 use crate::processor::clone_cur_task_in_this_hart;
-use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT};
+use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK};
 
 const FS_PID: usize = 5;
+
+pub fn do_lseek(fd: usize, offset: usize, whence: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_LSEEK, [fd, offset, whence, 0, 0])
+}
 
 pub fn do_getcwd(buf: usize, length: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_GETCWD, [buf, length, 0, 0, 0])

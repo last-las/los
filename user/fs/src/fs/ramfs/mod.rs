@@ -174,17 +174,15 @@ impl RamFsInode {
         Vec::from(slice)
     }
 
-    pub fn write(&mut self, pos: usize, content: Vec<u8>) {
+    pub fn write(&mut self, pos: usize, content: &[u8]) {
         let length = self.content.len();
-        if pos > length - 1 {
-            for _ in 0..pos - length {
-                self.content.push(0);
-            }
-        } else if pos < length - 1 {
-            self.content.drain(pos..);
+        for _ in length..pos + content.len() {
+            self.content.push(0);
         }
 
-        self.content.extend(content);
+        for i in pos..pos + content.len() {
+            self.content[i] = content[i - pos];
+        }
     }
 
     pub fn read_dir(&self) -> Vec<Rc<RefCell<RamFsInode>>> {
@@ -199,6 +197,7 @@ impl RamFsInode {
         }
         Inode::new(
             self.ino,
+            self.content.len(),
             rdev,
             self.file_type,
             super_block,

@@ -7,7 +7,7 @@ use share::file::FileTypeFlag;
 
 pub struct Inode {
     pub ino: usize,
-
+    pub size: usize,
     pub rdev: Option<Rdev>,
     pub file_type: FileTypeFlag,
     pub super_block: Rc<RefCell<SuperBlock>>,
@@ -16,11 +16,12 @@ pub struct Inode {
 }
 
 impl Inode {
-    pub fn new(ino: usize, rdev: Option<Rdev>, file_type: FileTypeFlag, super_block: Rc<RefCell<SuperBlock>>,
+    pub fn new(ino: usize, size: usize, rdev: Option<Rdev>, file_type: FileTypeFlag, super_block: Rc<RefCell<SuperBlock>>,
                iop: Rc<dyn InodeOperations>, fop: Rc<dyn FileOperations>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Inode {
                 ino,
+                size,
                 rdev,
                 file_type,
                 super_block,

@@ -101,6 +101,10 @@ pub fn sys_receive(dst_pid: isize, msg: &mut Msg) -> isize {
     syscall2(KCALL_RECEIVE, dst_pid as usize, msg_ptr)
 }
 
+pub fn sys_lseek(fd: usize, offset: usize, whence: usize) -> isize {
+    syscall3(SYSCALL_LSEEK, fd, offset, whence)
+}
+
 pub fn sys_getcwd(buf: &mut [u8]) -> isize {
     syscall2(SYSCALL_GETCWD, buf.as_ptr() as usize, buf.len())
 }

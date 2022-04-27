@@ -6,7 +6,7 @@ use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ER
 use crate::vfs::file::File;
 use alloc::sync::Arc;
 use user_lib::syscall::{virt_copy, getpid};
-use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ};
+use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, SEEKFlag};
 use alloc::vec::Vec;
 use alloc::string::String;
 use share::ffi::CString;
@@ -17,14 +17,14 @@ use crate::vfs::filesystem::read_super_block;
 pub struct NameIdata {
     /// The target file Dentry.
     dentry: Rc<RefCell<Dentry>>,
-    /// The target file's mount point.
+    /// Mount information of the device where the target file is located
     mnt: Rc<RefCell<VfsMount>>,
     ///  The remaining path name.
     ///
     /// When `LookupFlags::PARENT` is set, `path_lookup` will only find the target file's parent directory.
-    /// The target file name will be kept in `left_path_name`. In other cases, `left_path_name`'s value is always an empty string.
+    /// The target file name will be kept in `left_path_name`. In other cases, `left_path_name` is always an empty string.
     ///
-    /// For example, if the path name is "/foo/bar.txt", `left_path_name` is "bar.txt".
+    /// For example, if the path name is "/foo/bar.txt" and `LookupFlags::PARENT` is set, `left_path_name` is "bar.txt".
     left_path_name: String,
 }
 
@@ -36,6 +36,25 @@ impl NameIdata {
             left_path_name,
         }
     }
+}
+
+pub fn do_lseek(fd: usize, offset: usize, whence: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let whence = SEEKFlag::from_bits(whence as u32).unwrap();
+    let file = cur_fs.borrow().get_file(fd)?;
+
+    if whence.contains(SEEKFlag::CUR) { // current location plus `offset`
+        file.borrow_mut().pos += offset;
+    } else if whence.contains(SEEKFlag::END) { // size of the file plus `offset`
+        let size = file.borrow().dentry.borrow().inode.borrow().size;
+        file.borrow_mut().pos = size + offset;
+    } else if whence.is_empty() { // set to `offset`
+        file.borrow_mut().pos = offset;
+    } else {
+        return Err(SysError::new(EINVAL));
+    }
+
+    let result = file.borrow().pos;
+    Ok(result)
 }
 
 pub fn do_getcwd(buf: usize, size: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
@@ -245,6 +264,12 @@ pub fn do_write(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<
         file.borrow().fop.write(file.clone(), &buffer[0..length]);
         file.borrow_mut().pos += length;
     }
+
+    // update size.
+    let inode = file.borrow().dentry.borrow().inode.clone();
+    let size = inode.borrow().size;
+    let pos = file.borrow().pos;
+    inode.borrow_mut().size = usize::max(size, pos);
 
     Ok(count)
 }
