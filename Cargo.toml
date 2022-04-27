@@ -3,4 +3,4 @@ members = [
     "os",
 ]
 
-exclude = [ "user", "share" ]
+exclude = [ "user", "share", "easy-fs", "easy-fs-fuse" ]

@@ -33,10 +33,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "easy-fs"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "spin 0.7.1",
+]
+
+[[package]]
 name = "fs"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "easy-fs",
  "lazy_static",
  "share",
  "spin 0.7.1",

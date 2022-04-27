@@ -1,16 +1,16 @@
 use alloc::rc::{Rc, Weak};
 use alloc::string::String;
-use crate::vfs::inode::Inode;
+use crate::vfs::inode::VfsInode;
 use core::cell::{RefCell, Ref};
 use alloc::vec::Vec;
 use crate::vfs::super_block::SuperBlock;
 use share::file::Dirent;
 
-pub struct Dentry {
+pub struct VfsDentry {
     pub name: String,
-    pub inode: Rc<RefCell<Inode>>,
-    pub parent: Option<Rc<RefCell<Dentry>>>,
-    pub children: Vec<Rc<RefCell<Dentry>>>,
+    pub inode: Rc<RefCell<VfsInode>>,
+    pub parent: Option<Rc<RefCell<VfsDentry>>>,
+    pub children: Vec<Rc<RefCell<VfsDentry>>>,
 
     pub mnt: Option<Rc<RefCell<VfsMount>>>,
     /// `read_dir_flag` indicates whether `inode.borrow().iop.readdir()` has been invoked before, if so,
@@ -21,17 +21,17 @@ pub struct Dentry {
 
 pub struct VfsMount {
     /// Root dentry of the mounted tree.
-    pub mount_root: Rc<RefCell<Dentry>>,
+    pub mount_root: Rc<RefCell<VfsDentry>>,
     /// dentry of mountpoint.
-    pub mount_point: Option<Rc<RefCell<Dentry>>>,
+    pub mount_point: Option<Rc<RefCell<VfsDentry>>>,
     /// Fs we are mounted on.
     pub mount_parent: Option<Rc<RefCell<VfsMount>>>,
     /// Pointer to super block.
     pub mnt_sb: Rc<RefCell<SuperBlock>>,
 }
 
-impl Dentry {
-    pub fn new(name: &str, inode: Rc<RefCell<Inode>>) -> Rc<RefCell<Self>> {
+impl VfsDentry {
+    pub fn new(name: &str, inode: Rc<RefCell<VfsInode>>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
             Self {
                 name: String::from(name),
@@ -45,7 +45,7 @@ impl Dentry {
     }
 
     /// find out if the target dentry is already exists.
-    pub fn cached_lookup(&self, name: &str) -> Option<Rc<RefCell<Dentry>>> {
+    pub fn cached_lookup(&self, name: &str) -> Option<Rc<RefCell<VfsDentry>>> {
         if let Some((index, _)) = self.children
             .iter()
             .enumerate()
@@ -71,7 +71,7 @@ impl VfsMount {
         ))
     }
 
-    pub fn set_mnt_point(&mut self, mount_point: Rc<RefCell<Dentry>>) {
+    pub fn set_mnt_point(&mut self, mount_point: Rc<RefCell<VfsDentry>>) {
         self.mount_point = Some(mount_point);
     }
 

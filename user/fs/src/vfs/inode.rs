@@ -1,11 +1,11 @@
 use alloc::rc::Rc;
-use crate::vfs::dentry::Dentry;
+use crate::vfs::dentry::VfsDentry;
 use crate::vfs::file::FileOperations;
 use core::cell::RefCell;
 use crate::vfs::super_block::SuperBlock;
 use share::file::FileTypeFlag;
 
-pub struct Inode {
+pub struct VfsInode {
     pub ino: usize,
     pub size: usize,
     pub rdev: Option<Rdev>,
@@ -15,11 +15,11 @@ pub struct Inode {
     pub fop: Rc<dyn FileOperations>,
 }
 
-impl Inode {
+impl VfsInode {
     pub fn new(ino: usize, size: usize, rdev: Option<Rdev>, file_type: FileTypeFlag, super_block: Rc<RefCell<SuperBlock>>,
                iop: Rc<dyn InodeOperations>, fop: Rc<dyn FileOperations>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(
-            Inode {
+            VfsInode {
                 ino,
                 size,
                 rdev,
@@ -45,7 +45,7 @@ impl Inode {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Rdev {
     pub minor: u32,
     pub major: u32,
@@ -77,11 +77,11 @@ impl Into<u64> for Rdev {
 
 
 pub trait InodeOperations {
-    fn lookup(&self, name: &str, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
+    fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
     /// Create a normal file.
-    fn create(&self, name: &str, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
+    fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
     /// Create a directory.
-    fn mkdir(&self, name: &str, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
+    fn mkdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
     /// Create a node for special device.
-    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<Inode>>) -> Option<Rc<RefCell<Dentry>>>;
+    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
 }

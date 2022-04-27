@@ -27,14 +27,16 @@ use share::syscall::sys_const::*;
 use core::cell::RefCell;
 use alloc::rc::Rc;
 use share::syscall::error::SysError;
-use crate::vfs::dentry::{Dentry, VfsMount};
+use crate::vfs::dentry::{VfsDentry, VfsMount};
 use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR, RAM_MAJOR};
 use crate::vfs::inode::Rdev;
+use crate::fs::ezfs::register_ezfs;
 
 #[no_mangle]
 fn main() {
     let cur_pid = getpid();
 
+    register_ezfs();
     register_ramfs();
     let sp = read_super_block("ramfs", 0).unwrap();
     let root = sp.borrow().root.clone().unwrap();
@@ -64,7 +66,7 @@ fn main() {
     }
 }
 
-fn init_device_tree(root_dentry: Rc<RefCell<Dentry>>) {
+fn init_device_tree(root_dentry: Rc<RefCell<VfsDentry>>) {
     let root_inode = root_dentry.borrow().inode.clone();
     // create dev directory
     let dev_dentry = root_inode.borrow().iop.mkdir("dev", root_inode.clone()).unwrap();
@@ -89,7 +91,7 @@ fn init_device_tree(root_dentry: Rc<RefCell<Dentry>>) {
     }
 }
 
-fn attach_device_to(dev_dentry: Rc<RefCell<Dentry>>, name: &str, file_type: FileTypeFlag, rdev: Rdev) {
+fn attach_device_to(dev_dentry: Rc<RefCell<VfsDentry>>, name: &str, file_type: FileTypeFlag, rdev: Rdev) {
     let dev_inode = dev_dentry.borrow().inode.clone();
     let device_dentry = dev_inode.borrow().iop.mknod(name, file_type, rdev, dev_inode.clone()).unwrap();
     dev_dentry.borrow_mut().children.push(device_dentry.clone());

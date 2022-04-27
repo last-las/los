@@ -1,7 +1,7 @@
 use buddy_system_allocator::LockedHeap;
 use crate::syscall::brk;
 
-const USER_HEAP_SIZE: usize = 0x4000;
+const USER_HEAP_SIZE: usize = 0x10_000;
 
 // TODO-FUTURE: The size of heap should be dynamic rather than fix size `USER_HEAP_ALLOCATOR`
 #[global_allocator]

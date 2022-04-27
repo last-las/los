@@ -7,7 +7,7 @@ use core::cell::RefCell;
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::vfs::filesystem::{register_filesystem, FileSystem};
-use crate::vfs::inode::{Inode, Rdev};
+use crate::vfs::inode::{VfsInode, Rdev};
 use crate::vfs::super_block::SuperBlock;
 use crate::fs::ramfs::vfs_interface::{RamFsInodeOperations, RamFsFileOperations};
 use alloc::boxed::Box;
@@ -159,9 +159,8 @@ impl RamFsInode {
 
         let mut rdev = 0;
         for i in 0..core::mem::size_of::<usize>() {
-            rdev |= (self.content[i] << (8 * i)) as u64;
+            rdev |= (self.content[i] as u64) << (8 * i);
         }
-
         rdev.into()
     }
 
@@ -190,12 +189,12 @@ impl RamFsInode {
         self.sub_nodes.clone()
     }
 
-    pub fn get_vfs_inode(&self, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<Inode>> {
+    pub fn get_vfs_inode(&self, super_block: Rc<RefCell<SuperBlock>>) -> Rc<RefCell<VfsInode>> {
         let mut rdev = None;
         if self.file_type.is_device() {
             rdev = Some(self.read_rdev());
         }
-        Inode::new(
+        VfsInode::new(
             self.ino,
             self.content.len(),
             rdev,

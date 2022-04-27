@@ -1,6 +1,8 @@
 use core::fmt::{Debug, Formatter};
 use crate::syscall::error::SysError;
 
+pub const VIRTIO_BLK_PID: usize = 4;
+
 /* Message Type */
 pub const INTERRUPT: usize = 1;
 pub const OPEN: usize = 2;
@@ -50,6 +52,7 @@ pub const FORK_PARENT: usize = MSG_ARGS_0;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Msg {
+    /// `src_pid` will be set at the kernel.
     pub src_pid: usize,
     pub mtype: usize,
     pub args: [usize; 6]

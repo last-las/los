@@ -59,8 +59,9 @@ impl MemoryManager {
         }
 
         let stack_top = MAX_USER_ADDRESS;
+        let stack_size = FRAME_SIZE * 2;
         mem_manager.add_area(
-            VirtualAddress::new(stack_top - FRAME_SIZE), FRAME_SIZE,
+            VirtualAddress::new(stack_top - stack_size), stack_size,
             RegionFlags::R | RegionFlags::W, RegionType::DEFAULT, None,
         )?;
 

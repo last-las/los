@@ -22,7 +22,7 @@ user:
 	@cd ./user && python build.py && cargo build --release
 
 fs-img:
-	@dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024
+	# @dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024
 
 run: fs-img
 	@qemu-system-riscv64 \

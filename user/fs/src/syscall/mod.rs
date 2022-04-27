@@ -1,7 +1,7 @@
 use alloc::rc::Rc;
 use crate::proc::fs_struct::FsStruct;
 use core::cell::RefCell;
-use crate::vfs::dentry::{Dentry, VfsMount};
+use crate::vfs::dentry::{VfsDentry, VfsMount};
 use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ERANGE, ENOTBLK, ENODEV};
 use crate::vfs::file::File;
 use alloc::sync::Arc;
@@ -16,7 +16,7 @@ use crate::vfs::filesystem::read_super_block;
 /// The return value of `path_lookup` function.
 pub struct NameIdata {
     /// The target file Dentry.
-    dentry: Rc<RefCell<Dentry>>,
+    dentry: Rc<RefCell<VfsDentry>>,
     /// Mount information of the device where the target file is located
     mnt: Rc<RefCell<VfsMount>>,
     ///  The remaining path name.
@@ -29,7 +29,7 @@ pub struct NameIdata {
 }
 
 impl NameIdata {
-    pub fn new(dentry: Rc<RefCell<Dentry>>, mnt: Rc<RefCell<VfsMount>>, left_path_name: String) -> NameIdata {
+    pub fn new(dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMount>>, left_path_name: String) -> NameIdata {
         NameIdata {
             dentry,
             mnt,
@@ -385,7 +385,7 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags, di
 }
 
 fn get_target_dentry_and_mnt_by_parent(nameidata: NameIdata, open_flag: OpenFlag)
-    -> Result<(Rc<RefCell<Dentry>>, Rc<RefCell<VfsMount>>), SysError> {
+    -> Result<(Rc<RefCell<VfsDentry>>, Rc<RefCell<VfsMount>>), SysError> {
     let last_name = nameidata.left_path_name.as_str();
 
     if last_name.len() == 0 { // The open target path is root directory. Now `parent_dentry` is also root directory, so simply return `parent_dentry`
@@ -443,7 +443,7 @@ fn reach_the_end(path: &[u8], mut index: usize) -> bool {
 }
 
 /// go to the low-level filesystem and lookup.
-fn real_lookup(dentry: Rc<RefCell<Dentry>>, name: &str) -> Option<Rc<RefCell<Dentry>>> {
+fn real_lookup(dentry: Rc<RefCell<VfsDentry>>, name: &str) -> Option<Rc<RefCell<VfsDentry>>> {
     let inode = dentry.borrow().inode.clone();
     let result = inode.borrow().iop.lookup(name, inode.clone());
 
@@ -457,7 +457,7 @@ fn real_lookup(dentry: Rc<RefCell<Dentry>>, name: &str) -> Option<Rc<RefCell<Den
     }
 }
 
-fn find_uncached_dentries(parent: Rc<RefCell<Dentry>>, filesystem_dentries: Vec<Rc<RefCell<Dentry>>>) -> Vec<Rc<RefCell<Dentry>>> {
+fn find_uncached_dentries(parent: Rc<RefCell<VfsDentry>>, filesystem_dentries: Vec<Rc<RefCell<VfsDentry>>>) -> Vec<Rc<RefCell<VfsDentry>>> {
     let mut uncached_dentries = Vec::new();
     for filesystem_dentry in filesystem_dentries {
         let mut is_the_same_name = false;
@@ -476,8 +476,8 @@ fn find_uncached_dentries(parent: Rc<RefCell<Dentry>>, filesystem_dentries: Vec<
     uncached_dentries
 }
 
-fn follow_dotdot(mut dentry: Rc<RefCell<Dentry>>, mut mnt: Rc<RefCell<VfsMount>>, current: Rc<RefCell<FsStruct>>)
-    -> (Rc<RefCell<Dentry>>, Rc<RefCell<VfsMount>>) {
+fn follow_dotdot(mut dentry: Rc<RefCell<VfsDentry>>, mut mnt: Rc<RefCell<VfsMount>>, current: Rc<RefCell<FsStruct>>)
+                 -> (Rc<RefCell<VfsDentry>>, Rc<RefCell<VfsMount>>) {
     loop {
         if Rc::ptr_eq(&mnt, &current.borrow().root_mnt)
             && Rc::ptr_eq(&dentry, &current.borrow().root) {

@@ -1,7 +1,7 @@
 use alloc::rc::Rc;
 use alloc::vec::Vec;
 use core::cell::RefCell;
-use crate::vfs::dentry::{Dentry, VfsMount};
+use crate::vfs::dentry::{VfsDentry, VfsMount};
 use crate::vfs::file::File;
 use share::syscall::error::{SysError, ENFILE, EBADF};
 
@@ -9,17 +9,17 @@ const FD_LIMIT: usize = 0xFF;
 
 #[derive(Clone)]
 pub struct FsStruct {
-    pub pwd: Rc<RefCell<Dentry>>,
+    pub pwd: Rc<RefCell<VfsDentry>>,
     pub pwd_mnt: Rc<RefCell<VfsMount>>,
-    pub root: Rc<RefCell<Dentry>>,
+    pub root: Rc<RefCell<VfsDentry>>,
     pub root_mnt: Rc<RefCell<VfsMount>>,
 
     pub fd_table: Vec<Option<Rc<RefCell<File>>>>,
 }
 
 impl FsStruct {
-    pub fn new(pwd: Rc<RefCell<Dentry>>, pwd_mnt: Rc<RefCell<VfsMount>>,
-               root: Rc<RefCell<Dentry>>, root_mnt: Rc<RefCell<VfsMount>>) -> Rc<RefCell<FsStruct>> {
+    pub fn new(pwd: Rc<RefCell<VfsDentry>>, pwd_mnt: Rc<RefCell<VfsMount>>,
+               root: Rc<RefCell<VfsDentry>>, root_mnt: Rc<RefCell<VfsMount>>) -> Rc<RefCell<FsStruct>> {
         Rc::new(RefCell::new(FsStruct {
             pwd,
             pwd_mnt,

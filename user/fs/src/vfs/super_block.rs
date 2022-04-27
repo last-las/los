@@ -1,12 +1,12 @@
-use crate::vfs::inode::{Inode, Rdev};
-use crate::vfs::dentry::Dentry;
+use crate::vfs::inode::{VfsInode, Rdev};
+use crate::vfs::dentry::VfsDentry;
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
 pub struct SuperBlock {
     pub rdev: Rdev,
     /// Root Directory Entry, it's name is always "/".
-    pub root: Option<Rc<RefCell<Dentry>>>,
+    pub root: Option<Rc<RefCell<VfsDentry>>>,
 
     // pub sop: Rc<dyn SuperBlockOperations>,
 }

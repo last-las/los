@@ -26,6 +26,8 @@ fn main() {
     test_getcwd_and_chdir();
     test_mount();
     test_lseek();
+
+    test_mount_ezfs();
 }
 
 fn send_fork_message() {
@@ -174,6 +176,16 @@ fn test_lseek() {
         &content[0..size]
     );
     println!("[test_lseek] end\n");
+}
+
+fn test_mount_ezfs() {
+    mkdir_at(0, "/bin", 0).unwrap();
+    mount("/dev/sda2", "/bin", "ezfs", 0, 0).unwrap();
+    list_dir("/bin");
+    let mut buf = [0; BUF_SIZE];
+    let fd = open("/bin/cat", OpenFlag::RDWR, 0).unwrap();
+    __read(fd, buf.as_mut()).unwrap();
+    println!("{:?}", buf);
 }
 
 fn list_dir(path: &str) {
