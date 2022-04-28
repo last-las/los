@@ -12,6 +12,7 @@ use alloc::string::String;
 use share::ffi::CString;
 use alloc::collections::VecDeque;
 use crate::vfs::filesystem::read_super_block;
+use crate::vfs::inode::Rdev;
 
 /// The return value of `path_lookup` function.
 pub struct NameIdata {
@@ -132,11 +133,7 @@ pub fn do_mount(source: &str, target: &str, fs_type: &str, _: usize, _: usize, c
 
     // Get Super block with minor device number.
     let rdev = dev_inode.borrow().rdev.clone().unwrap();
-    let result = read_super_block(fs_type, rdev);
-    if result.is_none() {
-        return Err(SysError::new(ENODEV));
-    }
-    let super_block = result.unwrap();
+
 
     // Use `target` to find mountpoint. `target` has to be a directory.
     let target_nameidata = path_lookup(target, cur_fs.clone(), LookupFlags::DIRECTORY, None)?;
@@ -145,13 +142,26 @@ pub fn do_mount(source: &str, target: &str, fs_type: &str, _: usize, _: usize, c
         return Err(SysError::new(EINVAL))
     }
 
-    // Create [`VfsMount`] and attach to `target_dentry`.
+    real_mount(target_dentry, target_nameidata.mnt, fs_type, rdev)?;
+    Ok(0)
+}
+
+pub fn real_mount(target_dentry: Rc<RefCell<VfsDentry>>, target_mnt: Rc<RefCell<VfsMount>>, fs_type: &str, rdev: Rdev)
+                  -> Result<Rc<RefCell<VfsDentry>>, SysError> {
+    // read super block
+    let result = read_super_block(fs_type, rdev);
+    if result.is_none() {
+        return Err(SysError::new(ENODEV));
+    }
+    let super_block = result.unwrap();
+    let root_dentry = super_block.borrow().root.clone().unwrap();
+
     let vfs_mount = VfsMount::new(super_block);
     vfs_mount.borrow_mut().set_mnt_point(target_dentry.clone());
-    vfs_mount.borrow_mut().set_mnt_parent(target_nameidata.mnt);
+    vfs_mount.borrow_mut().set_mnt_parent(target_mnt);
     target_dentry.borrow_mut().mnt = Some(vfs_mount);
 
-    Ok(0)
+    Ok(root_dentry)
 }
 
 pub fn do_open(path: &str, flag: u32, mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {

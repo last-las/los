@@ -6,7 +6,7 @@ use crate::vfs::dentry::VfsDentry;
 use share::file::FileTypeFlag;
 use crate::vfs::file::{FileOperations, File};
 use alloc::vec::Vec;
-use crate::fs::ezfs::{EZFS_MAJOR_DEV, add_ez_fs_instance, get_ez_fs_instance_by, get_ez_fs_root_inode};
+use crate::fs::ezfs::{add_ez_fs_instance, get_ez_fs_instance_by, get_ez_fs_root_inode};
 use easy_fs::{Inode, EasyFileSystem};
 use easy_fs::DiskInodeType;
 use alloc::sync::Arc;
@@ -126,7 +126,7 @@ fn create_dentry_from_ezfs_inode(name: &str, ezfs_inode: Arc<Inode>, super_block
         DiskInodeType::File => FileTypeFlag::DT_REG,
         DiskInodeType::Directory => FileTypeFlag::DT_DIR,
     };
-    let iop = Rc::new(EzFsInodeOperations);
+    let iop = Rc::new(EzFsInodeOperations); // No need to create a new one.. we can clone on the root inode, so does fop.
     let fop = Rc::new(EzFsFileOperations);
     let vfs_inode = VfsInode::new(ino, size, None, file_type, super_block, iop, fop);
     VfsDentry::new(name, vfs_inode)

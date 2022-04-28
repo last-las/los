@@ -10,8 +10,6 @@ use spin::Mutex;
 use alloc::vec::Vec;
 use alloc::collections::BTreeMap;
 
-pub const EZFS_MAJOR_DEV: u32 = 1;
-
 /*
     easy-fs `BlockDevice` trait is moved to share::device
 */

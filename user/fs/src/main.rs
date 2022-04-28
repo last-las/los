@@ -33,6 +33,7 @@ use crate::vfs::dentry::{VfsDentry, VfsMount};
 use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR, RAM_MAJOR};
 use crate::vfs::inode::Rdev;
 use crate::fs::ezfs::register_ezfs;
+use crate::fs::devfs::register_devfs;
 
 #[no_mangle]
 fn main() {
@@ -40,11 +41,12 @@ fn main() {
 
     register_ezfs();
     register_ramfs();
+    register_devfs();
     let rdev = Rdev::new(0, RAM_MAJOR);
     let sp = read_super_block("ramfs", rdev).unwrap();
     let root = sp.borrow().root.clone().unwrap();
     let mnt = VfsMount::new(sp.clone());
-    init_dev_directory(root.clone());
+    init_dev_directory(root.clone(), mnt.clone());
 
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());
     init_fs_struct_of_proc(fs_struct, cur_pid);
@@ -69,12 +71,15 @@ fn main() {
     }
 }
 
-fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>) {
+fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMount>>) {
     let root_inode = root_dentry.borrow().inode.clone();
     // create dev directory
     let dev_dentry = root_inode.borrow().iop.mkdir("dev", root_inode.clone()).unwrap();
     root_dentry.borrow_mut().children.push(dev_dentry.clone());
     dev_dentry.borrow_mut().parent = Some(root_dentry.clone());
+    // mount devfs on dev directory.
+    let dev_dentry =
+        real_mount(dev_dentry, mnt, "devfs", 0.into()).unwrap();
 
     // create sda inode.
     let rdev = Rdev::new(0, VIRT_BLK_MAJOR);
@@ -83,7 +88,7 @@ fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>) {
 
     // create console inode.
     let rdev = Rdev::new(0, CONSOLE_MAJOR);
-    let file_type = FileTypeFlag::DT_BLK;
+    let file_type = FileTypeFlag::DT_CHR;
     attach_device_to(dev_dentry.clone(), "console", file_type, rdev);
 
     // create ram inode.

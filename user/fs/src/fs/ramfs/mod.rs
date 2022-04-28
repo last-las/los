@@ -84,7 +84,7 @@ pub struct InoAllocator {
 }
 
 impl InoAllocator {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             cur: 0,
             recycled: Vec::new(),
