@@ -6,22 +6,27 @@ use crate::vfs::dentry::VfsDentry;
 use share::file::FileTypeFlag;
 use crate::vfs::file::{FileOperations, File};
 use alloc::vec::Vec;
-use super::ROOT_INODE;
-use crate::fs::ezfs::EZFS_MAJOR_DEV;
-use easy_fs::Inode;
+use crate::fs::ezfs::{EZFS_MAJOR_DEV, add_ez_fs_instance, get_ez_fs_instance_by, get_ez_fs_root_inode};
+use easy_fs::{Inode, EasyFileSystem};
 use easy_fs::DiskInodeType;
 use alloc::sync::Arc;
 use alloc::boxed::Box;
+use crate::device::block::Block;
 
-pub fn read_ezfs_super_block(minor_dev: u32) -> Rc<RefCell<SuperBlock>> {
-    assert_eq!(minor_dev, 0);
-    let rdev = Rdev::new(minor_dev, EZFS_MAJOR_DEV);
+pub fn create_ezfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
+    // create a new easy filesystem instance.
+    let block = Block::new(rdev);
+    let easy_fs = EasyFileSystem::open(block);
+    add_ez_fs_instance(rdev.into(), easy_fs.clone());
+
+    // create a new super block
     let sp = SuperBlock::new(rdev);
+    let root_inode = EasyFileSystem::root_inode(&easy_fs);
     let root_dentry =
-        create_dentry_from_ezfs_inode("/", ROOT_INODE.clone(), sp.clone());
+        create_dentry_from_ezfs_inode("/",root_inode, sp.clone());
     sp.borrow_mut().root = Some(root_dentry);
 
-    sp
+    Some(sp)
 }
 
 pub struct EzFsInodeOperations;
@@ -29,8 +34,9 @@ pub struct EzFsFileOperations;
 
 impl InodeOperations for EzFsInodeOperations {
     fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        assert_eq!(parent.borrow().ino, 0);
-        let result = ROOT_INODE.find(name);
+        let rdev = parent.borrow().super_block.borrow().rdev.into();
+        let root_inode = get_ez_fs_root_inode(rdev).unwrap();
+        let result = root_inode.find(name);
         if result.is_none() {
             return None;
         }
@@ -41,8 +47,9 @@ impl InodeOperations for EzFsInodeOperations {
     }
 
     fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        assert_eq!(parent.borrow().ino, 0);
-        let result = ROOT_INODE.create(name);
+        let rdev = parent.borrow().super_block.borrow().rdev.into();
+        let root_inode = get_ez_fs_root_inode(rdev).unwrap();
+        let result = root_inode.create(name);
         if result.is_none() {
             return None;
         }
@@ -63,11 +70,14 @@ impl InodeOperations for EzFsInodeOperations {
 
 impl FileOperations for EzFsFileOperations {
     fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8> {
+        let rdev = file.borrow().dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
+        let root_inode = get_ez_fs_root_inode(rdev).unwrap();
+
         let name = file.borrow().dentry.borrow().name.clone();
         let ino = file.borrow().dentry.borrow().inode.borrow().ino;
         let pos = file.borrow().pos;
 
-        let ezfs_inode = ROOT_INODE.find(name.as_str()).unwrap();
+        let ezfs_inode = root_inode.find(name.as_str()).unwrap();
         let write_ino = get_inode_id_from(ezfs_inode.clone());
         assert_eq!(ino, write_ino);
         let mut content = vec![0; size];
@@ -76,24 +86,28 @@ impl FileOperations for EzFsFileOperations {
     }
 
     fn write(&self, file: Rc<RefCell<File>>, content: &[u8]) {
+        let rdev = file.borrow().dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
+        let root_inode = get_ez_fs_root_inode(rdev).unwrap();
+
         let name = file.borrow().dentry.borrow().name.clone();
         let ino = file.borrow().dentry.borrow().inode.borrow().ino;
         let pos = file.borrow().pos;
 
-        let ezfs_inode = ROOT_INODE.find(name.as_str()).unwrap();
+        let ezfs_inode = root_inode.find(name.as_str()).unwrap();
         let write_ino = get_inode_id_from(ezfs_inode.clone());
         assert_eq!(ino, write_ino);
         ezfs_inode.write_at(pos, content);
     }
 
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
-        let ino = file.borrow().dentry.borrow().inode.borrow().ino;
         let sp = file.borrow().dentry.borrow().inode.borrow().super_block.clone();
+        let rdev = sp.borrow().rdev.into();
+        let root_inode = get_ez_fs_root_inode(rdev).unwrap();
 
-        let names = ROOT_INODE.ls();
+        let names = root_inode.ls();
         let mut results = Vec::new();
         for name in names {
-            let ezfs_inode = ROOT_INODE.find(name.as_str()).unwrap();
+            let ezfs_inode = root_inode.find(name.as_str()).unwrap();
             let dentry = create_dentry_from_ezfs_inode(name.as_str(), ezfs_inode, sp.clone());
             results.push(dentry);
         }

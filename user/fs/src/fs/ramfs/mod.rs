@@ -1,7 +1,7 @@
 mod vfs_interface;
 
 use spin::Mutex;
-use alloc::collections::{BinaryHeap, VecDeque};
+use alloc::collections::{BinaryHeap, VecDeque, BTreeMap};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use alloc::vec::Vec;
@@ -13,19 +13,31 @@ use crate::fs::ramfs::vfs_interface::{RamFsInodeOperations, RamFsFileOperations}
 use alloc::boxed::Box;
 use share::file::FileTypeFlag;
 
-const RAMFS_MAJOR_DEV: u32 = 0;
 
 pub fn register_ramfs() {
-    let mut filesystem = FileSystem::new("ramfs", vfs_interface::read_ramfs_super_block);
-    assert!(register_filesystem(filesystem, RAMFS_MAJOR_DEV));
+    let mut filesystem = FileSystem::new("ramfs", vfs_interface::create_ramfs_super_block);
+    assert!(register_filesystem(filesystem));
 }
 
-pub static mut RAM_FILE_SYSTEMS: Vec<Option<RamFileSystem>> = Vec::new();
+fn add_ram_fs_instance(rdev: u64, ram_fs_instance: RamFileSystem) {
+    unsafe {
+        assert!(RAM_FILE_SYSTEMS.get(&rdev).is_none());
+        RAM_FILE_SYSTEMS.insert(rdev, ram_fs_instance);
+    }
+}
+
+fn get_ram_fs_instance(rdev: u64) -> Option<&'static mut RamFileSystem> {
+    unsafe {
+        RAM_FILE_SYSTEMS.get_mut(&rdev)
+    }
+}
+
+
+pub static mut RAM_FILE_SYSTEMS: BTreeMap<u64, RamFileSystem> = BTreeMap::new();
 
 pub struct RamFileSystem {
     ino_allocator: InoAllocator,
     inode_queue: VecDeque<Rc<RefCell<RamFsInode>>>,
-    super_block: Option<Rc<RefCell<SuperBlock>>>
 }
 
 impl RamFileSystem {
@@ -44,7 +56,6 @@ impl RamFileSystem {
         Self {
             ino_allocator,
             inode_queue,
-            super_block: None,
         }
     }
 

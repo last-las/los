@@ -45,7 +45,7 @@ impl VfsInode {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Rdev {
     pub minor: u32,
     pub major: u32,

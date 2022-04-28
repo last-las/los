@@ -1,11 +1,13 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![feature(arbitrary_self_types)]
+#![feature(const_btree_new)]
 
 mod vfs;
 mod fs;
 mod proc;
 mod syscall;
+mod device;
 
 #[macro_use]
 extern crate user_lib;
@@ -38,10 +40,11 @@ fn main() {
 
     register_ezfs();
     register_ramfs();
-    let sp = read_super_block("ramfs", 0).unwrap();
+    let rdev = Rdev::new(0, RAM_MAJOR);
+    let sp = read_super_block("ramfs", rdev).unwrap();
     let root = sp.borrow().root.clone().unwrap();
     let mnt = VfsMount::new(sp.clone());
-    init_device_tree(root.clone());
+    init_dev_directory(root.clone());
 
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());
     init_fs_struct_of_proc(fs_struct, cur_pid);
@@ -66,7 +69,7 @@ fn main() {
     }
 }
 
-fn init_device_tree(root_dentry: Rc<RefCell<VfsDentry>>) {
+fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>) {
     let root_inode = root_dentry.borrow().inode.clone();
     // create dev directory
     let dev_dentry = root_inode.borrow().iop.mkdir("dev", root_inode.clone()).unwrap();

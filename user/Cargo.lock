@@ -37,6 +37,7 @@ name = "easy-fs"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
+ "share",
  "spin 0.7.1",
 ]
 

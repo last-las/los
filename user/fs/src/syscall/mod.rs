@@ -132,7 +132,7 @@ pub fn do_mount(source: &str, target: &str, fs_type: &str, _: usize, _: usize, c
 
     // Get Super block with minor device number.
     let rdev = dev_inode.borrow().rdev.clone().unwrap();
-    let result = read_super_block(fs_type, rdev.minor);
+    let result = read_super_block(fs_type, rdev);
     if result.is_none() {
         return Err(SysError::new(ENODEV));
     }
