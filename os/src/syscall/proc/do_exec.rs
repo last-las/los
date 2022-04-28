@@ -8,16 +8,30 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::mm::page_table::PageTable;
 use share::ffi::{CString, CStrArray, c_char, CStr};
+use crate::syscall::kcall::FS_INIT_SUCCESS;
+use crate::syscall::file::{do_open, __do_read};
+use share::file::OpenFlag;
 
 pub fn do_exec(path_ptr: usize, argv: *const *const c_char, envp: *const *const c_char) -> Result<usize, SysError> {
-    let data = get_target_elf_data_by(path_ptr)?;
-    let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
-    let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv, envp);
-    switch_to_new_addr_space(&mem_manager.page_table);
-    let user_sp = unsafe { push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp) };
-    modify_current_task_struct(mem_manager, pc, user_sp);
+    let is_fs_init = unsafe { FS_INIT_SUCCESS };
 
-    Ok(0)
+    if is_fs_init {
+        let path_cstr = CStr::from_ptr(path_ptr as *const _);
+        let path_cstring = CString::from(path_cstr);
+        let open_flag = OpenFlag::RDONLY;
+        let fd = do_open(path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
+        Ok(0)
+    } else {
+        let data = get_target_elf_data_by(path_ptr)?;
+        let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
+        let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv, envp);
+        switch_to_new_addr_space(&mem_manager.page_table);
+        let user_sp = unsafe { push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp) };
+        modify_current_task_struct(mem_manager, pc, user_sp);
+
+        Ok(0)
+    }
+
 }
 
 fn get_target_elf_data_by(path_ptr: usize) -> Result<&'static [u8], SysError> {

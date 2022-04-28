@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
 use share::ipc::Msg;
-use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag};
+use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
 use share::ffi::{CString, CStr};
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
@@ -122,6 +122,12 @@ pub fn __write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
 pub fn mkdir_at(dir_fd: usize, path: &str, mode: u32) -> Result<usize, SysError> {
     let cstring = CString::from(path);
     isize2result(sys_mkdir_at(dir_fd, cstring.as_ptr() as usize, mode))
+}
+
+pub fn fstat(fd: usize) -> Result<Stat, SysError> {
+    let mut stat = Stat::empty();
+    isize2result(sys_fstat(fd, &mut stat))?;
+    Ok(stat)
 }
 
 pub fn sleep(seconds: usize) {

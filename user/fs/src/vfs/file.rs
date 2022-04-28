@@ -3,7 +3,7 @@ use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use share::file::OpenFlag;
+use share::file::{OpenFlag, Stat};
 
 pub struct File {
     pub fop: Rc<dyn FileOperations>,
@@ -37,6 +37,14 @@ impl File {
 
     pub fn is_directory(&self) -> bool {
         self.open_flags.contains(OpenFlag::DIRECTORY)
+    }
+
+    pub fn fstat(&self) -> Stat {
+        let mut stat = Stat::empty();
+        let size = self.dentry.borrow().inode.borrow().size;
+        stat.size = size;
+
+        stat
     }
 }
 

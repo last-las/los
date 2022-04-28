@@ -6,7 +6,7 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek};
+use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek, fstat};
 use share::ipc::{Msg, FORK, FS_SYSCALL_ARG0, FORK_PARENT};
 use share::file::{OpenFlag, AT_FD_CWD, SEEKFlag};
 use share::syscall::error::SysError;
@@ -28,6 +28,9 @@ fn main() {
     test_lseek();
 
     test_mount_ezfs();
+    let fd = open("/bin/test_fs", OpenFlag::RDONLY, 0).unwrap();
+    let stat = fstat(fd).unwrap();
+    println!("size: {:#x}", stat.size);
 }
 
 fn send_fork_message() {

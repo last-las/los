@@ -3,6 +3,7 @@ use crate::syscall::error::SysError;
 
 pub const TERMINAL_PID: usize = 1;
 pub const VIRTIO_BLK_PID: usize = 4;
+pub const FS_PID: usize = 5;
 
 /* Message Type */
 pub const INTERRUPT: usize = 1;

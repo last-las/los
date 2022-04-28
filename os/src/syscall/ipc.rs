@@ -13,7 +13,7 @@ use spin::MutexGuard;
 /// Caller task reads the message from `msg_ptr`, and If `dst_pid` task is receiving,
 /// it moves the message to dst task's [`TaskStruct`] and wakes it up. Otherwise it stores the message
 /// inside caller task's [`TaskStruct`] and blocks itself.
-pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
+pub fn kcall_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     let dst_task = get_dst_task_or_err(dst_pid)?;
     let caller_task = clone_cur_task_in_this_hart();
     check_deadlock(caller_task.clone(), dst_task.clone())?;
@@ -50,7 +50,7 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
 /// Caller task finds out possible sending tasks, if there is someone sending, it moves the [`Msg`]
 /// from sending task to address where `msg_ptr` points to and wakes the sending task up. Otherwise
 /// it blocks itself, and after it is waked up, it moves message to that address.
-pub fn sys_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
+pub fn kcall_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
     let src_task = clone_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     if dst_pid == -1 && src_task_inner.interrupt_flag {

@@ -6,7 +6,7 @@ use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ER
 use crate::vfs::file::File;
 use alloc::sync::Arc;
 use user_lib::syscall::{virt_copy, getpid};
-use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, SEEKFlag};
+use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
 use alloc::vec::Vec;
 use alloc::string::String;
 use share::ffi::CString;
@@ -303,6 +303,15 @@ pub fn do_mkdir_at(dir_fd: usize, path: &str, mode: usize, cur_fs: Rc<RefCell<Fs
 
     parent.borrow_mut().children.push(dir_entry.clone());
     dir_entry.borrow_mut().parent = Some(parent.clone());
+
+    Ok(0)
+}
+
+pub fn do_fstat(fd: usize, stat_ptr: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let file = cur_fs.borrow().get_file(fd)?;
+    let stat = file.borrow().fstat();
+    virt_copy(getpid(), &stat as *const _ as usize,
+              proc_nr, stat_ptr, core::mem::size_of::<Stat>()).unwrap();
 
     Ok(0)
 }

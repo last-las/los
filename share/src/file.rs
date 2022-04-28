@@ -79,6 +79,38 @@ bitflags! {
     }
 }
 
+// TODO-FUTURE: update field size.
+#[repr(C)]
+pub struct Stat {
+    pub dev: usize,
+    pub ino: usize,
+    pub mode: usize,
+    pub nlink: usize,
+    pub uid: usize,
+    pub gid: usize,
+    pub rdev: usize,
+    // __pad
+    pub size: usize,
+    pub blksize: usize,
+    // sec stuff...
+}
+
+impl Stat {
+    pub fn empty() -> Self {
+        Self {
+            dev: 0,
+            ino: 0,
+            mode: 0,
+            nlink: 0,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            size: 0,
+            blksize: 0,
+        }
+    }
+}
+
 pub const MAX_PATH_LENGTH: usize = 64;
 pub const AT_FD_CWD: isize = -100;
 pub const DIRENT_BUFFER_SZ: usize = 2048;

@@ -1,6 +1,7 @@
 use share::ipc::Msg;
 use share::syscall::sys_const::*;
 use core::arch::asm;
+use share::file::Stat;
 
 #[inline(always)]
 fn syscall0(id: usize) -> isize {
@@ -169,6 +170,10 @@ pub fn sys_mkdir_at(dir_fd: usize, path_ptr: usize, mode: u32) -> isize {
     syscall3(SYSCALL_MKDIRAT, dir_fd, path_ptr, mode as usize)
 }
 
+pub fn sys_fstat(fd: usize, stat: &mut Stat) -> isize {
+    syscall2(SYSCALL_FSTAT, fd, stat as *const _ as usize)
+}
+
 pub fn sys_exit(exit_code: usize) -> isize{
     syscall1(SYSCALL_EXIT, exit_code)
 }
@@ -243,4 +248,8 @@ pub fn k_virt_to_phys(virt_addr: usize) -> isize {
 
 pub fn k_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usize) -> isize {
     syscall4(KCALL_COPY_C_PATH, proc, path_ptr, buf_ptr, size)
+}
+
+pub fn k_fs_success() -> isize {
+    syscall0(KCALL_FS_SUCCESS)
 }

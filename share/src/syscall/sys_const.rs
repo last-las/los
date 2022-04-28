@@ -17,6 +17,7 @@ pub const __SYSCALL_READ: usize = SYSCALL_READ + 0x2000;
 pub const SYSCALL_WRITE: usize = 64;
 pub const _SYSCALL_WRITE: usize = KCALL_MASK | SYSCALL_WRITE;
 pub const __SYSCALL_WRITE: usize = SYSCALL_WRITE + 0x2000;
+pub const SYSCALL_FSTAT: usize = 80;
 
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;
@@ -42,3 +43,4 @@ pub const KCALL_VIRT_COPY: usize = KCALL_MASK | 5;
 pub const KCALL_CONTINUOUS_ALLOC: usize = KCALL_MASK | 6;
 pub const KCALL_VIRT_TO_PHYS: usize = KCALL_MASK | 7;
 pub const KCALL_COPY_C_PATH: usize = KCALL_MASK | 8;
+pub const KCALL_FS_SUCCESS: usize = KCALL_MASK | 9;

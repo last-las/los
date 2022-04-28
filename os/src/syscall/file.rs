@@ -2,12 +2,10 @@ use core::str::from_utf8;
 use share::syscall::error::{EBADF, SysError};
 use crate::sbi::sbi_console_getchar;
 use crate::task::stop_current_and_run_next_task;
-use crate::syscall::ipc::{sys_send, sys_receive};
-use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4};
+use crate::syscall::ipc::{kcall_send, kcall_receive};
+use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4, FS_PID};
 use crate::processor::clone_cur_task_in_this_hart;
-use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK};
-
-const FS_PID: usize = 5;
+use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK, SYSCALL_FSTAT};
 
 pub fn do_lseek(fd: usize, offset: usize, whence: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_LSEEK, [fd, offset, whence, 0, 0])
@@ -69,8 +67,8 @@ pub fn _do_write(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysE
         message.args[PROC_NR] = cur_pid;
         message.args[BUFFER] = buf_ptr;
         message.args[LENGTH] = length;
-        sys_send(1, &message as *const _ as usize).unwrap();
-        sys_receive(1, &mut message as *mut _ as usize).unwrap();
+        kcall_send(1, &message as *const _ as usize).unwrap();
+        kcall_receive(1, &mut message as *mut _ as usize).unwrap();
 
         Ok(message.args[REPLY_STATUS])
 }
@@ -116,8 +114,8 @@ pub fn _do_read(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysEr
     message.args[PROC_NR] = cur_pid;
     message.args[BUFFER] = buf_ptr;
     message.args[LENGTH] = length;
-    sys_send(1, &message as *const _ as usize).unwrap();
-    sys_receive(1, &mut message as *mut _ as usize).unwrap();
+    kcall_send(1, &message as *const _ as usize).unwrap();
+    kcall_receive(1, &mut message as *mut _ as usize).unwrap();
 
     Ok(message.args[REPLY_STATUS])
 }
@@ -131,6 +129,10 @@ pub fn do_mkdir_at(dir_fd: usize, path_ptr: usize, mode: usize) -> Result<usize,
     send_receive_fs(SYSCALL_MKDIRAT, [dir_fd, path_ptr, mode, 0, 0])
 }
 
+pub fn do_fstat(fd: usize, stat_ptr: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_FSTAT, [fd, stat_ptr, 0, 0, 0])
+}
+
 fn send_receive_fs(syscall_id: usize, args: [usize; 5]) -> Result<usize, SysError> {
     let mut message = Msg::empty();
     let cur_pid = clone_cur_task_in_this_hart().pid();
@@ -142,8 +144,8 @@ fn send_receive_fs(syscall_id: usize, args: [usize; 5]) -> Result<usize, SysErro
     message.args[FS_SYSCALL_ARG2] = args[2];
     message.args[FS_SYSCALL_ARG3] = args[3];
     message.args[FS_SYSCALL_ARG4] = args[4];
-    sys_send(FS_PID, &message as *const _ as usize).unwrap();
-    sys_receive(FS_PID as isize, &mut message as *mut _ as usize).unwrap();
+    kcall_send(FS_PID, &message as *const _ as usize).unwrap();
+    kcall_receive(FS_PID as isize, &mut message as *mut _ as usize).unwrap();
 
     let status = message.args[REPLY_STATUS] as isize;
     isize2result(status)
