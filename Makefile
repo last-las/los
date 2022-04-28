@@ -6,9 +6,9 @@ BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
-FS_IMG := ./fs.img
+FS_IMG := $(USER_PATH)/fs.img
 
-all: user
+all: user fs-img
 	@cd ./os && cargo build --release
 	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
 		--strip-all \
@@ -22,9 +22,9 @@ user:
 	@cd ./user && python build.py && cargo build --release
 
 fs-img:
-	# @dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024
+	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 
-run: fs-img
+run:
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \
