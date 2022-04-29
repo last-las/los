@@ -117,7 +117,7 @@ impl FileOperations for DevFsFileOperations {
     }
 
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
-        unimplemented!()
+        return Vec::new();
     }
 }
 

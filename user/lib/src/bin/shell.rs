@@ -7,9 +7,13 @@ extern crate user_lib;
 extern crate alloc;
 
 use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, exit, waitpid, debug_frame_usage};
+use user_lib::syscall::{fork, exec, exit, waitpid, debug_frame_usage, getcwd, chdir, open, write, close, dup};
 use share::terminal::{Termios, Ciflag, Clflag};
 use user_lib::termios::tc_set_attr;
+use core::str::SplitWhitespace;
+use alloc::vec::Vec;
+use user_lib::env::{get_args, getenv};
+use share::file::OpenFlag;
 
 #[no_mangle]
 fn main() {
@@ -18,20 +22,22 @@ fn main() {
     tc_set_attr(1, shell_termios).unwrap();
 
     loop {
-        print!("root@los$ ");
+        let cur_dir = getcwd().unwrap();
+        print!("root@los:{}$ ", cur_dir);
         let line = read_line();
-        if line.len() == 0 {
+        let args: Vec<&str> = line.split_whitespace().collect();
+        if args.len() == 0 {
             continue;
         }
-        if line.as_str() =="frame_usage"  {
-            println!("available frames: {:#x}", debug_frame_usage());
+
+        if handle_inner_command(&args) {
             continue;
         }
 
         let ret = fork().unwrap();
         if ret == 0 {
             tc_set_attr(1, Termios::default()).unwrap();
-            if exec(line.as_str(), vec![line.as_str()]).is_err() {
+            if exec(args[0], args).is_err() {
                 println!("{}: no such file", line);
                 exit(127);
             }
@@ -41,4 +47,34 @@ fn main() {
             tc_set_attr(1, shell_termios).unwrap(); // reset default shell termios.
         }
     }
+}
+
+fn handle_inner_command(args: &Vec<&str>) -> bool {
+    if args[0] == "frame_usage" {
+        println!("available frames: {:#x}", debug_frame_usage());
+        return true;
+    }
+
+    if args[0] == "cd" {
+        if args.len() != 2 {
+            println!("{}: cd: wrong arguments", get_args()[0].as_str());
+        } else if chdir(args[1]).is_err() {
+            println!("{}: cd: {}: No such file or directory", get_args()[0].as_str(), args[1]);
+        }
+        return true;
+    } else if args[0] == "echo" {
+        let len = args.len();
+        if len == 4 && args[2] == ">" { // No pipe syscall right now, use a stupid method instead.
+            let fd = open(args[3], OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
+            write(fd, args[1].as_bytes()).unwrap();
+            close(fd).unwrap();
+        } else if len == 2 {
+            let fd = dup(1).unwrap();
+            write(fd, args[1].as_bytes()).unwrap();
+            close(fd).unwrap();
+        }
+        return true;
+    }
+
+    return false;
 }

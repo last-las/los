@@ -10,7 +10,7 @@ use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, S
 use alloc::vec::Vec;
 use alloc::string::String;
 use share::ffi::CString;
-use alloc::collections::VecDeque;
+use alloc::collections::{VecDeque, BinaryHeap};
 use crate::vfs::filesystem::read_super_block;
 use crate::vfs::inode::Rdev;
 
@@ -59,33 +59,15 @@ pub fn do_lseek(fd: usize, offset: usize, whence: usize, cur_fs: Rc<RefCell<FsSt
 }
 
 pub fn do_getcwd(buf: usize, size: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
-    let mut names = VecDeque::new();
-    let mut cur_dentry = cur_fs.borrow().pwd.clone();
-    loop {
-        names.push_front(cur_dentry.borrow().name.clone());
-        if cur_dentry.borrow().parent.is_none() {
-            break;
-        }
-        let parent_dentry = cur_dentry.borrow().parent.as_ref().unwrap().clone();
-        cur_dentry = parent_dentry;
-    }
-
-    let mut path = String::new();
-
-    for i in 0..names.len() {
-        path.push_str(names[i].as_str());
-        if i == 0 || i == names.len() - 1 {
-            continue;
-        }
-        path.push_str("/");
-    }
-    let mut cstring = CString::new(path);
-    let length = cstring.as_bytes_with_nul().len();
+    let fs_ref = cur_fs.borrow();
+    let path = get_path_name(fs_ref.pwd.clone(), fs_ref.pwd_mnt.clone(),
+                             fs_ref.root.clone(), fs_ref.root_mnt.clone());
+    let length = path.len();
     if length > size {
         return Err(SysError::new(ERANGE));
     }
 
-    virt_copy(getpid(),cstring.as_ptr() as usize, proc_nr, buf, length).unwrap();
+    virt_copy(getpid(), path.as_ptr() as usize, proc_nr, buf, length).unwrap();
 
     Ok(0)
 }
@@ -493,6 +475,39 @@ fn find_uncached_dentries(parent: Rc<RefCell<VfsDentry>>, filesystem_dentries: V
     }
 
     uncached_dentries
+}
+
+/// Return the path(end with null) of `cur_dentry`
+fn get_path_name(mut cur_dentry: Rc<RefCell<VfsDentry>>, mut cur_mnt: Rc<RefCell<VfsMount>>,
+                 root_dentry: Rc<RefCell<VfsDentry>>, root_mnt: Rc<RefCell<VfsMount>>) -> String {
+    let mut path_names = VecDeque::new();
+    loop {
+        if Rc::ptr_eq(&cur_dentry, &root_dentry) && Rc::ptr_eq(&cur_mnt, &root_mnt) {
+            break;
+        } else if Rc::ptr_eq(&cur_dentry, &cur_mnt.borrow().mount_root) {
+            cur_dentry = cur_mnt.borrow().mount_point.clone().unwrap();
+            let parent_mnt = cur_mnt.borrow().mount_parent.clone().unwrap();
+            cur_mnt = parent_mnt;
+            continue;
+        }
+
+        path_names.push_front(cur_dentry.borrow().name.clone());
+        let parent = cur_dentry.borrow().parent.clone().unwrap();
+        cur_dentry = parent;
+    }
+
+    // concat together
+    let mut path = String::from('/');
+    let length = path_names.len();
+    for i in 0..length {
+        path.push_str(path_names[i].as_str());
+        if i != length - 1 {
+            path.push('/');
+        }
+    }
+    path.push('\0');
+
+    return path;
 }
 
 fn follow_dotdot(mut dentry: Rc<RefCell<VfsDentry>>, mut mnt: Rc<RefCell<VfsMount>>, current: Rc<RefCell<FsStruct>>)

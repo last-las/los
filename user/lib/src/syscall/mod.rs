@@ -1,10 +1,10 @@
 mod raw;
 
 pub use raw::*;
-use share::syscall::error::{SysError, ENOMEM};
+use share::syscall::error::{SysError, ENOMEM, ENFILE};
 use alloc::vec::Vec;
 use alloc::string::String;
-use crate::env::get_envp_copy;
+use crate::env::{get_envp_copy, getenv};
 use share::ipc::Msg;
 use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
 use share::ffi::{CString, CStr};
@@ -157,12 +157,18 @@ pub fn fork() -> Result<usize, SysError> {
     isize2result(sys_fork(0, 0, 0, 0, 0))
 }
 
-#[allow(unused_variables)]
 pub fn exec(path: &str, mut args: Vec<&str>) -> Result<usize, SysError> {
-    let mut s = String::from(path);
-    s.push('\0');
-    let path_ptr = s.as_ptr() as usize;
+    // search from current directory and directory name in PATH env.
+    let mut search_paths = Vec::new();
+    search_paths.push(String::from("."));
+    let result = getenv("PATH");
+    if result.is_some() {
+        let path = result.unwrap();
+        let env_paths: Vec<&str> = path.split(":").collect();
+        search_paths.extend(env_paths.iter().map(|&str| { String::from(str)}));
+    }
 
+    // construct `argv_ptr`
     let mut args_end_with_zero = Vec::new();
     let mut argv = Vec::new();
     for arg in args {
@@ -174,9 +180,19 @@ pub fn exec(path: &str, mut args: Vec<&str>) -> Result<usize, SysError> {
     argv.push(0);
     let argv_ptr = argv.as_ptr() as usize;
 
-    let envp = get_envp_copy();
-    let envp_ptr = envp.as_ptr() as usize;
-    isize2result(sys_exec(path_ptr, argv_ptr,envp_ptr))
+    // try exec `path` file on each search_path
+    for mut search_path in search_paths {
+        search_path.push('/');
+        search_path.push_str(path);
+        search_path.push('\0');
+        let path_ptr = search_path.as_ptr() as usize;
+
+        let envp = get_envp_copy();
+        let envp_ptr = envp.as_ptr() as usize;
+        sys_exec(path_ptr, argv_ptr,envp_ptr); // if success this function will never return.
+    }
+
+    return Err(SysError::new(ENFILE));
 }
 
 pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result<usize, SysError> {

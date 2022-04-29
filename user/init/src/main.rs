@@ -9,10 +9,12 @@ extern crate alloc;
 use user_lib::io::read_line;
 use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid, sleep, mkdir_at, mount, open, get_dents, close};
 use share::file::OpenFlag;
+use user_lib::env::setenv;
 
 #[no_mangle]
 fn main() {
-    sleep(2); // wait for fs server init.
+    setenv("PATH", "/bin:/usr/bin:", true);
+    sleep(1); // wait for fs server init.
     open_standard_fd();
     mount_ezfs_on("/bin");
     fork_and_exec("/bin/idle");
