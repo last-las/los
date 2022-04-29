@@ -249,7 +249,3 @@ pub fn k_virt_to_phys(virt_addr: usize) -> isize {
 pub fn k_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usize) -> isize {
     syscall4(KCALL_COPY_C_PATH, proc, path_ptr, buf_ptr, size)
 }
-
-pub fn k_fs_success() -> isize {
-    syscall0(KCALL_FS_SUCCESS)
-}

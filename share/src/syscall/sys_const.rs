@@ -43,4 +43,3 @@ pub const KCALL_VIRT_COPY: usize = KCALL_MASK | 5;
 pub const KCALL_CONTINUOUS_ALLOC: usize = KCALL_MASK | 6;
 pub const KCALL_VIRT_TO_PHYS: usize = KCALL_MASK | 7;
 pub const KCALL_COPY_C_PATH: usize = KCALL_MASK | 8;
-pub const KCALL_FS_SUCCESS: usize = KCALL_MASK | 9;

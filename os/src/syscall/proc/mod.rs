@@ -10,22 +10,22 @@ pub use do_waitpid::do_waitpid;
 pub use priority::*;
 use share::syscall::error::{SysError, ECHILD};
 use crate::processor::get_cur_task_in_this_hart;
-use crate::syscall::kcall::is_fs_init;
 use share::ipc::{Msg, EXIT, EXIT_PID, FS_PID};
 use crate::syscall::ipc::kcall_send;
 
 pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
-    if is_fs_init() {
-        let cur_task = get_cur_task_in_this_hart();
-        let pid = cur_task.pid();
-        drop(cur_task);
+    // get cur pid
+    let cur_task = get_cur_task_in_this_hart();
+    let pid = cur_task.pid();
+    drop(cur_task);
 
-        let mut message = Msg::empty();
-        message.mtype = EXIT;
-        message.args[EXIT_PID] = pid;
-        kcall_send(FS_PID, &message as *const _ as usize)?;
-    }
+    // send EXIT message to fs server
+    let mut message = Msg::empty();
+    message.mtype = EXIT;
+    message.args[EXIT_PID] = pid;
+    kcall_send(FS_PID, &message as *const _ as usize)?;
 
+    // final step
     exit_current_and_run_next_task(exit_code as usize);
     Ok(0)
 }

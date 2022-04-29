@@ -8,29 +8,22 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::mm::page_table::PageTable;
 use share::ffi::{CString, CStrArray, c_char, CStr};
-use crate::syscall::kcall::{FS_INIT_SUCCESS, is_fs_init};
 use crate::syscall::file::{do_open, __do_read, do_fstat, do_close};
 use share::file::{OpenFlag, Stat};
 use alloc::vec;
 
 pub fn do_exec(path_ptr: usize, argv: *const *const c_char, envp: *const *const c_char) -> Result<usize, SysError> {
-    let mut data_buffer: Vec<u8>;
-    let data;
-
-    if is_fs_init() { // read from fs server.
-        let path_cstr = CStr::from_ptr(path_ptr as *const _);
-        let path_cstring = CString::from(path_cstr);
-        let open_flag = OpenFlag::RDONLY;
-        let fd = do_open(path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
-        let stat = Stat::empty();
-        do_fstat(fd, &stat as *const _ as usize)?;
-        data_buffer = vec![0; stat.size];
-        __do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
-        do_close(fd)?;
-        data = data_buffer.as_slice();
-    } else { // read from ram.
-        data = get_target_elf_data_by(path_ptr)?;
-    }
+    // read file data from fs server.
+    let path_cstr = CStr::from_ptr(path_ptr as *const _);
+    let path_cstring = CString::from(path_cstr);
+    let open_flag = OpenFlag::RDONLY;
+    let fd = do_open(path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
+    let stat = Stat::empty();
+    do_fstat(fd, &stat as *const _ as usize)?;
+    let data_buffer = vec![0; stat.size];
+    __do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
+    do_close(fd)?;
+    let data = data_buffer.as_slice();
 
     let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
     let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv, envp);

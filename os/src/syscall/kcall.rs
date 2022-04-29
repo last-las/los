@@ -7,14 +7,6 @@ use crate::config::FRAME_SIZE;
 use share::ffi::CStr;
 use share::file::MAX_PATH_LENGTH;
 
-pub static mut FS_INIT_SUCCESS: bool = true;
-
-pub fn is_fs_init() -> bool {
-    unsafe {
-         FS_INIT_SUCCESS
-    }
-}
-
 pub fn kcall_read_dev(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
     let dev_pa = PhysicalAddress::new(dev_phys_addr);
     let ret = unsafe {
@@ -121,15 +113,6 @@ pub fn kcall_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usi
 
     Ok(c_str.as_bytes().len())
 }
-
-pub fn kcall_fs_success() -> Result<usize, SysError> {
-    unsafe {
-        FS_INIT_SUCCESS = true;
-    }
-
-    Ok(0)
-}
-
 
 fn get_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&'static [u8], SysError> {
     let task = get_task_by_pid(pid).ok_or(SysError::new(EINVAL))?;
