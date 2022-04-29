@@ -99,24 +99,8 @@ pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
     isize2result(sys_read(fd, buf))
 }
 
-pub fn _read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
-    isize2result(_sys_read(fd, buf))
-}
-
-pub fn __read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
-    isize2result(__sys_read(fd, buf))
-}
-
-pub fn write(fd: usize, buf: &[u8]) -> isize {
-    sys_write(fd, buf)
-}
-
-pub fn _write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
-    isize2result(_sys_write(fd, buf))
-}
-
-pub fn __write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
-    isize2result(__sys_write(fd, buf))
+pub fn write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+    isize2result(sys_write(fd, buf))
 }
 
 pub fn mkdir_at(dir_fd: usize, path: &str, mode: u32) -> Result<usize, SysError> {
@@ -203,6 +187,8 @@ pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result
     isize2result(sys_waitpid(pid as usize, status_ptr, options))
 }
 
+/************************************** kcall wrapper ****************************************/
+
 pub fn send(dst_pid: usize, msg: &Msg) -> Result<usize, SysError> {
     isize2result(sys_send(dst_pid, msg))
 }
@@ -248,4 +234,20 @@ pub fn copy_path_from(proc: usize, path_ptr: usize) -> Result<String, SysError> 
     let length = isize2result(k_copy_c_path(proc, path_ptr, buffer.as_ptr() as usize, MAX_PATH_LENGTH))?;
     let str = core::str::from_utf8(&buffer[..length]).unwrap();
     Ok(String::from(str))
+}
+
+pub fn sbi_read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(k_sbi_read(fd, buf))
+}
+
+pub fn sbi_write(fd: usize, buf: &[u8]) -> isize {
+    k_sbi_write(fd, buf)
+}
+
+pub fn terminal_read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(k_terminal_read(fd, buf))
+}
+
+pub fn terminal_write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+    isize2result(k_terminal_write(fd, buf))
 }

@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{_read, fork, _write, getpid, send, receive};
+use user_lib::syscall::{terminal_read, fork, terminal_write, getpid, send, receive};
 use user_lib::termios::{tc_get_attr, tc_set_attr};
 use share::terminal::Clflag;
 use share::ipc::{Msg, READ, PROC_NR, BUFFER, POSITION, WRITE, REPLY_STATUS, VIRTIO_BLK_PID};

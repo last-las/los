@@ -12,7 +12,8 @@ use share::file::OpenFlag;
 
 #[no_mangle]
 fn main() {
-    sleep(3); // wait for fs server init.
+    sleep(2); // wait for fs server init.
+    open_standard_fd();
     mount_ezfs_on("/bin");
     fork_and_exec("/bin/idle");
     fork_and_exec("/bin/shell");
@@ -23,6 +24,15 @@ fn main() {
             Err(_) => sys_yield(),
         };
     }
+}
+
+fn open_standard_fd() {
+    let fd = open("/dev/console", OpenFlag::RDONLY, 0).unwrap();
+    assert_eq!(fd, 0);
+    let fd = open("/dev/console", OpenFlag::WRONLY, 0).unwrap();
+    assert_eq!(fd, 1);
+    let fd = open("/dev/console", OpenFlag::WRONLY, 0).unwrap();
+    assert_eq!(fd, 2);
 }
 
 fn mount_ezfs_on(path: &str) {

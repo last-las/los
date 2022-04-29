@@ -6,7 +6,7 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{yield_, getppid, send, open, __write, __read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek, fstat, getpid};
+use user_lib::syscall::{yield_, getppid, send, open, write, read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek, fstat, getpid};
 use share::ipc::{Msg, FORK, FS_SYSCALL_ARG0, FORK_PARENT, FORK_CHILD};
 use share::file::{OpenFlag, AT_FD_CWD, SEEKFlag};
 use share::syscall::error::SysError;
@@ -43,16 +43,16 @@ fn test_read_write() {
     // write content
     let fd = open("/test1.txt",OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
     let mut w_buf = [8; BUF_SIZE];
-    __write(fd, &w_buf).unwrap();
-    assert!(__read(fd, &mut w_buf).is_err());
+    write(fd, &w_buf).unwrap();
+    assert!(read(fd, &mut w_buf).is_err());
     close(fd).unwrap();
     // println!("write content success");
 
     // read content
     let fd = open("/test1.txt",OpenFlag::CREAT | OpenFlag::RDONLY, 0).unwrap();
     let mut r_buf = [0; BUF_SIZE];
-     __read(fd, &mut r_buf).unwrap();
-    assert!(__write(fd, &r_buf).is_err());
+     read(fd, &mut r_buf).unwrap();
+    assert!(write(fd, &r_buf).is_err());
     close(fd).unwrap();
     // println!("read content success");
 
@@ -157,21 +157,21 @@ fn test_lseek() {
     let fd = open("/test_lseek.txt", OpenFlag::CREAT | OpenFlag::RDWR, 0).unwrap();
     let before = "She   is a crazy woman";
     let after_ = "He    was such a crazy\0\0\0man";
-    __write(fd, before.as_bytes()).unwrap();
+    write(fd, before.as_bytes()).unwrap();
 
     // SEEK_END flag
     lseek(fd, 3, SEEKFlag::END).unwrap();
-    __write(fd, "man".as_bytes()).unwrap();
+    write(fd, "man".as_bytes()).unwrap();
     // SEEK_SET flag
     lseek(fd, 0, SEEKFlag::SET).unwrap();
-    __write(fd, "He ".as_bytes()).unwrap();
+    write(fd, "He ".as_bytes()).unwrap();
     // SEEK_CUR flag
     lseek(fd, 3, SEEKFlag::CUR).unwrap();
-    __write(fd, "was such a crazy".as_bytes()).unwrap();
+    write(fd, "was such a crazy".as_bytes()).unwrap();
 
     lseek(fd, 0, SEEKFlag::SET).unwrap();
     let mut content = [0; 32];
-    let size = __read(fd, &mut content).unwrap();
+    let size = read(fd, &mut content).unwrap();
     assert_eq!(
         after_.as_bytes(),
         &content[0..size]

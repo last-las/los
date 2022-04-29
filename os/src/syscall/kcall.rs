@@ -1,11 +1,15 @@
-use share::syscall::error::{SysError, EINVAL, ESRCH, EFAULT, ENAMETOOLONG};
+use share::syscall::error::{SysError, EINVAL, ESRCH, EFAULT, ENAMETOOLONG, EBADF};
 use crate::mm::address::{PhysicalAddress, VirtualAddress};
-use crate::task::get_task_by_pid;
+use crate::task::{get_task_by_pid, stop_current_and_run_next_task};
 use crate::processor::get_cur_task_in_this_hart;
 use crate::mm::memory_manager::{RegionFlags, RegionType};
 use crate::config::FRAME_SIZE;
 use share::ffi::CStr;
 use share::file::MAX_PATH_LENGTH;
+use crate::sbi::sbi_console_getchar;
+use share::ipc::{Msg, READ, DEVICE, PROC_NR, BUFFER, LENGTH, TERMINAL_PID, REPLY_STATUS, WRITE};
+use crate::syscall::ipc::{kcall_send, kcall_receive};
+use core::str::from_utf8;
 
 pub fn kcall_read_dev(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
     let dev_pa = PhysicalAddress::new(dev_phys_addr);
@@ -112,6 +116,84 @@ pub fn kcall_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usi
     dst_slice.copy_from_slice(c_str.as_bytes());
 
     Ok(c_str.as_bytes().len())
+}
+
+
+pub fn kcall_sbi_read(fd: usize, buf_ptr: *mut u8, length: usize) -> Result<usize, SysError> {
+    if fd != 0 {
+        return Err(SysError::new(EBADF));
+    }
+
+    let buffer = unsafe {
+        core::slice::from_raw_parts_mut(buf_ptr, length)
+    };
+    let mut cnt = 0;
+    for i in 0..length {
+        let mut result = 0;
+        loop {
+            result = sbi_console_getchar();
+            // info!("result is: {:#x}", result);
+            if result == -1 {
+                stop_current_and_run_next_task();
+                continue;
+            }
+            break;
+        }
+        buffer[i] = result as usize as u8;
+        cnt += 1;
+    }
+
+    Ok(cnt)
+}
+
+pub fn kcall_sbi_write(fd: usize, buf_ptr: *const u8, length: usize) -> Result<usize, SysError>{
+    if fd != 1 {
+        return Err(SysError::new(EBADF));
+    }
+
+    let buffer = unsafe {
+        core::slice::from_raw_parts(buf_ptr, length)
+    };
+    print!("{}", from_utf8(buffer).unwrap());
+    Ok(0)
+}
+
+pub fn kcall_terminal_read(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysError> {
+    if fd != 0 {
+        return Err(SysError::new(EBADF));
+    }
+
+    let mut message = Msg::empty();
+    let cur_pid = get_cur_task_in_this_hart().pid();
+    message.src_pid = cur_pid;
+    message.mtype = READ;
+    message.args[DEVICE] = 0;
+    message.args[PROC_NR] = cur_pid;
+    message.args[BUFFER] = buf_ptr;
+    message.args[LENGTH] = length;
+    kcall_send(TERMINAL_PID, &message as *const _ as usize).unwrap();
+    kcall_receive(TERMINAL_PID as isize, &mut message as *mut _ as usize).unwrap();
+
+    Ok(message.args[REPLY_STATUS])
+}
+
+pub fn kcall_terminal_write(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysError> {
+    if fd != 1 {
+        return Err(SysError::new(EBADF));
+    }
+
+    let mut message = Msg::empty();
+    let cur_pid = get_cur_task_in_this_hart().pid();
+    message.src_pid = cur_pid;
+    message.mtype = WRITE;
+    message.args[DEVICE] = 0;
+    message.args[PROC_NR] = cur_pid;
+    message.args[BUFFER] = buf_ptr;
+    message.args[LENGTH] = length;
+    kcall_send(TERMINAL_PID, &message as *const _ as usize).unwrap();
+    kcall_receive(TERMINAL_PID as isize, &mut message as *mut _ as usize).unwrap();
+
+    Ok(message.args[REPLY_STATUS])
 }
 
 fn get_byte_slice_in_proc(pid: usize, ptr: usize, length: usize) -> Result<&'static [u8], SysError> {

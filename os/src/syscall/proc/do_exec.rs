@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::mm::page_table::PageTable;
 use share::ffi::{CString, CStrArray, c_char, CStr};
-use crate::syscall::file::{do_open, __do_read, do_fstat, do_close};
+use crate::syscall::file::{do_open, do_read, do_fstat, do_close};
 use share::file::{OpenFlag, Stat};
 use alloc::vec;
 
@@ -21,7 +21,7 @@ pub fn do_exec(path_ptr: usize, argv: *const *const c_char, envp: *const *const 
     let stat = Stat::empty();
     do_fstat(fd, &stat as *const _ as usize)?;
     let data_buffer = vec![0; stat.size];
-    __do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
+    do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
     do_close(fd)?;
     let data = data_buffer.as_slice();
 

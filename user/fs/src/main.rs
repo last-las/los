@@ -137,8 +137,8 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
         },
         SYSCALL_CLOSE => do_close(message.args[FS_SYSCALL_ARG0], cur_fs),
         SYSCALL_GETDENTS => do_get_dents(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
-        __SYSCALL_READ => do_read(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2],src_pid, cur_fs),
-        __SYSCALL_WRITE => do_write(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2],src_pid, cur_fs),
+        SYSCALL_READ => do_read(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
+        SYSCALL_WRITE => do_write(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
         SYSCALL_MKDIRAT => {
             let path = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG1])?;
             do_mkdir_at(message.args[FS_SYSCALL_ARG0],path.as_str(), message.args[FS_SYSCALL_ARG2], cur_fs)

@@ -1,3 +1,2 @@
 [workspace]
 members = ["init", "lib", "fs", "drivers/*"]
-exclude = ["bin"]

@@ -146,24 +146,8 @@ pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
     syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }
 
-pub fn _sys_read(fd: usize, buf: &mut [u8]) -> isize {
-    syscall3(_SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
-}
-
-pub fn __sys_read(fd: usize, buf: &mut [u8]) -> isize {
-    syscall3(__SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
-}
-
 pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
-}
-
-pub fn _sys_write(fd: usize, buf: &[u8]) -> isize {
-    syscall3(_SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
-}
-
-pub fn __sys_write(fd: usize, buf: &[u8]) -> isize {
-    syscall3(__SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }
 
 pub fn sys_mkdir_at(dir_fd: usize, path_ptr: usize, mode: u32) -> isize {
@@ -248,4 +232,20 @@ pub fn k_virt_to_phys(virt_addr: usize) -> isize {
 
 pub fn k_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usize) -> isize {
     syscall4(KCALL_COPY_C_PATH, proc, path_ptr, buf_ptr, size)
+}
+
+pub fn k_sbi_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(KCALL_SBI_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn k_sbi_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(KCALL_SBI_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn k_terminal_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(KCALL_TERMINAL_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn k_terminal_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(KCALL_TERMINAL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }

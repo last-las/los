@@ -15,7 +15,7 @@ use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
 use share::ffi::c_char;
 use crate::mm::available_frame;
-use crate::syscall::kcall::{kcall_read_dev, kcall_write_dev, kcall_virt_copy, kcall_continuous_alloc, kcall_virt_to_phys, kcall_copy_c_path, kcall_fs_success};
+use crate::syscall::kcall::*;
 
 pub use ipc::notify;
 
@@ -24,12 +24,17 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {
         KCALL_SEND => kcall_send(args[0], args[1]),
         KCALL_RECEIVE => kcall_receive(args[0] as isize, args[1]),
+
         KCALL_READ_DEV => kcall_read_dev(args[0], args[1]),
         KCALL_WRITE_DEV => kcall_write_dev(args[0], args[1], args[2]),
         KCALL_VIRT_COPY => kcall_virt_copy(args[0], args[1], args[2], args[3], args[4]),
         KCALL_CONTINUOUS_ALLOC => kcall_continuous_alloc(args[0]),
         KCALL_VIRT_TO_PHYS => kcall_virt_to_phys(args[0]),
         KCALL_COPY_C_PATH => kcall_copy_c_path(args[0], args[1], args[2], args[3]),
+        KCALL_SBI_READ => kcall_sbi_read(args[0], args[1] as *mut u8, args[2]),
+        KCALL_SBI_WRITE => kcall_sbi_write(args[0], args[1] as *const u8, args[2]),
+        KCALL_TERMINAL_READ => kcall_terminal_read(args[0], args[1], args[2]),
+        KCALL_TERMINAL_WRITE => kcall_terminal_write(args[0], args[1], args[2]),
 
         SYSCALL_LSEEK => do_lseek(args[0], args[1], args[2]),
         SYSCALL_GETCWD => do_getcwd(args[0], args[1]),
@@ -41,12 +46,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_OPEN => do_open(args[0], args[1], args[2]),
         SYSCALL_CLOSE => do_close(args[0]),
         SYSCALL_GETDENTS => do_get_dents(args[0], args[1], args[2]),
-        SYSCALL_READ => do_read(args[0], args[1] as *mut u8, args[2]),
-        _SYSCALL_READ => _do_read(args[0], args[1], args[2]),
-        __SYSCALL_READ => __do_read(args[0], args[1], args[2]),
-        SYSCALL_WRITE => do_write(args[0], args[1] as *const u8, args[2]),
-        _SYSCALL_WRITE => _do_write(args[0], args[1], args[2]),
-        __SYSCALL_WRITE => __do_write(args[0], args[1], args[2]),
+        SYSCALL_READ => do_read(args[0], args[1], args[2]),
+        SYSCALL_WRITE => do_write(args[0], args[1], args[2]),
         SYSCALL_MKDIRAT => do_mkdir_at(args[0], args[1], args[2]),
         SYSCALL_FSTAT => do_fstat(args[0], args[1]),
         SYSCALL_EXIT => do_exit(args[0] as isize),
