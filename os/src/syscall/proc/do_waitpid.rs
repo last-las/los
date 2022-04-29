@@ -1,10 +1,10 @@
 use share::syscall::error::{SysError, ECHILD};
-use crate::processor::clone_cur_task_in_this_hart;
+use crate::processor::get_cur_task_in_this_hart;
 use crate::task::{RuntimeFlags, stop_current_and_run_next_task};
 
 // TODO-FUTURE: implement WNOHANG, WUNTRACED and WCONTINUED for waitpid
 pub fn do_waitpid(pid: isize, status_ptr: usize, options: usize) -> Result<usize, SysError> {
-    let cur_task = clone_cur_task_in_this_hart();
+    let cur_task = get_cur_task_in_this_hart();
     if cur_task.acquire_inner_lock().children.is_empty() {
         return Err(SysError::new(ECHILD));
     }
@@ -17,7 +17,7 @@ pub fn do_waitpid(pid: isize, status_ptr: usize, options: usize) -> Result<usize
 }
 
 fn wait_on_all_children(status_ptr: usize, _: usize) -> Result<usize, SysError> {
-    let cur_task = clone_cur_task_in_this_hart();
+    let cur_task = get_cur_task_in_this_hart();
 
     loop {
         let mut inner = cur_task.acquire_inner_lock();
@@ -53,7 +53,7 @@ fn wait_on_all_children(status_ptr: usize, _: usize) -> Result<usize, SysError> 
 }
 
 fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize, SysError> {
-    let cur_task = clone_cur_task_in_this_hart();
+    let cur_task = get_cur_task_in_this_hart();
 
     loop {
         let mut inner = cur_task.acquire_inner_lock();

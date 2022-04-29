@@ -1,22 +1,34 @@
 use alloc::sync::Arc;
 use crate::task::{TaskStruct, add_a_task_to_manager, KernelStack, RuntimeFlags, TrapContext, TaskContext, alloc_pid, TaskStructInner};
-use crate::processor::clone_cur_task_in_this_hart;
+use crate::processor::get_cur_task_in_this_hart;
 use share::syscall::error::{SysError, EAGAIN};
 use alloc::vec::Vec;
 use spin::Mutex;
-// clone
+use crate::syscall::kcall::{FS_INIT_SUCCESS, is_fs_init};
+use crate::syscall::ipc::kcall_send;
+use share::ipc::{Msg, FORK_PARENT, FORK_CHILD, FS_PID, FORK};
 
 #[allow(unused_variables)]
 pub fn do_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_ptr: usize) -> Result<usize, SysError>{
-    let cur_task = clone_cur_task_in_this_hart();
+    let cur_task = get_cur_task_in_this_hart();
 
     let child_task = Arc::new(copy_process(flags, stack, ptid_ptr, tls_ptr, ctid_ptr, &cur_task)?);
     let mut inner = cur_task.acquire_inner_lock();
     inner.children.push(Arc::clone(&child_task));
     drop(inner);
 
+    let parent_pid = cur_task.pid();
     let child_pid = child_task.pid();
     add_a_task_to_manager(child_task);
+
+    if is_fs_init() {
+        let mut message = Msg::empty();
+        message.mtype = FORK;
+        message.args[FORK_PARENT] = parent_pid;
+        message.args[FORK_CHILD] = child_pid;
+        kcall_send(FS_PID, &message as *const _ as usize)?;
+    }
+
     Ok(child_pid)
 }
 

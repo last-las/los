@@ -24,7 +24,7 @@ use crate::proc::fs_struct::FsStruct;
 use crate::proc::fs_manager::*;
 use crate::syscall::*;
 use user_lib::syscall::{getpid, receive, copy_path_from, send};
-use share::ipc::{Msg, FORK, EXIT, MSG_ARGS_0, PROC_NR, MSG_ARGS_1, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, SYSCALL_TYPE, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, REPLY_PROC_NR, REPLY_STATUS, REPLY, FORK_PARENT, FSYSCALL, FS_SYSCALL_ARG4};
+use share::ipc::{Msg, FORK, EXIT, MSG_ARGS_0, PROC_NR, MSG_ARGS_1, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, SYSCALL_TYPE, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, REPLY_PROC_NR, REPLY_STATUS, REPLY, FORK_PARENT, FSYSCALL, FS_SYSCALL_ARG4, FORK_CHILD, EXIT_PID};
 use share::syscall::sys_const::*;
 use core::cell::RefCell;
 use alloc::rc::Rc;
@@ -37,8 +37,6 @@ use crate::fs::devfs::register_devfs;
 
 #[no_mangle]
 fn main() {
-    let cur_pid = getpid();
-
     register_ezfs();
     register_ramfs();
     register_devfs();
@@ -49,7 +47,7 @@ fn main() {
     init_dev_directory(root.clone(), mnt.clone());
 
     let fs_struct = FsStruct::new(root.clone(), mnt.clone(), root.clone(), mnt.clone());
-    init_fs_struct_of_proc(fs_struct, cur_pid);
+    init_fs_struct_of_proc(fs_struct, 0);
 
     let mut message = Msg::empty();
     loop {
@@ -57,12 +55,13 @@ fn main() {
 
         if message.mtype == FORK {
             let parent_pid = message.args[FORK_PARENT];
-            let child_pid = message.src_pid;
+            let child_pid = message.args[FORK_CHILD];
             let parent_fs = get_fs_struct_by_pid(parent_pid);
             let child_fs = parent_fs.borrow().clone_fs_struct();
             init_fs_struct_of_proc(child_fs, child_pid);
         }else if message.mtype == EXIT {
-            todo!()
+            let exit_pid = message.args[EXIT_PID];
+            rm_fs_struct_by_pid(exit_pid);
         } else { // FSYSCALL
             let result = handle_syscall(&mut message);
             let reply_status = SysError::mux(result);

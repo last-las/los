@@ -57,6 +57,7 @@ dependencies = [
 name = "init"
 version = "0.1.0"
 dependencies = [
+ "share",
  "user_lib",
 ]
 
@@ -89,14 +90,6 @@ name = "share"
 version = "0.1.0"
 dependencies = [
  "bitflags",
-]
-
-[[package]]
-name = "shell"
-version = "0.1.0"
-dependencies = [
- "share",
- "user_lib",
 ]
 
 [[package]]

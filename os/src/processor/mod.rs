@@ -22,7 +22,7 @@ pub fn get_cur_task_context_in_this_hart() -> &'static mut TrapContext {
 }
 
 #[allow(unused)]
-pub fn clone_cur_task_in_this_hart() -> Arc<TaskStruct> {
+pub fn get_cur_task_in_this_hart() -> Arc<TaskStruct> {
     PROCESSORS[get_hart_id()].get_current_task().unwrap()
 }
 

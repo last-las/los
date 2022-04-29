@@ -7,15 +7,15 @@ extern crate user_lib;
 extern crate alloc;
 
 use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid};
+use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid, sleep, mkdir_at, mount, open, get_dents, close};
+use share::file::OpenFlag;
 
 #[no_mangle]
 fn main() {
-    fork_and_exec("terminal"); // pid = 1
-    fork_and_exec("idle"); // pid = 2
-    fork_and_exec("shell"); // pid = 3
-    fork_and_exec("virtio-blk"); // pid = 4
-    fork_and_exec("fs"); // pid = 5
+    sleep(3); // wait for fs server init.
+    mount_ezfs_on("/bin");
+    fork_and_exec("/bin/idle");
+    fork_and_exec("/bin/shell");
 
     loop {
         match waitpid(-1, None, 0) {
@@ -23,6 +23,11 @@ fn main() {
             Err(_) => sys_yield(),
         };
     }
+}
+
+fn mount_ezfs_on(path: &str) {
+    mkdir_at(0, path, 0).unwrap();
+    mount("/dev/sda2", path, "ezfs", 0, 0).unwrap();
 }
 
 fn fork_and_exec(path: &str) {

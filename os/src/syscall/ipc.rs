@@ -1,5 +1,5 @@
 use crate::task::{get_task_by_pid, RuntimeFlags, TaskStruct, block_current_and_run_next_task, return_task_to_manager, TaskStructInner};
-use crate::processor::clone_cur_task_in_this_hart;
+use crate::processor::get_cur_task_in_this_hart;
 use alloc::sync::Arc;
 use share::ipc::Msg;
 use share::syscall::error::{EINVAL, SysError, EDLOCK};
@@ -15,7 +15,7 @@ use spin::MutexGuard;
 /// inside caller task's [`TaskStruct`] and blocks itself.
 pub fn kcall_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     let dst_task = get_dst_task_or_err(dst_pid)?;
-    let caller_task = clone_cur_task_in_this_hart();
+    let caller_task = get_cur_task_in_this_hart();
     check_deadlock(caller_task.clone(), dst_task.clone())?;
 
     let mut message = unsafe { (msg_ptr as *const Msg).read() };
@@ -51,7 +51,7 @@ pub fn kcall_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
 /// from sending task to address where `msg_ptr` points to and wakes the sending task up. Otherwise
 /// it blocks itself, and after it is waked up, it moves message to that address.
 pub fn kcall_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
-    let src_task = clone_cur_task_in_this_hart();
+    let src_task = get_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     if dst_pid == -1 && src_task_inner.interrupt_flag {
         src_task_inner.interrupt_flag = false;
@@ -83,7 +83,7 @@ pub fn kcall_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
     block_current_and_run_next_task();
 
     // After the task is waked up the message has been received.
-    let src_task = clone_cur_task_in_this_hart();
+    let src_task = get_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     unsafe {
         (msg_ptr as *mut Msg).write(src_task_inner.message_holder.take().unwrap());

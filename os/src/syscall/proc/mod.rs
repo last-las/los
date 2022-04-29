@@ -9,9 +9,23 @@ pub use do_exec::do_exec;
 pub use do_waitpid::do_waitpid;
 pub use priority::*;
 use share::syscall::error::{SysError, ECHILD};
-use crate::processor::clone_cur_task_in_this_hart;
+use crate::processor::get_cur_task_in_this_hart;
+use crate::syscall::kcall::is_fs_init;
+use share::ipc::{Msg, EXIT, EXIT_PID, FS_PID};
+use crate::syscall::ipc::kcall_send;
 
 pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
+    if is_fs_init() {
+        let cur_task = get_cur_task_in_this_hart();
+        let pid = cur_task.pid();
+        drop(cur_task);
+
+        let mut message = Msg::empty();
+        message.mtype = EXIT;
+        message.args[EXIT_PID] = pid;
+        kcall_send(FS_PID, &message as *const _ as usize)?;
+    }
+
     exit_current_and_run_next_task(exit_code as usize);
     Ok(0)
 }
@@ -22,12 +36,12 @@ pub fn do_yield() -> Result<usize, SysError> {
 }
 
 pub fn do_get_pid() -> Result<usize, SysError> {
-    Ok(clone_cur_task_in_this_hart().pid())
+    Ok(get_cur_task_in_this_hart().pid())
 }
 
 /// Except init process, this function is always successful.
 pub fn do_get_ppid() -> Result<usize, SysError> {
-    let cur_task = clone_cur_task_in_this_hart();
+    let cur_task = get_cur_task_in_this_hart();
     let inner = cur_task.acquire_inner_lock();
     Ok(inner.parent.as_ref().unwrap().upgrade().unwrap().pid())
 }

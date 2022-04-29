@@ -1,13 +1,19 @@
 use share::syscall::error::{SysError, EINVAL, ESRCH, EFAULT, ENAMETOOLONG};
 use crate::mm::address::{PhysicalAddress, VirtualAddress};
 use crate::task::get_task_by_pid;
-use crate::processor::clone_cur_task_in_this_hart;
+use crate::processor::get_cur_task_in_this_hart;
 use crate::mm::memory_manager::{RegionFlags, RegionType};
 use crate::config::FRAME_SIZE;
 use share::ffi::CStr;
 use share::file::MAX_PATH_LENGTH;
 
-pub static mut FS_INIT_SUCCESS: bool = false;
+pub static mut FS_INIT_SUCCESS: bool = true;
+
+pub fn is_fs_init() -> bool {
+    unsafe {
+         FS_INIT_SUCCESS
+    }
+}
 
 pub fn kcall_read_dev(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
     let dev_pa = PhysicalAddress::new(dev_phys_addr);
@@ -75,7 +81,7 @@ pub fn kcall_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr
 }
 
 pub fn kcall_continuous_alloc(size: usize) -> Result<usize, SysError> {
-    let task = clone_cur_task_in_this_hart();
+    let task = get_cur_task_in_this_hart();
     let mut inner = task.acquire_inner_lock();
     let size = (size + FRAME_SIZE) & !(FRAME_SIZE - 1);
     let start = inner.mem_manager.alloc_area(
@@ -86,7 +92,7 @@ pub fn kcall_continuous_alloc(size: usize) -> Result<usize, SysError> {
 }
 
 pub fn kcall_virt_to_phys(virt_addr: usize) -> Result<usize, SysError> {
-    let task = clone_cur_task_in_this_hart();
+    let task = get_cur_task_in_this_hart();
     let inner = task.acquire_inner_lock();
     let va = VirtualAddress::new(virt_addr);
     let pa =

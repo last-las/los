@@ -3,8 +3,8 @@ use share::syscall::error::{EBADF, SysError};
 use crate::sbi::sbi_console_getchar;
 use crate::task::stop_current_and_run_next_task;
 use crate::syscall::ipc::{kcall_send, kcall_receive};
-use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4, FS_PID};
-use crate::processor::clone_cur_task_in_this_hart;
+use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4, FS_PID, TERMINAL_PID};
+use crate::processor::get_cur_task_in_this_hart;
 use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, __SYSCALL_WRITE, SYSCALL_MKDIRAT, __SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK, SYSCALL_FSTAT};
 
 pub fn do_lseek(fd: usize, offset: usize, whence: usize) -> Result<usize, SysError> {
@@ -60,15 +60,15 @@ pub fn do_write(fd: usize, buf_ptr: *const u8, length: usize) -> Result<usize, S
 
 pub fn _do_write(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysError> {
         let mut message = Msg::empty();
-        let cur_pid = clone_cur_task_in_this_hart().pid();
+        let cur_pid = get_cur_task_in_this_hart().pid();
         message.src_pid = cur_pid;
         message.mtype = WRITE;
         message.args[DEVICE] = 0;
         message.args[PROC_NR] = cur_pid;
         message.args[BUFFER] = buf_ptr;
         message.args[LENGTH] = length;
-        kcall_send(1, &message as *const _ as usize).unwrap();
-        kcall_receive(1, &mut message as *mut _ as usize).unwrap();
+        kcall_send(TERMINAL_PID, &message as *const _ as usize).unwrap();
+        kcall_receive(TERMINAL_PID as isize, &mut message as *mut _ as usize).unwrap();
 
         Ok(message.args[REPLY_STATUS])
 }
@@ -107,15 +107,15 @@ pub fn do_read(fd: usize, buf_ptr: *mut u8, length: usize) -> Result<usize, SysE
 
 pub fn _do_read(fd: usize, buf_ptr: usize, length: usize) -> Result<usize, SysError> {
     let mut message = Msg::empty();
-    let cur_pid = clone_cur_task_in_this_hart().pid();
+    let cur_pid = get_cur_task_in_this_hart().pid();
     message.src_pid = cur_pid;
     message.mtype = READ;
     message.args[DEVICE] = 0;
     message.args[PROC_NR] = cur_pid;
     message.args[BUFFER] = buf_ptr;
     message.args[LENGTH] = length;
-    kcall_send(1, &message as *const _ as usize).unwrap();
-    kcall_receive(1, &mut message as *mut _ as usize).unwrap();
+    kcall_send(TERMINAL_PID, &message as *const _ as usize).unwrap();
+    kcall_receive(TERMINAL_PID as isize, &mut message as *mut _ as usize).unwrap();
 
     Ok(message.args[REPLY_STATUS])
 }
@@ -135,7 +135,7 @@ pub fn do_fstat(fd: usize, stat_ptr: usize) -> Result<usize, SysError> {
 
 fn send_receive_fs(syscall_id: usize, args: [usize; 5]) -> Result<usize, SysError> {
     let mut message = Msg::empty();
-    let cur_pid = clone_cur_task_in_this_hart().pid();
+    let cur_pid = get_cur_task_in_this_hart().pid();
     message.src_pid = cur_pid;
     message.mtype = FSYSCALL;
     message.args[SYSCALL_TYPE] = syscall_id;

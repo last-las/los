@@ -22,6 +22,7 @@ use crate::processor::__switch;
 use crate::paging::KERNEL_SATP;
 use lazy_static::*;
 use alloc::vec::Vec;
+use alloc::vec;
 
 lazy_static! {
     pub static ref APP_NAMES: Vec<&'static str> =get_app_names();
@@ -38,12 +39,15 @@ pub fn print_app_names() {
     }
 }
 
-pub fn load_init_task() {
-    let data = get_task_data_by_name("init").unwrap_or_else(|| {
-        panic!("'init' doesn't exist!");
-    });
-    let task = Arc::new(TaskStruct::new(data).unwrap());
-    add_a_task_to_manager(task);
+pub fn load_init_tasks() {
+    let tasks = vec!["init", "terminal", "virtio-blk", "fs"];
+    for task_name in tasks {
+        let data = get_task_data_by_name(task_name).unwrap_or_else(|| {
+            panic!("{} doesn't exist!", task_name);
+        });
+        let task = Arc::new(TaskStruct::new(data).unwrap());
+        add_a_task_to_manager(task);
+    }
 }
 
 pub fn get_task_data_by_name(name: &str) -> Option<&'static [u8]> {

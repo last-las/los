@@ -2,8 +2,8 @@ use core::fmt::{Debug, Formatter};
 use crate::syscall::error::SysError;
 
 pub const TERMINAL_PID: usize = 1;
-pub const VIRTIO_BLK_PID: usize = 4;
-pub const FS_PID: usize = 5;
+pub const VIRTIO_BLK_PID: usize = 2;
+pub const FS_PID: usize = 3;
 
 /* Message Type */
 pub const INTERRUPT: usize = 1;
@@ -50,6 +50,9 @@ pub const FS_SYSCALL_ARG3: usize = MSG_ARGS_4;
 pub const FS_SYSCALL_ARG4: usize = MSG_ARGS_5;
 /* fork message */
 pub const FORK_PARENT: usize = MSG_ARGS_0;
+pub const FORK_CHILD: usize = MSG_ARGS_1;
+/* exit message */
+pub const EXIT_PID: usize = MSG_ARGS_0;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
