@@ -1,17 +1,15 @@
-use spin::Mutex;
-use crate::config::{MAX_TASK_NUMBER, FRAME_SIZE};
+use crate::config::FRAME_SIZE;
 use alloc::vec::Vec;
 use crate::mm::{FrameTracker, alloc_continuous_frames};
 use share::syscall::error::SysError;
 use crate::mm::address::PhysicalAddress;
-use crate::task::TrapContext;
 
 const KERNEL_STACK_SIZE: usize = 0x1000;
 const GUARD_PAGE_SIZE: usize = 0x1000;
 
 pub struct KernelStack {
     pub sp: PhysicalAddress,
-    frames: Vec<FrameTracker>
+    _frames: Vec<FrameTracker>
 }
 
 impl KernelStack {
@@ -23,7 +21,7 @@ impl KernelStack {
         Ok(
             Self {
                 sp,
-                frames,
+                _frames: frames,
             }
         )
     }

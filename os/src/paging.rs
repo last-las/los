@@ -7,7 +7,6 @@ use crate::kmain;
 use crate::processor::suspend_current_hart;
 use crate::mm::heap::stupid_allocator::StupidAllocator;
 use core::arch::asm;
-use crate::sbi::sbi_shutdown;
 use crate::plic::PLIC_START_ADDRESS;
 
 extern "C" {

@@ -10,7 +10,6 @@ use crate::syscall::file::*;
 use crate::syscall::time::do_get_time;
 use crate::syscall::ipc::{kcall_receive, kcall_send};
 use crate::syscall::proc::*;
-use crate::task::stop_current_and_run_next_task;
 use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
 use crate::mm::available_frame;

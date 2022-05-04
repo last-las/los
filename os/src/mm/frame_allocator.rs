@@ -143,7 +143,7 @@ impl BitMapFrameAllocator {
 
         let bitmap_size = self.bitmap_len * 8;
         let mut start_pa = PhysicalAddress::from(self.start_ppn);
-        let mut end_pa = start_pa.add(bitmap_size);
+        let end_pa = start_pa.add(bitmap_size);
         let mut byte: &mut u8 = start_pa.as_mut();
         let mut bit_offset = 0;
         while start_pa < end_pa  {

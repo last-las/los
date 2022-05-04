@@ -19,6 +19,7 @@ extern crate riscv;
 use core::arch::asm;
 use core::arch::global_asm;
 
+#[allow(unused_imports)]
 use processor::enable_other_harts;
 use processor::set_hart_id;
 

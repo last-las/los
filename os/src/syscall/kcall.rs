@@ -5,7 +5,6 @@ use crate::processor::get_cur_task_in_this_hart;
 use crate::mm::memory_manager::{RegionFlags, RegionType};
 use crate::config::FRAME_SIZE;
 use share::ffi::CStr;
-use share::file::MAX_PATH_LENGTH;
 use crate::sbi::sbi_console_getchar;
 use share::ipc::{Msg, READ, DEVICE, PROC_NR, BUFFER, LENGTH, TERMINAL_PID, REPLY_STATUS, WRITE};
 use crate::syscall::ipc::{kcall_send, kcall_receive};
@@ -129,7 +128,7 @@ pub fn kcall_sbi_read(fd: usize, buf_ptr: *mut u8, length: usize) -> Result<usiz
     };
     let mut cnt = 0;
     for i in 0..length {
-        let mut result = 0;
+        let mut result;
         loop {
             result = sbi_console_getchar();
             // info!("result is: {:#x}", result);

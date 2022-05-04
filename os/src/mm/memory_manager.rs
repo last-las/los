@@ -9,12 +9,12 @@ use crate::mm::{alloc_frame, address, alloc_continuous_frames};
 use core::arch::asm;
 use share::syscall::error::{SysError, EACCES, ENOMEM};
 
-#[allow(unused)]
 pub struct MemoryManager {
     pub page_table: PageTable,
     pub region_list: RegionList,
+    /// The start of programme break. It should not be changed after initializing
     pub brk_start: VirtualAddress,
-    /// the start of programme break. It should not be changed after initializing
+    /// Current programme break.
     pub brk: VirtualAddress,
 }
 
@@ -426,6 +426,10 @@ pub struct MemoryRegion {
     region_size: usize,
     flags: RegionFlags,
     next: Option<Box<MemoryRegion>>,
+    /// This field indicates whether `frames` field is continuous.
+    ///
+    /// `region_type` only equals RegionType::CONTINUOUS
+    /// when the block device driver needs continuous physical memory for DMA.
     region_type: RegionType,
 }
 

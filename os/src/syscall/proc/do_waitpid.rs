@@ -23,7 +23,7 @@ fn wait_on_all_children(status_ptr: usize, _: usize) -> Result<usize, SysError> 
         let mut inner = cur_task.acquire_inner_lock();
         let mut exit_code = 0;
         let mut pid = 0;
-        let result = inner.children.iter().enumerate().find(|(index, child)|{
+        let result = inner.children.iter().enumerate().find(|(_, child)|{
             let child_inner = child.acquire_inner_lock();
             match child_inner.flag {
                 RuntimeFlags::ZOMBIE(exit) => {
@@ -57,7 +57,7 @@ fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize
 
     loop {
         let mut inner = cur_task.acquire_inner_lock();
-        let result = inner.children.iter().enumerate().find(|(index, child)| {
+        let result = inner.children.iter().enumerate().find(|(_, child)| {
             child.pid() == pid as usize
         });
         if result.is_none() {

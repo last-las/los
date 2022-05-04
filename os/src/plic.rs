@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use riscv::register::sie;
 use crate::mm::address::PhysicalAddress;
 use crate::syscall::notify;
@@ -35,7 +37,7 @@ pub fn handle_interrupt() {
     if let Some(interrupt) = next_interrupt_number() {
         match interrupt {
             UART_IRQ => {
-                notify(1);
+                notify(1).unwrap();
                 disable_uart_interrupt();
             },
             _ => {

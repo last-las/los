@@ -6,8 +6,7 @@ use alloc::sync::{Arc, Weak};
 use spin::{Mutex, MutexGuard};
 use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
-use share::syscall::error::{SysError, EAGAIN};
-use crate::mm::address::PhysicalAddress;
+use share::syscall::error::SysError;
 use share::ipc::Msg;
 
 pub struct TaskStruct {
@@ -37,7 +36,7 @@ impl TaskStruct {
         let pid_handle = alloc_pid().unwrap();
         user_sp -= core::mem::size_of::<usize>() * 3; // push argc, NULL and NULL onto stack.
 
-        let mut kernel_stack = KernelStack::new()?;
+        let kernel_stack = KernelStack::new()?;
         let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 
         let mut inner = TaskStructInner {

@@ -23,6 +23,7 @@ pub fn get_hart_id() -> usize {
     hart_id
 }
 
+#[allow(unused)]
 pub fn enable_other_harts() {
     assert_eq!(get_hart_id(), 0);
     let hart_mask = usize::MAX ^ 0b1;

@@ -42,7 +42,7 @@ fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_
     }
     let pid_handle = pid_handle.unwrap();
 
-    let mut kernel_stack = KernelStack::new()?;
+    let kernel_stack = KernelStack::new()?;
 
     let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 

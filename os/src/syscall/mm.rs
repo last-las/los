@@ -4,7 +4,7 @@ use crate::config::{MMAP_START_ADDRESS, FRAME_SIZE};
 use crate::mm::memory_manager::{RegionFlags, RegionType};
 use share::syscall::error::{SysError, ENOMEM};
 
-pub fn do_brk(mut new_brk: usize) -> Result<usize, SysError> {
+pub fn do_brk(new_brk: usize) -> Result<usize, SysError> {
     let mut new_brk = VirtualAddress::new(new_brk);
 
     let cur_task = get_cur_task_in_this_hart();

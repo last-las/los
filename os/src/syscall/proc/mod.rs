@@ -3,12 +3,12 @@ mod do_exec;
 mod do_waitpid;
 mod priority;
 
-use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task, RuntimeFlags};
+use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
 pub use do_fork::do_fork;
 pub use do_exec::do_exec;
 pub use do_waitpid::do_waitpid;
 pub use priority::*;
-use share::syscall::error::{SysError, ECHILD};
+use share::syscall::error::SysError;
 use crate::processor::get_cur_task_in_this_hart;
 use share::ipc::{Msg, EXIT, EXIT_PID, FS_PID};
 use crate::syscall::ipc::kcall_send;

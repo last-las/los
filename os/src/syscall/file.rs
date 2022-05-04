@@ -1,11 +1,8 @@
-use core::str::from_utf8;
-use share::syscall::error::{EBADF, SysError};
-use crate::sbi::sbi_console_getchar;
-use crate::task::stop_current_and_run_next_task;
+use share::syscall::error::SysError;
 use crate::syscall::ipc::{kcall_send, kcall_receive};
-use share::ipc::{Msg, DEVICE, PROC_NR, BUFFER, LENGTH, REPLY_STATUS, READ, WRITE, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4, FS_PID, TERMINAL_PID};
+use share::ipc::{Msg, REPLY_STATUS, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4, FS_PID};
 use crate::processor::get_cur_task_in_this_hart;
-use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, KCALL_SBI_WRITE, SYSCALL_WRITE, SYSCALL_MKDIRAT, SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK, SYSCALL_FSTAT};
+use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, SYSCALL_MKDIRAT, SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK, SYSCALL_FSTAT};
 
 pub fn do_lseek(fd: usize, offset: usize, whence: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_LSEEK, [fd, offset, whence, 0, 0])

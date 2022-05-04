@@ -1,10 +1,9 @@
-use share::syscall::error::{SysError, ENOENT};
-use crate::task::{get_task_data_by_name, TrapContext};
+use share::syscall::error::SysError;
+use crate::task::TrapContext;
 use crate::processor::get_cur_task_in_this_hart;
 use crate::mm::memory_manager::MemoryManager;
 use core::arch::asm;
 use alloc::vec::Vec;
-use alloc::string::String;
 use crate::mm::page_table::PageTable;
 use share::ffi::{CString, CStrArray, CStr};
 use crate::syscall::file::{do_open, do_read, do_fstat, do_close};
@@ -28,17 +27,11 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
     let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
     let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv, envp);
     switch_to_new_addr_space(&mem_manager.page_table);
-    let user_sp = unsafe { push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp) };
+    let user_sp = push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp);
 
     modify_current_task_struct(mem_manager, pc, user_sp);
 
     Ok(0)
-}
-
-fn get_target_elf_data_by(path_ptr: usize) -> Result<&'static [u8], SysError> {
-    let path = CStr::from_ptr(path_ptr as *const u8);
-    let result = get_task_data_by_name(path.as_str());
-    result.ok_or(SysError::new(ENOENT))
 }
 
 fn read_arg_and_env_in_current_addr_space(argv_ptr: *const *const u8, envp_ptr: *const *const u8)
@@ -85,9 +78,7 @@ fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usi
 fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const u8) -> Vec<CString> {
     let mut vec = Vec::new();
     for cstr_ptr in CStrArray::copy_from_ptr(str_array_ptr).iter() {
-        let cstr = unsafe {
-            CStr::from_ptr(cstr_ptr)
-        };
+        let cstr = CStr::from_ptr(cstr_ptr);
         vec.push(CString::from(cstr));
     }
 

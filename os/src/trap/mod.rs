@@ -6,8 +6,6 @@ use crate::task::{stop_current_and_run_next_task, exit_current_and_run_next_task
 
 pub use trap::{__enter_user_mode, __from_user_mode};
 use crate::processor::{get_cur_task_context_in_this_hart};
-use crate::sbi::sbi_shutdown;
-use crate::syscall::notify;
 use crate::plic;
 
 pub fn init_stvec() {
