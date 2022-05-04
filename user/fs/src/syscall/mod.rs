@@ -4,13 +4,12 @@ use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
 use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ERANGE, ENOTBLK, ENODEV};
 use crate::vfs::file::File;
-use alloc::sync::Arc;
 use user_lib::syscall::{virt_copy, getpid};
 use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
 use alloc::vec::Vec;
 use alloc::string::String;
 use share::ffi::CString;
-use alloc::collections::{VecDeque, BinaryHeap};
+use alloc::collections::VecDeque;
 use crate::vfs::filesystem::read_super_block;
 use crate::vfs::inode::Rdev;
 
@@ -146,7 +145,7 @@ pub fn real_mount(target_dentry: Rc<RefCell<VfsDentry>>, target_mnt: Rc<RefCell<
     Ok(root_dentry)
 }
 
-pub fn do_open(path: &str, flag: u32, mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+pub fn do_open(path: &str, flag: u32, _mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let open_flag = OpenFlag::from_bits(flag).unwrap();
     let nameidata =
         path_lookup(path, Rc::clone(&cur_fs), LookupFlags::PARENT | LookupFlags::DIRECTORY, None)?;
@@ -189,11 +188,11 @@ pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs
     // construct dirent array buffer.
     let mut buffer: [u8; DIRENT_BUFFER_SZ] = [0; DIRENT_BUFFER_SZ];
     let mut offset = 0;
-    let mut dirent_size = core::mem::size_of::<Dirent>();
+    let dirent_size = core::mem::size_of::<Dirent>();
     for child_dentry in dentry.borrow().children.iter() {
         let child_dentry_ref = child_dentry.borrow();
         let cstring_name = CString::new(child_dentry_ref.name.clone());
-        let mut reclen = dirent_size + cstring_name.as_bytes_with_nul().len();
+        let reclen = dirent_size + cstring_name.as_bytes_with_nul().len();
         if buffer.len() - offset < reclen {
             return Err(SysError::new(EINVAL));
         }
@@ -203,9 +202,7 @@ pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs
             d_offset: 0,
             d_reclen: reclen as u16,
             d_type: child_dentry_ref.inode.borrow().file_type,
-            d_name: unsafe {
-                (buf + offset + dirent_size) as *const u8
-            },
+            d_name: (buf + offset + dirent_size) as *const u8,
         };
         unsafe {
             ((buffer.as_mut_ptr() as usize + offset) as *mut Dirent).write(dirent);
@@ -266,7 +263,7 @@ pub fn do_write(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<
     Ok(count)
 }
 
-pub fn do_mkdir_at(dir_fd: usize, path: &str, mode: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+pub fn do_mkdir_at(dir_fd: usize, path: &str, _mode: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let mut dir_fs = None;
     if path.as_bytes()[0] != '/' as u8 && dir_fd != AT_FD_CWD as usize {
         let file = cur_fs.borrow().get_file(dir_fd)?;

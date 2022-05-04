@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{getcwd, open, exit, close};
+use user_lib::syscall::{open, exit, close};
 use share::file::OpenFlag;
 use user_lib::env::get_args;
 

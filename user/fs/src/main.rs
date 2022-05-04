@@ -9,11 +9,9 @@ mod proc;
 mod syscall;
 mod device;
 
-#[macro_use]
 extern crate user_lib;
 #[macro_use]
 extern crate alloc;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate bitflags;
@@ -23,8 +21,8 @@ use crate::vfs::filesystem::read_super_block;
 use crate::proc::fs_struct::FsStruct;
 use crate::proc::fs_manager::*;
 use crate::syscall::*;
-use user_lib::syscall::{getpid, receive, copy_path_from, send};
-use share::ipc::{Msg, FORK, EXIT, MSG_ARGS_0, PROC_NR, MSG_ARGS_1, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, SYSCALL_TYPE, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, REPLY_PROC_NR, REPLY_STATUS, REPLY, FORK_PARENT, FSYSCALL, FS_SYSCALL_ARG4, FORK_CHILD, EXIT_PID};
+use user_lib::syscall::{receive, copy_path_from, send};
+use share::ipc::{Msg, FORK, EXIT, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, SYSCALL_TYPE, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, REPLY_PROC_NR, REPLY_STATUS, REPLY, FORK_PARENT, FSYSCALL, FS_SYSCALL_ARG4, FORK_CHILD, EXIT_PID};
 use share::syscall::sys_const::*;
 use core::cell::RefCell;
 use alloc::rc::Rc;

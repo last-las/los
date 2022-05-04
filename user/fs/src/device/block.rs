@@ -12,7 +12,7 @@ pub struct Block {
 
 impl Block {
     pub fn new(rdev: Rdev) -> Arc<Self> { // Because Block struct should be compatible with easy-fs,
-                                            // we make the return value "Arc<Self>".
+                                            // the return value is "Arc<Self>".
         Arc::new(
             Self {
                 rdev,

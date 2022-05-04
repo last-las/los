@@ -1,7 +1,7 @@
 mod raw;
 
 pub use raw::*;
-use share::syscall::error::{SysError, ENOMEM, ENFILE};
+use share::syscall::error::{SysError, ENFILE};
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::{get_envp_copy, getenv};
@@ -157,7 +157,7 @@ pub fn fork() -> Result<usize, SysError> {
     isize2result(sys_fork(0, 0, 0, 0, 0))
 }
 
-pub fn exec(path: &str, mut args: Vec<&str>) -> Result<usize, SysError> {
+pub fn exec(path: &str, args: Vec<&str>) -> Result<usize, SysError> {
     // search from current directory and directory name in PATH env.
     let mut search_paths = Vec::new();
     search_paths.push(String::from("."));

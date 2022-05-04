@@ -17,12 +17,12 @@ pub struct TaskStruct {
 
 pub struct TaskStructInner {
     pub kernel_stack: KernelStack,
-    pub wait_queue: Vec<Arc<TaskStruct>>,
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
     // ipc
     pub message_holder: Option<Msg>,
     pub interrupt_flag: bool,
+    pub wait_queue: Vec<Arc<TaskStruct>>,
 
     pub mem_manager: MemoryManager,
     pub priority: usize,

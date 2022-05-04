@@ -129,6 +129,7 @@ impl VirtQueue<'_> {
     }
 
     /// The number of free descriptors.
+    #[allow(unused)]
     pub fn available_desc(&self) -> usize {
         (self.queue_size - self.num_used) as usize
     }

@@ -5,8 +5,6 @@
 extern crate user_lib;
 extern crate alloc;
 
-use alloc::vec::Vec;
-use alloc::boxed::Box;
 use user_lib::syscall::{fork, getppid, receive, waitpid, send, yield_, exit, sleep};
 use share::ipc::Msg;
 
@@ -43,7 +41,7 @@ fn test_send_before_receive() {
         exit(0);
     } else {
         let msg = unsafe { MESSAGE.clone() };
-        send(ret, &msg);
+        send(ret, &msg).unwrap();
         let mut status = 0;
         waitpid(ret as isize,Some(&mut status), 0).unwrap();
         assert_eq!(status, 0);
@@ -64,7 +62,7 @@ fn test_receive_before_send() {
     } else {
         yield_();
         let msg = unsafe { MESSAGE.clone() };
-        send(ret, &msg);
+        send(ret, &msg).unwrap();
         let mut status = 0;
         waitpid(ret as isize,Some(&mut status), 0).unwrap();
         assert_eq!(status, 0);
@@ -73,9 +71,8 @@ fn test_receive_before_send() {
 }
 
 fn test_receive_after_multiple_send() {
-    let mut ret = 0;
     for _ in 0..NUM {
-        ret = fork().unwrap();
+        let ret = fork().unwrap();
         if ret == 0 {
             let ppid = getppid();
             let msg = unsafe {
@@ -103,9 +100,8 @@ fn test_receive_after_multiple_send() {
 }
 
 fn test_receive_before_multiple_send() {
-    let mut ret = 0;
     for _ in 0..NUM {
-        ret = fork().unwrap();
+        let ret = fork().unwrap();
         if ret == 0 {
             sleep(1);
             let ppid = getppid();

@@ -3,16 +3,12 @@
 
 mod uart_16550;
 
-#[macro_use]
 extern crate user_lib;
-#[macro_use]
 extern crate alloc;
-#[macro_use]
-extern crate lazy_static;
 
-use crate::uart_16550::{REG_THR_OFFSET, REG_RHR_OFFSET, read_reg, Uart, write_reg, REG_IER_OFFSET};
+use crate::uart_16550::*;
 use share::ipc::Msg;
-use user_lib::syscall::{receive, dev_write_u8, virt_copy, send, getpid};
+use user_lib::syscall::{receive, virt_copy, send, getpid};
 use share::ipc::*;
 use share::terminal::{Clflag, TC_GET_ATTR, TC_SET_ATTR, TC_GET_PGRP, TC_SET_PGRP, Termios, Ciflag};
 use core::mem::size_of;
@@ -21,6 +17,7 @@ const BS: u8 = 0x08;
 const LF: u8 = 0x0a;
 const CR: u8 = 0x0d;
 const DL: u8 = 0x7f;
+#[allow(unused)]
 const CTRL_C: u8 = 0x3;
 
 #[no_mangle]
@@ -75,7 +72,7 @@ pub fn do_interrupt(uart: &mut Uart) {
     transfer_to_usr(uart);
 }
 
-pub fn do_open(uart: &mut Uart, message: Msg) {
+pub fn do_open(_uart: &mut Uart, _message: Msg) {
 }
 
 pub fn do_read(uart: &mut Uart, message: Msg) {
@@ -100,7 +97,7 @@ pub fn do_write(uart: &mut Uart, message: Msg) {
     let mut cnt = 0;
     while buf_len != 0 {
         let length = BUFFER_SIZE.min(buf_len);
-        virt_copy(proc_nr, buf_ptr, getpid(), buffer.as_ptr() as usize, length).unwrap();
+        virt_copy(proc_nr, buf_ptr, getpid(), buffer.as_mut_ptr() as usize, length).unwrap();
         buf_ptr += length;
         buf_len -= length;
         cnt += length;
@@ -115,7 +112,6 @@ pub fn do_write(uart: &mut Uart, message: Msg) {
 
 pub fn do_ioctl(uart: &mut Uart, message: Msg) {
     let proc_nr = message.args[PROC_NR];
-    let mut ret = STATUS_OK;
 
     match message.args[IOCTL_TYPE] {
         TC_GET_ATTR => {
@@ -141,10 +137,11 @@ pub fn do_ioctl(uart: &mut Uart, message: Msg) {
         }
     }
 
+    let ret = STATUS_OK;
     reply(message.src_pid, REPLY, proc_nr, ret as isize);
 }
 
-pub fn do_close(uart: &mut Uart, message: Msg) {
+pub fn do_close(_uart: &mut Uart, _message: Msg) {
 }
 
 fn echo(uart: &mut Uart, byte: u8) {
@@ -186,7 +183,7 @@ fn transfer_to_usr(uart: &mut Uart) {
         let buffer = uart.usr_buffer.as_slice();
         let buffer_ptr = buffer.as_ptr() as usize;
         let length = buffer.len();
-        virt_copy(getpid(), buffer_ptr, uart.in_proc, uart.buf_ptr, length);
+        virt_copy(getpid(), buffer_ptr, uart.in_proc, uart.buf_ptr, length).unwrap();
         uart.usr_buffer.clear();
         reply(uart.in_caller, REPLY, uart.in_proc, length as isize);
     }

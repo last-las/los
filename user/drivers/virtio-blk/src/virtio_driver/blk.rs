@@ -3,7 +3,6 @@ use super::header::VirtIOHeader;
 use super::queue::VirtQueue;
 use bitflags::*;
 use core::hint::spin_loop;
-use log::*;
 use super::volatile::Volatile;
 use user_lib::syscall::yield_;
 
@@ -14,6 +13,7 @@ use user_lib::syscall::yield_;
 pub struct VirtIOBlk<'a> {
     header: &'static mut VirtIOHeader,
     queue: VirtQueue<'a>,
+    #[allow(unused)]
     capacity: usize,
 }
 
@@ -232,8 +232,11 @@ impl BlkResp {
 enum ReqType {
     In = 0,
     Out = 1,
+    #[allow(unused)]
     Flush = 4,
+    #[allow(unused)]
     Discard = 11,
+    #[allow(unused)]
     WriteZeroes = 13,
 }
 

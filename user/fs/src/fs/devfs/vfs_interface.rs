@@ -30,15 +30,15 @@ pub struct DevFsInodeOperations;
 pub struct DevFsFileOperations;
 
 impl InodeOperations for  DevFsInodeOperations {
-    fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn lookup(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
         return None;
     }
 
-    fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn create(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
         return None;
     }
 
-    fn mkdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
         return None;
     }
 
@@ -116,7 +116,7 @@ impl FileOperations for DevFsFileOperations {
         };
     }
 
-    fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
+    fn readdir(&self, _file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
         return Vec::new();
     }
 }

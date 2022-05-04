@@ -29,6 +29,7 @@ impl<T: Copy + Debug> Debug for Volatile<T> {
 }
 
 impl<T: Copy + Debug> Volatile<T> {
+    #[allow(unused)]
     pub fn new(value: T) -> Volatile<T>{
         Volatile(value)
     }

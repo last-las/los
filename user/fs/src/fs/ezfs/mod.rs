@@ -1,20 +1,15 @@
 mod vfs_interface;
-use easy_fs::{EasyFileSystem, Inode, BlockDevice, BLOCK_SZ};
-use lazy_static::*;
+use easy_fs::{EasyFileSystem, Inode};
 use alloc::sync::Arc;
-use share::ipc::{Msg, PROC_NR, BUFFER, POSITION, LENGTH, DEVICE, VIRTIO_BLK_PID, WRITE, READ, REPLY_STATUS};
-use user_lib::syscall::{getpid, send, receive};
 use crate::vfs::filesystem::{FileSystem, register_filesystem};
-use crate::vfs::inode::Rdev;
 use spin::Mutex;
-use alloc::vec::Vec;
 use alloc::collections::BTreeMap;
 
 /*
     easy-fs `BlockDevice` trait is moved to share::device
 */
 pub fn register_ezfs() {
-    let mut filesystem = FileSystem::new("ezfs", vfs_interface::create_ezfs_super_block);
+    let filesystem = FileSystem::new("ezfs", vfs_interface::create_ezfs_super_block);
     assert!(register_filesystem(filesystem));
 }
 

@@ -1,10 +1,9 @@
 #![no_std]
 #![no_main]
 
-#[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{terminal_read, fork, terminal_write};
+use user_lib::syscall::{terminal_read, terminal_write};
 use user_lib::termios::{tc_get_attr, tc_set_attr};
 use share::terminal::Clflag;
 

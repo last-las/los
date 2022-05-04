@@ -23,9 +23,10 @@ use crate::paging::KERNEL_SATP;
 use lazy_static::*;
 use alloc::vec::Vec;
 use alloc::vec;
+use share::ffi::CStr;
 
 lazy_static! {
-    pub static ref APP_NAMES: Vec<&'static str> =get_app_names();
+    pub static ref APP_NAMES: Vec<CStr<'static>> =get_app_names();
 
     pub static ref APP_DATA: Vec<&'static [u8]> = unsafe {
         get_app_ref_data()
@@ -35,7 +36,7 @@ lazy_static! {
 pub fn print_app_names() {
     println!("apps num : {}", APP_DATA.len());
     for i in 0..APP_DATA.len() {
-        println!("app[{}] name: {}", i, APP_NAMES[i]);
+        println!("app[{}] name: {:?}", i, APP_NAMES[i]);
     }
 }
 
@@ -51,8 +52,8 @@ pub fn load_init_tasks() {
 }
 
 pub fn get_task_data_by_name(name: &str) -> Option<&'static [u8]> {
-    let result = APP_NAMES.iter().enumerate().find(|(_, &app_name)| {
-        name == app_name
+    let result = APP_NAMES.iter().enumerate().find(|(_, app_name)| {
+        name == app_name.as_str()
     });
     result.map(|(index, _)| {
         APP_DATA[index]
@@ -73,7 +74,10 @@ pub fn block_current_and_run_next_task() {
 pub fn stop_current_and_run_next_task() {
     debug!("stop and schedule..");
     let current_task = take_task_in_current_hart();
-    let current_task_context_ptr = current_task.acquire_inner_lock().task_context_ptr();
+    let mut inner = current_task.acquire_inner_lock();
+    inner.flag = RuntimeFlags::READY;
+    let current_task_context_ptr = inner.task_context_ptr();
+    drop(inner);
     return_task_to_manager(current_task);
     let hart_context_ptr = get_current_hart_context_ptr();
     unsafe {

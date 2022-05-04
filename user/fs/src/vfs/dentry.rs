@@ -1,10 +1,9 @@
-use alloc::rc::{Rc, Weak};
+use alloc::rc::Rc;
 use alloc::string::String;
 use crate::vfs::inode::VfsInode;
-use core::cell::{RefCell, Ref};
+use core::cell::RefCell;
 use alloc::vec::Vec;
 use crate::vfs::super_block::SuperBlock;
-use share::file::Dirent;
 
 pub struct VfsDentry {
     pub name: String,

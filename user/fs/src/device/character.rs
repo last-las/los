@@ -1,5 +1,5 @@
 use crate::vfs::inode::Rdev;
-use share::ipc::{Msg, READ, DEVICE, PROC_NR, BUFFER, LENGTH, POSITION, VIRTIO_BLK_PID, TERMINAL_PID, WRITE, REPLY_STATUS};
+use share::ipc::{Msg, READ, DEVICE, PROC_NR, BUFFER, LENGTH, TERMINAL_PID, WRITE};
 use user_lib::syscall::{getpid, send, receive};
 
 pub struct Character {

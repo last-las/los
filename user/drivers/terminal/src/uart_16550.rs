@@ -1,5 +1,6 @@
+#![allow(unused)]
+
 use user_lib::syscall::{dev_read_u8, dev_write_u8};
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloc::collections::VecDeque;
 use share::terminal::Termios;

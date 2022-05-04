@@ -1,7 +1,6 @@
 mod vfs_interface;
 
-use spin::Mutex;
-use alloc::collections::{BinaryHeap, VecDeque, BTreeMap};
+use alloc::collections::{VecDeque, BTreeMap};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use alloc::vec::Vec;
@@ -10,12 +9,11 @@ use crate::vfs::filesystem::{register_filesystem, FileSystem};
 use crate::vfs::inode::{VfsInode, Rdev};
 use crate::vfs::super_block::SuperBlock;
 use crate::fs::ramfs::vfs_interface::{RamFsInodeOperations, RamFsFileOperations};
-use alloc::boxed::Box;
 use share::file::FileTypeFlag;
 
 
 pub fn register_ramfs() {
-    let mut filesystem = FileSystem::new("ramfs", vfs_interface::create_ramfs_super_block);
+    let filesystem = FileSystem::new("ramfs", vfs_interface::create_ramfs_super_block);
     assert!(register_filesystem(filesystem));
 }
 
@@ -46,7 +44,7 @@ impl RamFileSystem {
         let mut ino_allocator = InoAllocator::new();
         let ino = ino_allocator.alloc();
         assert_eq!(ino, 0);
-        let mut root_ramfs_inode = RamFsInode::empty(ino);
+        let root_ramfs_inode = RamFsInode::empty(ino);
         root_ramfs_inode.borrow_mut().mark_as_dir();
         root_ramfs_inode.borrow_mut().set_name("/");
 
@@ -100,6 +98,7 @@ impl InoAllocator {
         }
     }
 
+    #[allow(unused)]
     pub fn dealloc(&mut self, ino: usize) {
         self.recycled.push(ino);
     }

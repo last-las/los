@@ -4,12 +4,10 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::env::{setenv, getenv, get_args};
-use user_lib::syscall::{fork, exit};
+use user_lib::env::{getenv, get_args};
 
 const SIZE: usize = 3;
 const NAME: [&str; SIZE] = [ "PATH", "USER", "SHELL"];
-const VALUE: [&str; SIZE] = [ "/user/bin", "ROOT", "/bin/bash"];
 
 #[no_mangle]
 fn main() {

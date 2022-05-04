@@ -1,13 +1,11 @@
 #![no_std]
 #![no_main]
 
-#[macro_use]
 extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid, sleep, mkdir_at, mount, open, get_dents, close};
+use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, sleep, mkdir_at, mount, open};
 use share::file::OpenFlag;
 use user_lib::env::setenv;
 

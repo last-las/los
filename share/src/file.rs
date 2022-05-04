@@ -1,5 +1,5 @@
 use alloc::string::String;
-use crate::ffi::{CString, CStr};
+use crate::ffi::CStr;
 bitflags! {
     pub struct OpenFlag: u32 {
         const RDONLY = 0x0; // attention: RDONLY is zero, which means open_flag.contains(OpenFlag::RDONLY) is always true!

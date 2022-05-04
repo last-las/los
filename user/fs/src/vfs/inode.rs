@@ -31,11 +31,6 @@ impl VfsInode {
         ))
     }
 
-    pub fn set_rdev(&mut self, rdev: Rdev) {
-        assert!(self.file_type.is_device());
-        self.rdev = Some(rdev);
-    }
-
     pub fn is_dir(&self) -> bool {
         self.file_type.contains(FileTypeFlag::DT_DIR)
     }

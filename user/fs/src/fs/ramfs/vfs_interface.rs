@@ -1,12 +1,10 @@
 use crate::vfs::inode::{InodeOperations, VfsInode, Rdev};
 use alloc::rc::Rc;
 use core::cell::RefCell;
-use crate::vfs::dentry::{VfsDentry, VfsMount};
+use crate::vfs::dentry::VfsDentry;
 use crate::vfs::super_block::SuperBlock;
-use super::RAM_FILE_SYSTEMS;
 use crate::fs::ramfs::{RamFileSystem, RamFsInode, add_ram_fs_instance, get_ram_fs_instance};
 use crate::vfs::file::{FileOperations, File};
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use share::file::FileTypeFlag;
 
@@ -120,7 +118,7 @@ impl InodeOperations for RamFsInodeOperations {
 
 impl FileOperations for RamFsFileOperations {
     fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8> {
-        let mut file_ref = file.borrow();
+        let file_ref = file.borrow();
 
         let rdev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
@@ -133,7 +131,7 @@ impl FileOperations for RamFsFileOperations {
     }
 
     fn write(&self, file: Rc<RefCell<File>>, content: &[u8]) {
-        let mut file_ref = file.borrow();
+        let file_ref = file.borrow();
 
         let rdev = file_ref.dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
         let ino = file_ref.dentry.borrow().inode.borrow().ino;
@@ -143,7 +141,7 @@ impl FileOperations for RamFsFileOperations {
     }
 
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
-        let mut file_ref = file.borrow();
+        let file_ref = file.borrow();
 
         let super_block = file_ref.dentry.borrow().inode.borrow().super_block.clone();
         let rdev = super_block.borrow().rdev.into();
@@ -155,7 +153,6 @@ impl FileOperations for RamFsFileOperations {
 
         // convert `RamFsInode` to `Dentry`
         let mut ans = Vec::new();
-        let inode = file_ref.dentry.borrow().inode.clone();
         for sub_ramfs_inode in sub_ramfs_inodes {
             ans.push(create_dentry_from_ramfs_inode(sub_ramfs_inode,super_block.clone()));
         }

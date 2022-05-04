@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{fork, exit, waitpid, sleep};
+use user_lib::syscall::{fork, exit, waitpid};
 use share::syscall::error::ECHILD;
 
 const CHILD_NUM: usize = 5;

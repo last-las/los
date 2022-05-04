@@ -1,5 +1,5 @@
 use share::terminal::{Termios, TC_GET_ATTR, TC_SET_ATTR};
-use share::ipc::{Msg, IOCTL, IOCTL_TYPE, ADDRESS, REPLY, REPLY_STATUS, PROC_NR, DEVICE};
+use share::ipc::{Msg, IOCTL, IOCTL_TYPE, ADDRESS, PROC_NR, DEVICE};
 use crate::syscall::{send, receive, getpid};
 use share::syscall::error::SysError;
 

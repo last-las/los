@@ -23,5 +23,5 @@ fn main() {
         mkdir_at(fd, path, 0).unwrap();
     }
 
-    close(fd);
+    close(fd).unwrap();
 }

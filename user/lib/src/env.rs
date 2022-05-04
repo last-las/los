@@ -1,13 +1,11 @@
 use alloc::collections::BTreeMap;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use lazy_static::*;
 use spin::Mutex;
 use share::syscall::error::{SysError, EINVAL};
-use core::ops::Add;
 use core::str::from_utf8;
 use alloc::vec::Vec;
-use share::util::cvt_c_like_str_ptr_to_rust;
-use share::ffi::{CStrArray, c_char, CString, CStr};
+use share::ffi::{CStrArray,CString, CStr};
 
 pub fn setenv(name: &str, value: &str, overwrite: bool) {
     ENV.lock().insert(name, value, overwrite);
@@ -33,14 +31,14 @@ pub fn get_envp_copy() -> CStrArray {
 
 /// Read environment variables on the stack when the process is just created,
 /// and copy them to the heap for better management.
-pub fn parse_envp(envp: *const *const c_char) {
+pub fn parse_envp(envp: *const *const u8) {
     let c_array_envp = CStrArray::copy_from_ptr(envp);
-    ENV.lock().parse_envp(c_array_envp);
+    ENV.lock().parse_envp(c_array_envp).unwrap();
 }
 
 /// Read arguments on the stack when the process is just created,
 /// and copy them to the heap for better management.
-pub fn parse_argv(argv: *const *const c_char) {
+pub fn parse_argv(argv: *const *const u8) {
     let c_array_argv = CStrArray::copy_from_ptr(argv);
     for arg_ptr in c_array_argv.iter() {
         let cstr = CStr::from_ptr(arg_ptr);
@@ -64,15 +62,13 @@ impl EnvironVariable {
         }
     }
 
-    pub fn insert(&mut self, k: &str, v: &str, overwrite: bool) -> Result<(), SysError> {
+    pub fn insert(&mut self, k: &str, v: &str, overwrite: bool) {
         let key = String::from(k);
         let pair = Pair::new(k, v);
 
         if overwrite || !self.store.contains_key(&key) {
             self.store.insert(key, pair);
         }
-
-        Ok(())
     }
 
     pub fn get(&self, k: &str) -> Option<String> {
@@ -84,7 +80,7 @@ impl EnvironVariable {
     }
 
     pub fn delete(&mut self, key: &str) {
-        let mut key = String::from(key);
+        let key = String::from(key);
 
         self.store.remove(&key);
     }
@@ -127,9 +123,9 @@ impl Pair {
         }
     }
 
-    pub fn from(ptr:* const c_char) -> Result<Self, SysError> {
-        let cstr = unsafe { CStr::from_ptr(ptr) };
-        let cstring = unsafe {CString::from(cstr) };
+    pub fn from(ptr:* const u8) -> Result<Self, SysError> {
+        let cstr = CStr::from_ptr(ptr);
+        let cstring = CString::from(cstr);
         assert_ne!(cstring.as_ptr() as usize, ptr as usize);
 
         let result = cstring.as_bytes().iter().enumerate().find(|(_, byte)| {

@@ -3,16 +3,14 @@
 
 #[macro_use]
 extern crate user_lib;
-#[macro_use]
 extern crate alloc;
 
 use user_lib::io::read_line;
 use user_lib::syscall::{fork, exec, exit, waitpid, debug_frame_usage, getcwd, chdir, open, write, close, dup};
-use share::terminal::{Termios, Ciflag, Clflag};
+use share::terminal::{Termios, Clflag};
 use user_lib::termios::tc_set_attr;
-use core::str::SplitWhitespace;
 use alloc::vec::Vec;
-use user_lib::env::{get_args, getenv};
+use user_lib::env::get_args;
 use share::file::OpenFlag;
 
 #[no_mangle]

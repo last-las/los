@@ -1,10 +1,8 @@
 use crate::vfs::super_block::SuperBlock;
 use alloc::string::String;
 use alloc::vec::Vec;
-use spin::Mutex;
 use alloc::rc::Rc;
 use core::cell::RefCell;
-use crate::fs::ramfs::RAM_FILE_SYSTEMS;
 use crate::vfs::inode::Rdev;
 
 static mut FILE_SYSTEMS: Vec<FileSystem> = Vec::new();

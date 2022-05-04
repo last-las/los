@@ -7,12 +7,8 @@ use crate::syscall::exit;
 use crate::heap::init_heap;
 use core::arch::global_asm;
 use core::ptr;
-use core::ffi::c_void;
-use share::ffi::c_char;
 
-#[macro_use]
 extern crate alloc;
-
 #[macro_use]
 pub mod console;
 pub mod syscall;
@@ -25,7 +21,7 @@ mod heap;
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
-pub extern "C" fn rust_start(argv: *const *const c_char, envp: *const *const c_char) {
+pub extern "C" fn rust_start(argv: *const *const u8, envp: *const *const u8) {
     clear_bss();
     init_heap();
     env::parse_argv(argv);

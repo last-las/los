@@ -43,6 +43,7 @@ fn align_up(size: usize) -> usize {
 }
 
 /// Pages of `size`.
+#[allow(unused)]
 fn pages(size: usize) -> usize {
     (size + PAGE_SIZE - 1) / PAGE_SIZE
 }

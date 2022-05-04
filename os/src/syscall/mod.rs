@@ -13,7 +13,6 @@ use crate::syscall::proc::*;
 use crate::task::stop_current_and_run_next_task;
 use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
-use share::ffi::c_char;
 use crate::mm::available_frame;
 use crate::syscall::kcall::*;
 
@@ -59,7 +58,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_GETPPID => do_get_ppid(),
         SYSCALL_BRK => do_brk(args[0]),
         SYSCALL_FORK => do_fork(args[0] as u32, args[1], args[2], args[3], args[4]),
-        SYSCALL_EXEC => do_exec(args[0], args[1] as *const *const c_char, args[2] as *const *const c_char),
+        SYSCALL_EXEC => do_exec(args[0], args[1] as *const *const u8, args[2] as *const *const u8),
         SYSCALL_WAITPID => do_waitpid(args[0] as isize, args[1], args[2]),
 
         SYSCALL_TEST =>  do_test(),

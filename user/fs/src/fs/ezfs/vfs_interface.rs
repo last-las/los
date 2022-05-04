@@ -6,11 +6,10 @@ use crate::vfs::dentry::VfsDentry;
 use share::file::FileTypeFlag;
 use crate::vfs::file::{FileOperations, File};
 use alloc::vec::Vec;
-use crate::fs::ezfs::{add_ez_fs_instance, get_ez_fs_instance_by, get_ez_fs_root_inode};
+use crate::fs::ezfs::{add_ez_fs_instance, get_ez_fs_root_inode};
 use easy_fs::{Inode, EasyFileSystem};
 use easy_fs::DiskInodeType;
 use alloc::sync::Arc;
-use alloc::boxed::Box;
 use crate::device::block::Block;
 
 pub fn create_ezfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
@@ -59,11 +58,11 @@ impl InodeOperations for EzFsInodeOperations {
         Some(create_dentry_from_ezfs_inode(name, ezfs_inode, sp))
     }
 
-    fn mkdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
         return None;
     }
 
-    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn mknod(&self, _name: &str, _file_type: FileTypeFlag, _rdev: Rdev, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
         return None;
     }
 }

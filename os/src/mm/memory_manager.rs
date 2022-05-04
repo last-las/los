@@ -14,7 +14,7 @@ pub struct MemoryManager {
     pub page_table: PageTable,
     pub region_list: RegionList,
     pub brk_start: VirtualAddress,
-    // the start of programme break. This value should not be changed after initializing
+    /// the start of programme break. It should not be changed after initializing
     pub brk: VirtualAddress,
 }
 

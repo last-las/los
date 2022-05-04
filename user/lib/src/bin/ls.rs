@@ -23,7 +23,7 @@ fn main() {
         exit(0);
     }
     let fd = open(path.as_str(), OpenFlag::DIRECTORY | OpenFlag::RDONLY, 0).unwrap();
-    let mut dirents = get_dents(fd).unwrap();
+    let dirents = get_dents(fd).unwrap();
     for dirent in dirents {
         println!("{}", dirent.name);
     }

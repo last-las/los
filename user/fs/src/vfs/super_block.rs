@@ -1,4 +1,4 @@
-use crate::vfs::inode::{VfsInode, Rdev};
+use crate::vfs::inode::Rdev;
 use crate::vfs::dentry::VfsDentry;
 use alloc::rc::Rc;
 use core::cell::RefCell;

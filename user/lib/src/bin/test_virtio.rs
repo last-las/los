@@ -4,18 +4,17 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{terminal_read, fork, terminal_write, getpid, send, receive};
-use user_lib::termios::{tc_get_attr, tc_set_attr};
-use share::terminal::Clflag;
+use user_lib::syscall::{getpid, send, receive};
 use share::ipc::{Msg, READ, PROC_NR, BUFFER, POSITION, WRITE, REPLY_STATUS, VIRTIO_BLK_PID};
 
 const BLK_SZ: usize = 512;
+#[allow(unused)]
 const BLK_COUNT: usize = 1024;
 
 #[no_mangle]
 fn main() {
     let mut buffer: [u8; BLK_SZ] = [0; BLK_SZ];
-    read_block(0, buffer.as_ptr() as usize);
+    read_block(0, buffer.as_mut_ptr() as usize);
     println!("{:?}", buffer);
 /*    let buffer_ptr = buffer.as_ptr() as usize;
 

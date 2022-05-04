@@ -1,7 +1,6 @@
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use share::file::{OpenFlag, Stat};
 

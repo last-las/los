@@ -6,18 +6,13 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{yield_, getppid, send, open, write, read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek, fstat, getpid};
-use share::ipc::{Msg, FORK, FS_SYSCALL_ARG0, FORK_PARENT, FORK_CHILD};
+use user_lib::syscall::{open, write, read, close, get_dents, mkdir_at, getcwd, chdir, mount, unmount, lseek};
 use share::file::{OpenFlag, AT_FD_CWD, SEEKFlag};
-use share::syscall::error::SysError;
-use alloc::string::{String};
-use alloc::string::ToString;
 
 const BUF_SIZE: usize = 64;
 
 #[no_mangle]
 fn main() {
-    // send_fork_message();
     mk_tmp_dir();
 
     test_read_write();
@@ -28,14 +23,6 @@ fn main() {
     test_lseek();
 
     test_mount_ezfs();
-}
-
-fn send_fork_message() {
-    let mut message = Msg::empty();
-    message.mtype = FORK;
-    message.args[FORK_PARENT] = 5;
-    message.args[FORK_CHILD] = getpid();
-    send(5, &message).unwrap();
 }
 
 fn test_read_write() {
