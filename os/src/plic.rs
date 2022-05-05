@@ -3,6 +3,7 @@
 use riscv::register::sie;
 use crate::mm::address::PhysicalAddress;
 use crate::syscall::notify;
+use share::ipc::TERMINAL_PID;
 
 // TODO-FUTURE: plic implement is only worked at single hart right now!!!
 
@@ -37,7 +38,7 @@ pub fn handle_interrupt() {
     if let Some(interrupt) = next_interrupt_number() {
         match interrupt {
             UART_IRQ => {
-                notify(1).unwrap();
+                notify(TERMINAL_PID).unwrap();
                 disable_uart_interrupt();
             },
             _ => {

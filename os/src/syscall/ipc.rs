@@ -7,7 +7,7 @@ use spin::MutexGuard;
 
 // TODO-FUTURE: using registers to pass the message could improve performance. L4 stuff.
 
-/// Send a message, which `msg_ptr` points to, from current task to `dst_pid` task.
+/// Send a message which `msg_ptr` points to, from current task to `dst_pid` task.
 ///
 /// Before any real work, caller task checks whether there is a deadlock situation.
 /// Caller task reads the message from `msg_ptr`, and If `dst_pid` task is receiving,
@@ -44,7 +44,7 @@ pub fn kcall_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     Ok(0)
 }
 
-/// Receive a [`Msg`] `dst_pid` task, and save it to `msg_ptr` address.
+/// Receive a [`Msg`] from `dst_pid` task, and save it to `msg_ptr` address.
 ///
 /// If `interrupt_flag` is set for caller task, it return with an interrupt message immediately.
 /// Caller task finds out possible sending tasks, if there is someone sending, it moves the [`Msg`]

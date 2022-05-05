@@ -19,11 +19,21 @@ pub const REG_SCR_OFFSET: usize = 7;
 
 
 pub struct Uart {
+    /// When an interrupt occurs, input byte will be pushed into `read_buffer`.
     pub read_buffer: VecDeque<u8>,
+    /// Bytes in `usr_buffer` will be copied to `in_proc` process.
     pub usr_buffer: Vec<u8>,
+    /// Pid of the reading message sender.
+    ///
+    /// When `in_left` reduce to zero, driver sends a reply message to `in_caller` process.
     pub in_caller: usize,
+    /// Pid of the process that owns the `buf_ptr`.
+    ///
+    /// When `in_left` reduce to zero, driver copies bytes from `usr_buffer` to `in_proc` process.
     pub in_proc: usize,
+    /// Indicates how many bytes should be read before driver replies to `in_caller` process.
     pub in_left: usize,
+    /// The buffer pointer in `in_proc` process space.
     pub buf_ptr: usize,
     pub pgrp: Option<usize>,
 
