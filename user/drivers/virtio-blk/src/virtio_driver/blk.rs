@@ -2,7 +2,6 @@ use super::*;
 use super::header::VirtIOHeader;
 use super::queue::VirtQueue;
 use bitflags::*;
-use core::hint::spin_loop;
 use super::volatile::Volatile;
 use user_lib::syscall::yield_;
 
@@ -130,7 +129,8 @@ impl VirtIOBlk<'_> {
         self.queue.add(&[req.as_buf(), buf], &[resp.as_buf_mut()])?;
         self.header.notify(0);
         while !self.queue.can_pop() {
-            spin_loop();
+            // spin_loop();
+            yield_();
         }
         self.queue.pop_used()?;
         match resp.status {
