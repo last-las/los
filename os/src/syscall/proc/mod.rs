@@ -12,6 +12,7 @@ use share::syscall::error::SysError;
 use crate::processor::get_cur_task_in_this_hart;
 use share::ipc::{Msg, EXIT, EXIT_PID, FS_PID};
 use crate::syscall::ipc::kcall_send;
+pub use priority::{MAX_PRIORITY, MIN_PRIORITY};
 
 pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
     // get cur pid

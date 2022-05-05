@@ -8,6 +8,7 @@ use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
 use share::syscall::error::SysError;
 use share::ipc::Msg;
+use crate::syscall::{MAX_PRIORITY, MIN_PRIORITY};
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -24,7 +25,9 @@ pub struct TaskStructInner {
     pub wait_queue: Vec<Arc<TaskStruct>>,
 
     pub mem_manager: MemoryManager,
-    pub priority: usize,
+
+    pub priority: isize,
+    pub min_priority: isize,
 
     pub children:Vec<Arc<TaskStruct>>,
     pub parent: Option<Weak<TaskStruct>>,
@@ -47,7 +50,8 @@ impl TaskStruct {
             message_holder: None,
             interrupt_flag: false,
             mem_manager,
-            priority: 7,
+            priority: 0,
+            min_priority: 0,
             children: Vec::new(),
             parent: None,
         };
@@ -68,6 +72,21 @@ impl TaskStruct {
 
     pub fn pid(&self) -> usize {
         self.pid_handle.0
+    }
+
+    pub fn increase_priority(&self) {
+        let mut inner = self.acquire_inner_lock();
+        if inner.priority < MAX_PRIORITY {
+            inner.priority += 1;
+        }
+    }
+
+    pub fn decrease_priority(&self) {
+        let mut inner = self.acquire_inner_lock();
+        let min_priority = isize::max(MIN_PRIORITY, inner.min_priority);
+        if inner.priority > min_priority {
+            inner.priority -= 1;
+        }
     }
 }
 

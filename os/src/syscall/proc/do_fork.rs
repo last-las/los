@@ -55,6 +55,7 @@ fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_
         interrupt_flag: false,
         mem_manager,
         priority: parent_inner.priority,
+        min_priority: parent_inner.min_priority,
         children: Vec::new(),
         parent: Some(Arc::downgrade(parent))
     };

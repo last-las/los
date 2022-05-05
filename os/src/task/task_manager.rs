@@ -1,9 +1,10 @@
 use crate::task::task_struct::TaskStruct;
 use spin::Mutex;
-use alloc::sync::Arc;
+use alloc::sync::{Arc, Weak};
 use alloc::collections::VecDeque;
 use crate::config::MAX_TASK_NUMBER;
 use alloc::vec::Vec;
+use crate::syscall::MAX_PRIORITY;
 
 pub fn fetch_a_task_from_manager() -> Option<Arc<TaskStruct>> {
     TASK_MANAGER.lock().dequeue()
@@ -30,12 +31,13 @@ lazy_static!{
     pub static ref TASK_MANAGER: Mutex<TaskManager> = Mutex::new(TaskManager::new());
 }
 
-const QUEUE_NUM: usize = 8;
+const QUEUE_NUM: usize = MAX_PRIORITY as usize + 1;
 
 /// a simple multi queue scheduler.
 pub struct TaskManager {
     pid_2_task: Vec<Option<Arc<TaskStruct>>>,
     queues: [VecDeque<Arc<TaskStruct>>; QUEUE_NUM],
+    last_task: Option<Weak<TaskStruct>>,
 }
 
 impl TaskManager {
@@ -59,6 +61,7 @@ impl TaskManager {
         Self {
             pid_2_task,
             queues,
+            last_task: None,
         }
     }
 
@@ -71,14 +74,19 @@ impl TaskManager {
     }
 
     /// difference between `add()` and `enqueue()` is that `add()` is used when new task is created,
-    /// while `enqueue()` is used when an old task is temporarily stopped thus it is returned to the manager.
+    /// while `enqueue()` is used when an old task is temporarily stopped.
     pub fn enqueue(&mut self, task: Arc<TaskStruct>) {
-        let pid =task.pid_handle.0;
+        let pid = task.pid_handle.0;
         assert!(self.pid_2_task[pid].is_some());
+        if self.is_last_running_task(&task) {
+            task.increase_priority();
+        } else {
+            task.decrease_priority();
+        }
 
         let priority = task.acquire_inner_lock().priority;
-        assert!(priority < QUEUE_NUM);
-        self.queues[priority].push_back(task);
+        assert!(priority >= 0);
+        self.queues[priority as usize].push_back(task);
     }
 
     pub fn dequeue(&mut self) -> Option<Arc<TaskStruct>> {
@@ -90,7 +98,10 @@ impl TaskManager {
         }
 
         let index = result.unwrap().0;
-        self.queues[index].pop_front()
+        let task: Arc<TaskStruct> = self.queues[index].pop_front().unwrap();
+        self.last_task = Some(Arc::downgrade(&task));
+
+        Some(task)
     }
 
 
@@ -109,5 +120,18 @@ impl TaskManager {
         }
         self.pid_2_task[pid].take();
         true
+    }
+
+    fn is_last_running_task(&self, task: &Arc<TaskStruct>) -> bool {
+        if self.last_task.is_none() {
+            return false;
+        }
+        let result = self.last_task.as_ref().unwrap().upgrade();
+        if result.is_none() { // last running task has already been removed.
+            return false;
+        }
+        let last_task = result.unwrap();
+
+        return Arc::ptr_eq(&last_task, task);
     }
 }

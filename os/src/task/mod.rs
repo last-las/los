@@ -47,6 +47,19 @@ pub fn load_init_tasks() {
             panic!("{} doesn't exist!", task_name);
         });
         let task = Arc::new(TaskStruct::new(data).unwrap());
+
+        // set min_priority for these tasks.
+        let mut priority = 0;
+        if task_name == "init" { // make sure normal user processes' min_priority is higher than device and fs.
+            priority = 3;
+        } else if task_name == "fs" { // make sure fs' min_priority is higher than device.
+            priority = 2;
+        }
+        let mut inner = task.acquire_inner_lock();
+        inner.min_priority = priority;
+        inner.priority = priority;
+        drop(inner);
+
         add_a_task_to_manager(task);
     }
 }

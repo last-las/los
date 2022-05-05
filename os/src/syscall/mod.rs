@@ -16,6 +16,7 @@ use crate::mm::available_frame;
 use crate::syscall::kcall::*;
 
 pub use ipc::notify;
+pub use proc::{MIN_PRIORITY, MAX_PRIORITY};
 
 
 pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
