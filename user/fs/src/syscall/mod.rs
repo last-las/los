@@ -68,7 +68,7 @@ pub fn do_getcwd(buf: usize, size: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsS
 
     virt_copy(getpid(), path.as_ptr() as usize, proc_nr, buf, length).unwrap();
 
-    Ok(0)
+    Ok(buf)
 }
 
 pub fn do_dup(old_fd: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
@@ -145,11 +145,18 @@ pub fn real_mount(target_dentry: Rc<RefCell<VfsDentry>>, target_mnt: Rc<RefCell<
     Ok(root_dentry)
 }
 
-pub fn do_open(fd: usize, path: &str, flag: u32, _mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
-    assert_eq!(fd, AT_FD_CWD as usize);
+pub fn do_open(dir_fd: usize, path: &str, flag: u32, _mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let open_flag = OpenFlag::from_bits(flag).unwrap();
+    let mut dir_fs = None;
+    if path.as_bytes()[0] != '/' as u8 && dir_fd != AT_FD_CWD as usize {
+        let file = cur_fs.borrow().get_file(dir_fd)?;
+        if !file.borrow().is_directory() {
+            return Err(SysError::new(ENOTDIR));
+        }
+        dir_fs = Some(file);
+    }
     let nameidata =
-        path_lookup(path, Rc::clone(&cur_fs), LookupFlags::PARENT | LookupFlags::DIRECTORY, None)?;
+        path_lookup(path, Rc::clone(&cur_fs), LookupFlags::PARENT | LookupFlags::DIRECTORY, dir_fs)?;
 
     let (target_dentry, target_mnt) = get_target_dentry_and_mnt_by_parent(nameidata, open_flag)?;
     let fop = target_dentry.borrow().inode.borrow().fop.clone();
