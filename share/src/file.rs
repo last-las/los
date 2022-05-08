@@ -9,7 +9,7 @@ bitflags! {
         const EXCL = 0x80;
         const TRUNC = 0x200;
         const APPEND = 0x400;
-        const DIRECTORY = 0x10000;
+        const DIRECTORY = 0x200000;
     }
 }
 
