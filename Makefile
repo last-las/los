@@ -22,8 +22,8 @@ user:
 	@cd ./user && python build.py && cargo build --release
 
 fs-img:
-	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
-	# @cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
+	# @cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
+	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 
 run:
 	@qemu-system-riscv64 \
