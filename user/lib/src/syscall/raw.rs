@@ -130,8 +130,8 @@ pub fn sys_chdir(path_ptr: usize) -> isize {
     syscall1(SYSCALL_CHDIR, path_ptr)
 }
 
-pub fn sys_open(path_ptr: usize, flags: u32, mode: u32) -> isize {
-    syscall3(SYSCALL_OPEN, path_ptr, flags as usize, mode as usize)
+pub fn sys_open(fd: usize, path_ptr: usize, flags: u32, mode: u32) -> isize {
+    syscall4(SYSCALL_OPEN, fd, path_ptr, flags as usize, mode as usize)
 }
 
 pub fn sys_close(fd: usize) -> isize {

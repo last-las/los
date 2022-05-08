@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::{get_envp_copy, getenv};
 use share::ipc::Msg;
-use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
+use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag, Stat, AT_FD_CWD};
 use share::ffi::{CString, CStr};
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
@@ -60,7 +60,7 @@ pub fn chdir(path: &str) -> Result<(), SysError> {
 pub fn open(path: &str, flags: OpenFlag, mode: u32) -> Result<usize, SysError> {
     let cstring = CString::from(path);
 
-    isize2result(sys_open(cstring.as_ptr() as usize, flags.bits(), mode))
+    isize2result(sys_open(AT_FD_CWD as usize,cstring.as_ptr() as usize, flags.bits(), mode))
 }
 
 pub fn close(fd: usize) -> Result<usize, SysError> {

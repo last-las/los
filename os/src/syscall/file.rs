@@ -32,8 +32,8 @@ pub fn do_chdir(path_ptr: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_CHDIR, [path_ptr, 0, 0, 0, 0])
 }
 
-pub fn do_open(path_ptr: usize, flags: usize, mode: usize) -> Result<usize, SysError> {
-    send_receive_fs(SYSCALL_OPEN, [path_ptr, flags, mode, 0, 0])
+pub fn do_open(fd: usize, path_ptr: usize, flags: usize, mode: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_OPEN, [fd, path_ptr, flags, mode, 0])
 }
 
 pub fn do_close(fd: usize) -> Result<usize, SysError> {

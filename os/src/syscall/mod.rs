@@ -42,7 +42,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_UNMOUNT => do_unmount(args[0], args[1]),
         SYSCALL_MOUNT => do_mount(args[0], args[1], args[2], args[3], args[4]),
         SYSCALL_CHDIR => do_chdir(args[0]),
-        SYSCALL_OPEN => do_open(args[0], args[1], args[2]),
+        SYSCALL_OPEN => do_open(args[0], args[1], args[2], args[3]),
         SYSCALL_CLOSE => do_close(args[0]),
         SYSCALL_GETDENTS => do_get_dents(args[0], args[1], args[2]),
         SYSCALL_READ => do_read(args[0], args[1], args[2]),

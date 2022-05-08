@@ -145,7 +145,8 @@ pub fn real_mount(target_dentry: Rc<RefCell<VfsDentry>>, target_mnt: Rc<RefCell<
     Ok(root_dentry)
 }
 
-pub fn do_open(path: &str, flag: u32, _mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+pub fn do_open(fd: usize, path: &str, flag: u32, _mode: u32, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    assert_eq!(fd, AT_FD_CWD as usize);
     let open_flag = OpenFlag::from_bits(flag).unwrap();
     let nameidata =
         path_lookup(path, Rc::clone(&cur_fs), LookupFlags::PARENT | LookupFlags::DIRECTORY, None)?;

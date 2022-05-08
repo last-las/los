@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 use crate::mm::page_table::PageTable;
 use share::ffi::{CString, CStrArray, CStr};
 use crate::syscall::file::{do_open, do_read, do_fstat, do_close};
-use share::file::{OpenFlag, Stat};
+use share::file::{OpenFlag, Stat, AT_FD_CWD};
 use alloc::vec;
 
 pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) -> Result<usize, SysError> {
@@ -15,7 +15,7 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
     let path_cstr = CStr::from_ptr(path_ptr as *const _);
     let path_cstring = CString::from(path_cstr);
     let open_flag = OpenFlag::RDONLY;
-    let fd = do_open(path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
+    let fd = do_open( AT_FD_CWD as usize,path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
     let stat = Stat::empty();
     do_fstat(fd, &stat as *const _ as usize)?;
     let data_buffer = vec![0; stat.size];

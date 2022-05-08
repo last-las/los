@@ -130,8 +130,8 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
             do_chdir(path.as_str(),cur_fs)
         },
         SYSCALL_OPEN => {
-            let path = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;
-            do_open(path.as_str(), message.args[FS_SYSCALL_ARG1] as u32, message.args[FS_SYSCALL_ARG2] as u32, cur_fs)
+            let path = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG1])?;
+            do_open(message.args[FS_SYSCALL_ARG0], path.as_str(), message.args[FS_SYSCALL_ARG2] as u32, message.args[FS_SYSCALL_ARG3] as u32, cur_fs)
         },
         SYSCALL_CLOSE => do_close(message.args[FS_SYSCALL_ARG0], cur_fs),
         SYSCALL_GETDENTS => do_get_dents(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
