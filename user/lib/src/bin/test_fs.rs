@@ -15,18 +15,28 @@ const BUF_SIZE: usize = 64;
 fn main() {
     mk_tmp_dir();
 
+    test_open();
     test_read_write();
     test_get_dirent_at();
-    test_mkdir_at();
-    test_getcwd_and_chdir();
-    test_mount();
+    // test_mkdir_at();
+    // test_getcwd_and_chdir();
+    // test_mount();
     test_lseek();
+}
 
-    test_mount_ezfs();
+fn test_open() {
+    let fd = open(".", OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
+    close(fd).unwrap();
+    let fd = open("..", OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
+    close(fd).unwrap();
+    let fd = open("../../../../", OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
+    close(fd).unwrap();
+    let fd = open("/././././.", OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
+    close(fd).unwrap();
+    println!("[ test_open] end successfully!\n");
 }
 
 fn test_read_write() {
-    println!("[ test_read_write] start");
     // write content
     let fd = open("/test1.txt",OpenFlag::CREAT | OpenFlag::WRONLY, 0).unwrap();
     let mut w_buf = [8; BUF_SIZE];
@@ -44,11 +54,10 @@ fn test_read_write() {
     // println!("read content success");
 
     assert_eq!(w_buf, r_buf);
-    println!("[ test_read_write] end\n");
+    println!("[ test_read_write] end successfully!\n");
 }
 
 fn test_get_dirent_at() {
-    println!("[ test_get_dirent_at] start");
     for i in 0..10 {
         let path = format!("/x{}.txt", i);
         let fd = open(path.as_str(), OpenFlag::CREAT, 0).unwrap();
@@ -62,11 +71,10 @@ fn test_get_dirent_at() {
     }
     close(fd).unwrap();
 
-    println!("[ test_get_dirent_at] end\n");
+    println!("[ test_get_dirent_at] end successfully!\n");
 }
 
 fn test_mkdir_at() {
-    println!("[test_mkdir_at] start");
     let tmp_fd = open("/tmp", OpenFlag::DIRECTORY | OpenFlag::RDWR, 0).unwrap();
     // 1. relative path
     mkdir_at(tmp_fd, "relative_dir1", 0).unwrap();
@@ -80,7 +88,7 @@ fn test_mkdir_at() {
     list_dir("/tmp");
     println!("list / dir:");
     list_dir("/");
-    println!("[test_mkdir_at] end\n");
+    println!("[test_mkdir_at] end successfully!\n");
 }
 
 fn test_getcwd_and_chdir() {
@@ -106,11 +114,10 @@ fn test_getcwd_and_chdir() {
     chdir("././././././././").unwrap();
     assert_eq!(getcwd().unwrap().as_str(), "/tmp");
 
-    println!("[test_getcwd_and_chdir] end\n");
+    println!("[test_getcwd_and_chdir] end successfully!\n");
 }
 
 fn test_mount() {
-    println!("[test_mount] start");
     mkdir_at(0, "/test", 0).unwrap();
 
     // before mount
@@ -135,12 +142,10 @@ fn test_mount() {
     println!("after mount again, ls /test/:");
     mount("/dev/ram1", "/test", "ramfs", 0, 0).unwrap();
     list_dir("/test");
-    println!("[test_mount] end\n");
+    println!("[test_mount] end successfully!\n");
 }
 
 fn test_lseek() {
-    println!("[test_lseek] start");
-
     let fd = open("/test_lseek.txt", OpenFlag::CREAT | OpenFlag::RDWR, 0).unwrap();
     let before = "She   is a crazy woman";
     let after_ = "He    was such a crazy\0\0\0man";
@@ -163,13 +168,7 @@ fn test_lseek() {
         after_.as_bytes(),
         &content[0..size]
     );
-    println!("[test_lseek] end\n");
-}
-
-fn test_mount_ezfs() {
-    mkdir_at(0, "/bin", 0).unwrap();
-    mount("/dev/sda2", "/bin", "ezfs", 0, 0).unwrap();
-    list_dir("/bin");
+    println!("[test_lseek] end successfully!\n");
 }
 
 fn list_dir(path: &str) {
