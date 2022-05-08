@@ -74,6 +74,7 @@ fn test_get_dirent_at() {
     println!("[ test_get_dirent_at] end successfully!\n");
 }
 
+#[allow(unused)]
 fn test_mkdir_at() {
     let tmp_fd = open("/tmp", OpenFlag::DIRECTORY | OpenFlag::RDWR, 0).unwrap();
     // 1. relative path
@@ -91,6 +92,7 @@ fn test_mkdir_at() {
     println!("[test_mkdir_at] end successfully!\n");
 }
 
+#[allow(unused)]
 fn test_getcwd_and_chdir() {
     println!("[test_getcwd_and_chdir] start");
     assert_eq!(getcwd().unwrap().as_str(), "/");
@@ -117,6 +119,7 @@ fn test_getcwd_and_chdir() {
     println!("[test_getcwd_and_chdir] end successfully!\n");
 }
 
+#[allow(unused)]
 fn test_mount() {
     mkdir_at(0, "/test", 0).unwrap();
 
@@ -171,6 +174,7 @@ fn test_lseek() {
     println!("[test_lseek] end successfully!\n");
 }
 
+#[allow(unused)]
 fn list_dir(path: &str) {
     let fd = open(path, OpenFlag::DIRECTORY | OpenFlag::RDONLY, 0).unwrap();
     let dirents = get_dents(fd).unwrap();
