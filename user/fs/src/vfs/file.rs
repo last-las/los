@@ -2,7 +2,7 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
 use alloc::vec::Vec;
-use share::file::{OpenFlag, Stat};
+use share::file::{OpenFlag, Stat, FileTypeFlag};
 
 pub struct File {
     pub fop: Rc<dyn FileOperations>,
@@ -35,7 +35,7 @@ impl File {
     }
 
     pub fn is_directory(&self) -> bool {
-        self.open_flags.contains(OpenFlag::DIRECTORY)
+        self.dentry.borrow().inode.borrow().file_type.contains(FileTypeFlag::DT_DIR)
     }
 
     pub fn fstat(&self) -> Stat {
