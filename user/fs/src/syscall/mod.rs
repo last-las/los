@@ -155,10 +155,12 @@ pub fn do_open(dir_fd: usize, path: &str, flag: u32, _mode: u32, cur_fs: Rc<RefC
         }
         dir_fs = Some(file);
     }
+    // find target file's parent directory
     let nameidata =
         path_lookup(path, Rc::clone(&cur_fs), LookupFlags::PARENT | LookupFlags::DIRECTORY, dir_fs)?;
 
-    let (target_dentry, target_mnt) = get_target_dentry_and_mnt_by_parent(nameidata, open_flag)?;
+    // find target file on parent directory
+    let (target_dentry, target_mnt) = lookup_target_on_parent(nameidata, open_flag, cur_fs.clone())?;
     let fop = target_dentry.borrow().inode.borrow().fop.clone();
     let file = File::new(fop, target_dentry, open_flag, target_mnt);
     // println!("open ino:{}", file.dentry.borrow().inode.borrow().ino);
@@ -390,34 +392,42 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags, di
     Ok(NameIdata::new(dentry, mnt, last_filename))
 }
 
-fn get_target_dentry_and_mnt_by_parent(nameidata: NameIdata, open_flag: OpenFlag)
-    -> Result<(Rc<RefCell<VfsDentry>>, Rc<RefCell<VfsMount>>), SysError> {
-    let last_name = nameidata.left_path_name.as_str();
+fn lookup_target_on_parent(nameidata: NameIdata, open_flag: OpenFlag, cur_fs: Rc<RefCell<FsStruct>>)
+                           -> Result<(Rc<RefCell<VfsDentry>>, Rc<RefCell<VfsMount>>), SysError> {
+    let last_name = nameidata.left_path_name.as_str(); // last_name doesn't have trailing '/'
 
-    if last_name.len() == 0 { // The open target path is root directory. Now `parent_dentry` is also root directory, so simply return `parent_dentry`
+    if last_name.len() == 0 { /* This happens when the target dentry is the root directory of current process.
+                                In this situation, parent and target dentries are both root directory. */
         Ok((nameidata.dentry.clone(), nameidata.mnt.clone()))
-    } else { // The open target path is not root directory,so we will search the target on `parent_dentry`.
+    } else { // target dentry is not the root directory, so it searches the target dentry on parent.
         let parent_dentry = nameidata.dentry;
         let parent_inode = parent_dentry.borrow().inode.clone();
-
         let mut child_dentry;
-        // Find on the cache.
-        let result = parent_dentry.borrow().cached_lookup(last_name);
-        if result.is_some() {
-            child_dentry = result.unwrap();
-        } else {  // Find on the real filesystem, if target doesn't exist and `OpenFlag::CREAT` is set, create on the real filesystem.
-            let result = parent_inode.borrow().iop.lookup(last_name, parent_inode.clone());
+
+        if last_name == "." {
+            child_dentry = parent_dentry;
+        } else if last_name == ".." {
+            let result = follow_dotdot(parent_dentry, nameidata.mnt.clone(), cur_fs);
+            child_dentry = result.0;
+        } else {
+            // Find on the cache.
+            let result = parent_dentry.borrow().cached_lookup(last_name);
             if result.is_some() {
                 child_dentry = result.unwrap();
-            } else if open_flag.contains(OpenFlag::CREAT) {
-                child_dentry = parent_inode.borrow().iop.create(last_name, parent_inode.clone()).ok_or(SysError::new(EEXIST))?;
-            } else {
-                return Err(SysError::new(ENOENT));
-            }
+            } else {  // Find on the real filesystem, if target doesn't exist and `OpenFlag::CREAT` is set, create on the real filesystem.
+                let result = parent_inode.borrow().iop.lookup(last_name, parent_inode.clone());
+                if result.is_some() {
+                    child_dentry = result.unwrap();
+                } else if open_flag.contains(OpenFlag::CREAT) {
+                    child_dentry = parent_inode.borrow().iop.create(last_name, parent_inode.clone()).ok_or(SysError::new(EEXIST))?;
+                } else {
+                    return Err(SysError::new(ENOENT));
+                }
 
-            // successfully find, set the cache
-            parent_dentry.borrow_mut().children.push(child_dentry.clone());
-            child_dentry.borrow_mut().parent = Some(parent_dentry.clone());
+                // successfully find, set the cache
+                parent_dentry.borrow_mut().children.push(child_dentry.clone());
+                child_dentry.borrow_mut().parent = Some(parent_dentry.clone());
+            }
         }
 
         // ENOTDIR situation
