@@ -7,6 +7,7 @@ export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 FS_IMG := $(USER_PATH)/fs.img
+OTHER_PATH := /home/las/workstation/testsuits-for-oskernel-main/riscv-syscalls-testing/user/build/riscv64/
 
 all: user fs-img
 	@cd ./os && cargo build --release
@@ -21,7 +22,8 @@ user:
 	@cd ./user && python build.py && cargo build --release
 
 fs-img:
-	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
+	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
+	# @cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 
 run:
 	@qemu-system-riscv64 \

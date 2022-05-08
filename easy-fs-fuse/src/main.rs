@@ -45,9 +45,17 @@ fn easy_fs_pack() -> std::io::Result<()> {
                 .takes_value(true)
                 .help("Executable target dir(with backslash)"),
         )
+        .arg(
+            Arg::with_name("other")
+                .short("o")
+                .long("other")
+                .takes_value(true)
+                .help("Other executable dir(with backslash)"),
+        )
         .get_matches();
     let src_path = matches.value_of("source").unwrap();
     let target_path = matches.value_of("target").unwrap();
+    let other_path_wrap = matches.value_of("other");
     println!("src_path = {}\ntarget_path = {}", src_path, target_path);
     let block_file = Arc::new(BlockFile(Mutex::new({
         let f = OpenOptions::new()
@@ -80,6 +88,29 @@ fn easy_fs_pack() -> std::io::Result<()> {
         // write data to easy-fs
         inode.write_at(0, all_data.as_slice());
     }
+
+    // load other executable files if `other_path` is some.
+    if other_path_wrap.is_some() {
+        let other_path = other_path_wrap.unwrap();
+        let other_apps: Vec<_> = read_dir(other_path)
+            .unwrap()
+            .into_iter()
+            .map(|dir_entry| {
+                dir_entry.unwrap().file_name().into_string().unwrap()
+            })
+            .collect();
+        for app in other_apps {
+            // load app data from host file system
+            let mut host_file = File::open(format!("{}{}",other_path, app)).unwrap();
+            let mut all_data: Vec<u8> = Vec::new();
+            host_file.read_to_end(&mut all_data).unwrap();
+            // create a file in easy-fs
+            let inode = root_inode.create(app.as_str()).unwrap();
+            // write data to easy-fs
+            inode.write_at(0, all_data.as_slice());
+        }
+    }
+
     // list apps
     for app in root_inode.ls() {
         println!("{}", app);

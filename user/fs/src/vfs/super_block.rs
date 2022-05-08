@@ -7,7 +7,6 @@ pub struct SuperBlock {
     pub rdev: Rdev,
     /// Root Directory Entry, it's name is always "/".
     pub root: Option<Rc<RefCell<VfsDentry>>>,
-
     // pub sop: Rc<dyn SuperBlockOperations>,
 }
 
