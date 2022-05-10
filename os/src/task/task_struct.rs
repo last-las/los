@@ -121,6 +121,6 @@ pub enum RuntimeFlags {
     RECEIVING(isize),
     SENDING(usize),
     READY,
-    ZOMBIE(usize),
+    ZOMBIE(isize),
     RUNNING,
 }

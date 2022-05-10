@@ -82,8 +82,8 @@ fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize
     }
 }
 
-fn write_exist_status(status_ptr : usize, exit_code: usize) {
+fn write_exist_status(status_ptr : usize, exit_code: isize) {
     unsafe {
-        (status_ptr as *mut usize).write_volatile((exit_code & 0xff) << 8);
+        (status_ptr as *mut isize).write_volatile((exit_code & 0xff) << 8);
     }
 }

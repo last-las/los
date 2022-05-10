@@ -27,7 +27,7 @@ pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
     kcall_send(FS_PID, &message as *const _ as usize)?;
 
     // final step
-    schedule(RuntimeFlags::ZOMBIE(exit_code as usize));
+    schedule(RuntimeFlags::ZOMBIE(exit_code));
     Ok(0)
 }
 
