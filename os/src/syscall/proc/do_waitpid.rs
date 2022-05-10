@@ -1,6 +1,6 @@
 use share::syscall::error::{SysError, ECHILD};
 use crate::processor::get_cur_task_in_this_hart;
-use crate::task::{RuntimeFlags, stop_current_and_run_next_task};
+use crate::task::{RuntimeFlags, schedule};
 
 // TODO-FUTURE: implement WNOHANG, WUNTRACED and WCONTINUED for waitpid
 pub fn do_waitpid(pid: isize, status_ptr: usize, options: usize) -> Result<usize, SysError> {
@@ -36,7 +36,7 @@ fn wait_on_all_children(status_ptr: usize, _: usize) -> Result<usize, SysError> 
         });
         if result.is_none() {
             drop(inner);
-            stop_current_and_run_next_task();
+            schedule(RuntimeFlags::READY);
             continue;
         }
 
@@ -76,7 +76,7 @@ fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize
             _ => {
                 drop(child_inner);
                 drop(inner);
-                stop_current_and_run_next_task();
+                schedule(RuntimeFlags::READY);
             },
         }
     }

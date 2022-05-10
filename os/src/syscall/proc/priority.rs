@@ -1,6 +1,6 @@
 use crate::processor::get_cur_task_in_this_hart;
 use share::syscall::error::SysError;
-use crate::task::stop_current_and_run_next_task;
+use crate::task::{schedule, RuntimeFlags};
 
 pub const MIN_PRIORITY: isize = 0;
 pub const MAX_PRIORITY: isize = 7;
@@ -24,7 +24,7 @@ pub fn do_set_priority(_: usize, _: usize, mut prio: isize) -> Result<usize, Sys
     inner.priority = prio;
     drop(inner);
     drop(cur_task);
-    stop_current_and_run_next_task(); // reschedule
+    schedule(RuntimeFlags::READY);
 
     Ok(0)
 }

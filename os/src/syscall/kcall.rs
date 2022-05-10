@@ -1,6 +1,6 @@
 use share::syscall::error::{SysError, EINVAL, ESRCH, EFAULT, ENAMETOOLONG, EBADF};
 use crate::mm::address::{PhysicalAddress, VirtualAddress};
-use crate::task::{get_task_by_pid, stop_current_and_run_next_task};
+use crate::task::{get_task_by_pid, RuntimeFlags, schedule};
 use crate::processor::get_cur_task_in_this_hart;
 use crate::mm::memory_manager::{RegionFlags, RegionType};
 use crate::config::FRAME_SIZE;
@@ -133,7 +133,7 @@ pub fn kcall_sbi_read(fd: usize, buf_ptr: *mut u8, length: usize) -> Result<usiz
             result = sbi_console_getchar();
             // info!("result is: {:#x}", result);
             if result == -1 {
-                stop_current_and_run_next_task();
+                schedule(RuntimeFlags::READY);
                 continue;
             }
             break;

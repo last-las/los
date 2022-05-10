@@ -73,57 +73,46 @@ pub fn get_task_data_by_name(name: &str) -> Option<&'static [u8]> {
     })
 }
 
-pub fn block_current_and_run_next_task() {
-    debug!("block and schedule..");
-    let current_task = take_task_in_current_hart();
-    let current_task_context_ptr = current_task.acquire_inner_lock().task_context_ptr();
-    let hart_context_ptr = get_current_hart_context_ptr();
-    drop(current_task);
-    unsafe {
-        __switch(current_task_context_ptr, hart_context_ptr);
-    }
-}
-
-pub fn stop_current_and_run_next_task() {
-    debug!("stop and schedule..");
+pub fn schedule(runtime_flag: RuntimeFlags) {
+    debug!("schedule...");
     let current_task = take_task_in_current_hart();
     let mut inner = current_task.acquire_inner_lock();
-    inner.flag = RuntimeFlags::READY;
-    let current_task_context_ptr = inner.task_context_ptr();
-    drop(inner);
-    return_task_to_manager(current_task);
+    inner.flag = runtime_flag;
+    let mut current_task_context_ptr= 0;
+
+    match inner.flag {
+        RuntimeFlags::RECEIVING(_) | RuntimeFlags::SENDING(_) => {
+            current_task_context_ptr = inner.task_context_ptr();
+            drop(inner);
+            drop(current_task);
+        },
+        RuntimeFlags::READY => {
+            current_task_context_ptr = inner.task_context_ptr();
+            drop(inner);
+            return_task_to_manager(current_task);
+        },
+        RuntimeFlags::ZOMBIE(exit_code) => {
+            info!("task {} exit with exit_code:{}",current_task.pid(), exit_code);
+            move_cur_task_children_to_init(inner.children.clone());
+            drop(inner);
+            rm_task_from_manager(current_task);
+
+            let kernel_satp = 8 << 60 | unsafe { KERNEL_SATP };
+            riscv::register::satp::write(kernel_satp);
+        },
+        RuntimeFlags::RUNNING => panic!("schedule error!")
+    };
+
     let hart_context_ptr = get_current_hart_context_ptr();
     unsafe {
         __switch(current_task_context_ptr, hart_context_ptr);
     }
 }
 
-pub fn exit_current_and_run_next_task(exit_code: usize) {
-    let cur_task = take_task_in_current_hart();
-    info!("task {} exit with exit_code:{}",cur_task.pid(), exit_code);
-    let mut cur_task_inner = cur_task.acquire_inner_lock();
-    // mark current task as zombie
-    cur_task_inner.flag = RuntimeFlags::ZOMBIE(exit_code);
-    // move current task's children to init.
+fn move_cur_task_children_to_init(children: Vec<Arc<TaskStruct>>) {
     let init_task = get_task_by_pid(0).unwrap();
     let mut init_task_inner = init_task.acquire_inner_lock();
-    for child in cur_task_inner.children.iter() {
-        init_task_inner.children.push(Arc::clone(child));
-    }
-
-    drop(init_task_inner);
-    drop(init_task);
-    drop(cur_task_inner);
-    rm_task_from_manager(cur_task);
-    let hart_context_ptr = get_current_hart_context_ptr();
-
-    let kernel_satp = 8 << 60 | unsafe { KERNEL_SATP };
-    riscv::register::satp::write(kernel_satp);
-
-    unsafe {
-        //seems like there is no need to do sfence.vma ???
-        __switch(0, hart_context_ptr);
-    }
+    init_task_inner.children.extend(children);
 }
 
 pub fn get_alive_hart_cnt() -> usize {

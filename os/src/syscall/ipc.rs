@@ -1,4 +1,4 @@
-use crate::task::{get_task_by_pid, RuntimeFlags, TaskStruct, block_current_and_run_next_task, return_task_to_manager, TaskStructInner};
+use crate::task::{get_task_by_pid, RuntimeFlags, TaskStruct, return_task_to_manager, TaskStructInner, schedule};
 use crate::processor::get_cur_task_in_this_hart;
 use alloc::sync::Arc;
 use share::ipc::Msg;
@@ -32,13 +32,12 @@ pub fn kcall_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
         return_task_to_manager(dst_task.clone());
     } else {
         let mut src_task_inner = caller_task.acquire_inner_lock();
-        src_task_inner.flag = RuntimeFlags::SENDING(dst_pid);
         src_task_inner.message_holder = Some(message);
         dst_task_inner.wait_queue.push(caller_task.clone());
         drop(src_task_inner);
         drop(dst_task_inner);
 
-        block_current_and_run_next_task();
+        schedule(RuntimeFlags::SENDING(dst_pid));
     }
 
     Ok(0)
@@ -77,10 +76,9 @@ pub fn kcall_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
         return Ok(0);
     }
 
-    src_task_inner.flag = RuntimeFlags::RECEIVING(dst_pid);
     drop(src_task_inner);
     drop(src_task);
-    block_current_and_run_next_task();
+    schedule(RuntimeFlags::RECEIVING(dst_pid));
 
     // After the task is waked up the message has been received.
     let src_task = get_cur_task_in_this_hart();
