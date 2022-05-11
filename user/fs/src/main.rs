@@ -2,6 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![feature(arbitrary_self_types)]
 #![feature(const_btree_new)]
+#![feature(is_some_with)]
 
 mod vfs;
 mod fs;

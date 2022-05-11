@@ -2,7 +2,7 @@ use alloc::rc::Rc;
 use crate::proc::fs_struct::FsStruct;
 use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
-use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EEXIST, EINVAL, ERANGE, ENOTBLK, ENODEV};
+use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EINVAL, ERANGE, ENOTBLK, ENODEV};
 use crate::vfs::file::File;
 use user_lib::syscall::{virt_copy, getpid};
 use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
@@ -286,9 +286,7 @@ pub fn do_mkdir_at(dir_fd: usize, path: &str, _mode: usize, cur_fs: Rc<RefCell<F
     let parent = nameidata.dentry;
     let parent_inode = parent.borrow().inode.clone();
     let dir_entry =
-        parent_inode.borrow()
-            .iop.mkdir(nameidata.left_path_name.as_str(), parent_inode.clone())
-            .ok_or(SysError::new(EEXIST))?;
+        parent_inode.borrow().iop.mkdir(nameidata.left_path_name.as_str(), parent_inode.clone())?;
 
     parent.borrow_mut().children.push(dir_entry.clone());
     dir_entry.borrow_mut().parent = Some(parent.clone());
@@ -363,7 +361,7 @@ fn path_lookup(path: &str, current: Rc<RefCell<FsStruct>>, flag: LookupFlags, di
             if result.is_some() {
                 dentry = result.unwrap();
             } else {
-                dentry = real_lookup(dentry.clone(), name).ok_or(SysError::new(ENOENT))?;
+                dentry = real_lookup(dentry.clone(), name)?;
             }
 
             // check mountpoint
@@ -416,12 +414,10 @@ fn lookup_target_on_parent(nameidata: NameIdata, open_flag: OpenFlag, cur_fs: Rc
                 child_dentry = result.unwrap();
             } else {  // Find on the real filesystem, if target doesn't exist and `OpenFlag::CREAT` is set, create on the real filesystem.
                 let result = parent_inode.borrow().iop.lookup(last_name, parent_inode.clone());
-                if result.is_some() {
-                    child_dentry = result.unwrap();
-                } else if open_flag.contains(OpenFlag::CREAT) {
-                    child_dentry = parent_inode.borrow().iop.create(last_name, parent_inode.clone()).ok_or(SysError::new(EEXIST))?;
+                if result.is_err_and(|e| e.errno == ENOENT) && open_flag.contains(OpenFlag::CREAT) {
+                    child_dentry = parent_inode.borrow().iop.create(last_name, parent_inode.clone())?;
                 } else {
-                    return Err(SysError::new(ENOENT));
+                    child_dentry = result?;
                 }
 
                 // successfully find, set the cache
@@ -459,18 +455,13 @@ fn reach_the_end(path: &[u8], mut index: usize) -> bool {
 }
 
 /// go to the low-level filesystem and lookup.
-fn real_lookup(dentry: Rc<RefCell<VfsDentry>>, name: &str) -> Option<Rc<RefCell<VfsDentry>>> {
+fn real_lookup(dentry: Rc<RefCell<VfsDentry>>, name: &str) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
     let inode = dentry.borrow().inode.clone();
-    let result = inode.borrow().iop.lookup(name, inode.clone());
+    let child_dentry = inode.borrow().iop.lookup(name, inode.clone())?;
 
-    if result.is_some() {
-        let child_dentry = result.unwrap();
-        dentry.borrow_mut().children.push(child_dentry.clone());
-        child_dentry.borrow_mut().parent = Some(dentry.clone());
-        Some(child_dentry)
-    } else {
-        None
-    }
+    dentry.borrow_mut().children.push(child_dentry.clone());
+    child_dentry.borrow_mut().parent = Some(dentry.clone());
+    Ok(child_dentry)
 }
 
 fn find_uncached_dentries(parent: Rc<RefCell<VfsDentry>>, filesystem_dentries: Vec<Rc<RefCell<VfsDentry>>>) -> Vec<Rc<RefCell<VfsDentry>>> {

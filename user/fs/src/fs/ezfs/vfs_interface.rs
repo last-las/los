@@ -11,6 +11,7 @@ use easy_fs::{Inode, EasyFileSystem};
 use easy_fs::DiskInodeType;
 use alloc::sync::Arc;
 use crate::device::block::Block;
+use share::syscall::error::{SysError, EEXIST, EPERM};
 
 pub fn create_ezfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     // create a new easy filesystem instance.
@@ -32,38 +33,39 @@ pub struct EzFsInodeOperations;
 pub struct EzFsFileOperations;
 
 impl InodeOperations for EzFsInodeOperations {
-    fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         let rdev = parent.borrow().super_block.borrow().rdev.into();
         let root_inode = get_ez_fs_root_inode(rdev).unwrap();
         let result = root_inode.find(name);
         if result.is_none() {
-            return None;
+            return Err(SysError::new(EEXIST));
         }
         let ezfs_inode = result.unwrap();
         let sp = parent.borrow().super_block.clone();
 
-        Some(create_dentry_from_ezfs_inode(name, ezfs_inode, sp))
+        Ok(create_dentry_from_ezfs_inode(name, ezfs_inode, sp))
     }
 
-    fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
+    fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         let rdev = parent.borrow().super_block.borrow().rdev.into();
         let root_inode = get_ez_fs_root_inode(rdev).unwrap();
         let result = root_inode.create(name);
         if result.is_none() {
-            return None;
+            return Err(SysError::new(EEXIST));
         }
         let ezfs_inode = result.unwrap();
         let sp = parent.borrow().super_block.clone();
 
-        Some(create_dentry_from_ezfs_inode(name, ezfs_inode, sp))
+        Ok(create_dentry_from_ezfs_inode(name, ezfs_inode, sp))
     }
 
-    fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        return None;
+    fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
+        return Err(SysError::new(EPERM));
     }
 
-    fn mknod(&self, _name: &str, _file_type: FileTypeFlag, _rdev: Rdev, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        return None;
+    fn mknod(&self, _name: &str, _file_type: FileTypeFlag, _rdev: Rdev, _parent: Rc<RefCell<VfsInode>>)
+        -> Result<Rc<RefCell<VfsDentry>>, SysError> {
+        return Err(SysError::new(EPERM));
     }
 }
 

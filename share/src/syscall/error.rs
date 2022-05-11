@@ -22,6 +22,7 @@ impl SysError {
 impl Debug for SysError {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let info = match self.errno {
+            EPERM => "EPERM: Operation not permitted",
             ENOENT => "ENOENT: No such file or directory",
             ESRCH => "ESRCH: No such process",
             EIO => "EIO: input/output error",
@@ -51,6 +52,7 @@ impl Debug for SysError {
     }
 }
 
+pub const EPERM: i32 = 1;
 pub const ENOENT: i32 = 2;
 pub const ESRCH: i32 = 3;
 pub const EIO: i32 = 5;

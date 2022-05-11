@@ -4,6 +4,7 @@ use crate::vfs::file::FileOperations;
 use core::cell::RefCell;
 use crate::vfs::super_block::SuperBlock;
 use share::file::FileTypeFlag;
+use share::syscall::error::SysError;
 
 pub struct VfsInode {
     pub ino: usize,
@@ -72,11 +73,12 @@ impl Into<u64> for Rdev {
 
 
 pub trait InodeOperations {
-    fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
+    fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError>;
     /// Create a normal file.
-    fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
+    fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError>;
     /// Create a directory.
-    fn mkdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
+    fn mkdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError>;
     /// Create a node for special device.
-    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>>;
+    fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<VfsInode>>)
+        -> Result<Rc<RefCell<VfsDentry>>, SysError>;
 }

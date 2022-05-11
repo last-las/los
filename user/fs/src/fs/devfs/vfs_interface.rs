@@ -10,6 +10,7 @@ use alloc::vec::Vec;
 use crate::device::block::{Block, BLOCK_SIZE};
 use share::device::BlockDevice;
 use crate::device::character::Character;
+use share::syscall::error::{SysError, EPERM};
 
 pub fn create_devfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     let val: u64 = rdev.into();
@@ -30,20 +31,21 @@ pub struct DevFsInodeOperations;
 pub struct DevFsFileOperations;
 
 impl InodeOperations for  DevFsInodeOperations {
-    fn lookup(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        return None;
+    fn lookup(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
+        return Err(SysError::new(EPERM));
     }
 
-    fn create(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        return None;
+    fn create(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
+        return Err(SysError::new(EPERM));
     }
 
-    fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Option<Rc<RefCell<VfsDentry>>> {
-        return None;
+    fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
+        return Err(SysError::new(EPERM));
     }
+
 
     fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<VfsInode>>)
-        -> Option<Rc<RefCell<VfsDentry>>> {
+        -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         let ino = alloc_devfs_ino();
         let sp = parent.borrow().super_block.clone();
         let iop = Rc::new(DevFsInodeOperations);
@@ -53,7 +55,7 @@ impl InodeOperations for  DevFsInodeOperations {
             VfsInode::new(ino, 0, Some(rdev),file_type,sp, iop, fop);
         let dentry = VfsDentry::new(name, inode);
 
-        Some(dentry)
+        Ok(dentry)
     }
 }
 
