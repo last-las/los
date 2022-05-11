@@ -9,6 +9,7 @@ use share::ffi::{CString, CStrArray, CStr};
 use crate::syscall::file::{do_open, do_read, do_fstat, do_close};
 use share::file::{OpenFlag, Stat, AT_FD_CWD};
 use alloc::vec;
+use alloc::string::String;
 
 pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) -> Result<usize, SysError> {
     // read file data from fs server.
@@ -29,7 +30,9 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
     switch_to_new_addr_space(&mem_manager.page_table);
     let user_sp = push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp);
 
-    modify_current_task_struct(mem_manager, pc, user_sp);
+    let mut name = String::from(path_cstring.inner);
+    name.pop();
+    modify_current_task_struct(mem_manager, pc, user_sp, name);
 
     Ok(0)
 }
@@ -67,12 +70,14 @@ fn push_arg_and_env_onto_stack(arg_vec: Vec<CString>, env_vec: Vec<CString>, mut
     user_sp
 }
 
-fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usize) {
+fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usize, name: String) {
     let cur_task = get_cur_task_in_this_hart();
     let mut inner = cur_task.acquire_inner_lock();
     let trap_context_ref = inner.trap_context_ref();
     *trap_context_ref = TrapContext::new(pc, user_sp);
     inner.mem_manager = mem_manager;
+
+    inner.name = name;
 }
 
 fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const u8) -> Vec<CString> {

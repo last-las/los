@@ -13,6 +13,7 @@ use crate::task::{TaskStruct, TrapContext, fetch_a_task_from_manager, decrease_a
 use crate::timer::set_timer_ms;
 use spin::Mutex;
 use core::arch::asm;
+use crate::syscall::debug::{is_schedule_record_enable, append_schedule_record};
 
 pub const CPU_NUMS: usize = 4;
 
@@ -82,6 +83,11 @@ impl Processor{
                 next_task_inner.flag = RuntimeFlags::RUNNING;
                 let next_task_context_ptr = next_task_inner.task_context_ptr();
                 let satp = 8 << 60 | next_task_inner.mem_manager.page_table.satp();
+
+                if is_schedule_record_enable() {
+                    append_schedule_record(next_task.pid(), next_task_inner.name.clone());
+                }
+
                 drop(next_task_inner);
                 self.set_current_task(next_task);
 

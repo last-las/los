@@ -24,6 +24,7 @@ use lazy_static::*;
 use alloc::vec::Vec;
 use alloc::vec;
 use share::ffi::CStr;
+use alloc::string::String;
 
 lazy_static! {
     pub static ref APP_NAMES: Vec<CStr<'static>> =get_app_names();
@@ -46,7 +47,7 @@ pub fn load_init_tasks() {
         let data = get_task_data_by_name(task_name).unwrap_or_else(|| {
             panic!("{} doesn't exist!", task_name);
         });
-        let task = Arc::new(TaskStruct::new(data).unwrap());
+        let task = Arc::new(TaskStruct::new(data, String::from(task_name)).unwrap());
 
         // set min_priority for these tasks.
         let mut priority = 0;

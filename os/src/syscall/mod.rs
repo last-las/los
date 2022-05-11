@@ -4,6 +4,7 @@ mod file;
 mod time;
 mod proc;
 mod kcall;
+pub mod debug;
 
 use crate::syscall::mm::do_brk;
 use crate::syscall::file::*;
@@ -17,6 +18,7 @@ use crate::syscall::kcall::*;
 
 pub use ipc::notify;
 pub use proc::{MIN_PRIORITY, MAX_PRIORITY};
+use crate::syscall::debug::{debug_schedule_record_enable, debug_schedule_record_print};
 
 
 pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
@@ -64,6 +66,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_TEST =>  do_test(),
 
         DEBUG_FRAME_USAGE => debug_frame_usage(),
+        DEBUG_SCHEDULE_RECORD_ENABLE => debug_schedule_record_enable(args[0]),
+        DEBUG_SCHEDULE_RECORD_PRINT => debug_schedule_record_print(),
 
         _ => Err(SysError::new(EUNKOWN))
     };

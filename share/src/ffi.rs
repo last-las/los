@@ -4,7 +4,7 @@ use core::fmt::{Debug, Formatter};
 
 /// a simplified version of the std::ffi::CString which is not available for no_std right now.
 pub struct CString {
-    inner: String
+    pub inner: String
 }
 
 impl CString {

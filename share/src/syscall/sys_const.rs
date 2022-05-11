@@ -28,6 +28,8 @@ pub const SYSCALL_WAITPID: usize = 260;
 pub const SYSCALL_TEST: usize = 1234;
 
 pub const DEBUG_FRAME_USAGE: usize = 1001;
+pub const DEBUG_SCHEDULE_RECORD_ENABLE: usize = 1002;
+pub const DEBUG_SCHEDULE_RECORD_PRINT: usize = 1003;
 
 pub const KCALL_MASK: usize = 0x1000;
 pub const KCALL_SEND: usize = KCALL_MASK | 1;

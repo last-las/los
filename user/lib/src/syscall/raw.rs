@@ -210,6 +210,14 @@ pub fn debug_frame_usage() -> usize {
     syscall0(DEBUG_FRAME_USAGE) as usize
 }
 
+pub fn debug_schedule_record_enable(val: usize) {
+    syscall1(DEBUG_SCHEDULE_RECORD_ENABLE, val);
+}
+
+pub fn debug_schedule_record_print() {
+    syscall0(DEBUG_SCHEDULE_RECORD_PRINT);
+}
+
 pub fn k_read_dev(dev_phys_addr: usize, byte_size: usize) -> isize {
     syscall2(KCALL_READ_DEV, dev_phys_addr, byte_size)
 }

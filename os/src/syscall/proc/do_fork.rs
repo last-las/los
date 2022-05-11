@@ -47,6 +47,7 @@ fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_
     let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 
     let mut child_inner = TaskStructInner {
+        name: parent_inner.name.clone(),
         kernel_stack,
         wait_queue: Vec::new(),
         flag: RuntimeFlags::READY,

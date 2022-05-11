@@ -9,6 +9,7 @@ use crate::mm::memory_manager::MemoryManager;
 use share::syscall::error::SysError;
 use share::ipc::Msg;
 use crate::syscall::{MAX_PRIORITY, MIN_PRIORITY};
+use alloc::string::String;
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -16,6 +17,8 @@ pub struct TaskStruct {
 }
 
 pub struct TaskStructInner {
+    pub name: String,
+
     pub kernel_stack: KernelStack,
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
@@ -34,7 +37,7 @@ pub struct TaskStructInner {
 }
 
 impl TaskStruct {
-    pub fn new(data: &[u8]) -> Result<Self, SysError> {
+    pub fn new(data: &[u8], name: String) -> Result<Self, SysError> {
         let (mem_manager, pc,mut user_sp) = MemoryManager::new(data)?;
         let pid_handle = alloc_pid().unwrap();
         user_sp -= core::mem::size_of::<usize>() * 3; // push argc, NULL and NULL onto stack.
@@ -43,6 +46,7 @@ impl TaskStruct {
         let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 
         let mut inner = TaskStructInner {
+            name,
             kernel_stack,
             wait_queue: Vec::new(),
             flag: RuntimeFlags::READY,
