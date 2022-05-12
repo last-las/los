@@ -120,6 +120,12 @@ pub fn unlink(path: &str) -> Result<(), SysError> {
     Ok(())
 }
 
+pub fn rmdir(path: &str) -> Result<(), SysError> {
+    let cstring = CString::from(path);
+    isize2result( sys_rmdir(cstring.as_ptr() as usize))?;
+    Ok(())
+}
+
 pub fn sleep(seconds: usize) {
     let start_time = get_time();
     let mseconds = seconds * 1000;

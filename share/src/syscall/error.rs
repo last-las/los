@@ -34,6 +34,7 @@ impl Debug for SysError {
             EACCES => "EACCES: Permission denied",
             EFAULT => "EFAULT: Bad address",
             ENOTBLK => "ENOTBLK: Block device required",
+            EBUSY => "EBUSY: Device or resource busy",
             EEXIST => "EEXIST: File exists",
             ENODEV => "ENODEV: No such device",
             ENOTDIR => "ENOTDIR: Not a directory",
@@ -42,6 +43,7 @@ impl Debug for SysError {
             ENFILE => "ENFILE: File table overflow",
             ERANGE => "ERANGE: The argument is less than the length of the absolute pathname",
             ENAMETOOLONG => "ENAMETOOLONG: File name too long",
+            ENOTEMPTY => "ENOTEMPTY: Directory is not empty",
 
             EUNKOWN => "Unknown error nnn.",
             EDLOCK => "EDLOCK: Ipc dead lock",
@@ -65,6 +67,7 @@ pub const ENOMEM: i32 = 12;
 pub const EACCES: i32 = 13;
 pub const EFAULT: i32 = 14;
 pub const ENOTBLK: i32 = 15;
+pub const EBUSY: i32 = 16;
 pub const EEXIST: i32 = 17;
 pub const ENODEV: i32 = 19;
 pub const ENOTDIR: i32 = 20;
@@ -73,6 +76,7 @@ pub const EINVAL: i32 = 22;
 pub const ENFILE: i32 = 23;
 pub const ERANGE: i32 = 34;
 pub const ENAMETOOLONG: i32 = 36;
+pub const ENOTEMPTY: i32 = 39;
 
 // Self designed error numbers..
 pub const EUNKOWN: i32 = 400;

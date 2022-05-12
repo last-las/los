@@ -71,6 +71,10 @@ impl InodeOperations for EzFsInodeOperations {
     fn unlink(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError> {
         return Err(SysError::new(EPERM));
     }
+
+    fn rmdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError> {
+        return Err(SysError::new(EPERM));
+    }
 }
 
 impl FileOperations for EzFsFileOperations {

@@ -14,6 +14,7 @@ pub const SYSCALL_READ: usize = 63;
 pub const SYSCALL_WRITE: usize = 64;
 pub const SYSCALL_FSTAT: usize = 80;
 pub const SYSCALL_UNLINK: usize = 83;
+pub const SYSCALL_RMDIR: usize = 84;
 
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;

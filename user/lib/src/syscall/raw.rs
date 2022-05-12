@@ -162,6 +162,10 @@ pub fn sys_unlink(path_ptr: usize) -> isize {
     syscall1(SYSCALL_UNLINK, path_ptr)
 }
 
+pub fn sys_rmdir(path_ptr: usize) -> isize {
+    syscall1(SYSCALL_RMDIR, path_ptr)
+}
+
 pub fn sys_exit(exit_code: usize) -> isize{
     syscall1(SYSCALL_EXIT, exit_code)
 }

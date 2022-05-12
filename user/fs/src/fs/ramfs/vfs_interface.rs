@@ -108,6 +108,10 @@ impl InodeOperations for RamFsInodeOperations {
             Err(SysError::new(ENOENT))
         }
     }
+
+    fn rmdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError> {
+        self.unlink(name, parent)
+    }
 }
 
 impl FileOperations for RamFsFileOperations {

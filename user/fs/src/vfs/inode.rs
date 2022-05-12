@@ -83,4 +83,6 @@ pub trait InodeOperations {
         -> Result<Rc<RefCell<VfsDentry>>, SysError>;
     /// Delete target file on parent directory.
     fn unlink(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError>;
+    /// Remove target directory on parent.
+    fn rmdir(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError>;
 }

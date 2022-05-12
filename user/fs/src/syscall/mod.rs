@@ -2,7 +2,7 @@ use alloc::rc::Rc;
 use crate::proc::fs_struct::FsStruct;
 use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
-use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EINVAL, ERANGE, ENOTBLK, ENODEV, EISDIR};
+use share::syscall::error::{SysError, ENOENT, EBADF, ENOTDIR, EINVAL, ERANGE, ENOTBLK, ENODEV, EISDIR, EBUSY, ENOTEMPTY};
 use crate::vfs::file::File;
 use user_lib::syscall::{virt_copy, getpid};
 use share::file::{OpenFlag, FileTypeFlag, Dirent, AT_FD_CWD, DIRENT_BUFFER_SZ, SEEKFlag, Stat};
@@ -305,8 +305,8 @@ pub fn do_fstat(fd: usize, stat_ptr: usize, proc_nr: usize, cur_fs: Rc<RefCell<F
 }
 
 pub fn do_unlink(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
-    let nameidata = path_lookup(path, cur_fs.clone(), LookupFlags::PARENT | LookupFlags::DIRECTORY, None).unwrap();
-    let (target, _) = lookup_target_on_parent(nameidata.clone(), OpenFlag::empty(), cur_fs).unwrap();
+    let nameidata = path_lookup(path, cur_fs.clone(), LookupFlags::PARENT | LookupFlags::DIRECTORY, None)?;
+    let (target, _) = lookup_target_on_parent(nameidata.clone(), OpenFlag::empty(), cur_fs)?;
     if target.borrow().inode.borrow().is_dir() {
         return Err(SysError::new(EISDIR));
     }
@@ -315,7 +315,30 @@ pub fn do_unlink(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, Sys
     let name = nameidata.left_path_name.as_str();
     let parent_inode = parent.borrow().inode.clone();
     // remove on the device
-    parent_inode.borrow().iop.unlink(name, parent_inode.clone()).unwrap();
+    parent_inode.borrow().iop.unlink(name, parent_inode.clone())?;
+
+    // remove on the cache
+    parent.borrow_mut().remove_cache(name);
+
+    Ok(0)
+}
+
+pub fn do_rmdir(path: &str, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+    let nameidata = path_lookup(path, cur_fs.clone(), LookupFlags::PARENT | LookupFlags::DIRECTORY, None)?;
+    let (target, target_mnt) = lookup_target_on_parent(nameidata.clone(), OpenFlag::DIRECTORY, cur_fs)?;
+    let mount_root = target_mnt.borrow().mount_root.clone();
+    if  Rc::ptr_eq(&mount_root, &target) {
+        return Err(SysError::new(EBUSY));
+    }
+    if !target.borrow().children.is_empty() {
+        return Err(SysError::new(ENOTEMPTY));
+    }
+
+    let parent = nameidata.dentry;
+    let name = nameidata.left_path_name.as_str();
+    let parent_inode = parent.borrow().inode.clone();
+    // remove on the directory
+    parent_inode.borrow().iop.rmdir(name, parent_inode.clone())?;
 
     // remove on the cache
     parent.borrow_mut().remove_cache(name);
