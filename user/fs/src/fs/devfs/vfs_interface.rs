@@ -57,6 +57,10 @@ impl InodeOperations for  DevFsInodeOperations {
 
         Ok(dentry)
     }
+
+    fn unlink(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError> {
+        return Err(SysError::new(EPERM));
+    }
 }
 
 impl FileOperations for DevFsFileOperations {

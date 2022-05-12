@@ -81,4 +81,6 @@ pub trait InodeOperations {
     /// Create a node for special device.
     fn mknod(&self, name: &str, file_type: FileTypeFlag, rdev: Rdev, parent: Rc<RefCell<VfsInode>>)
         -> Result<Rc<RefCell<VfsDentry>>, SysError>;
+    /// Delete target file on parent directory.
+    fn unlink(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError>;
 }

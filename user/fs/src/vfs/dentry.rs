@@ -55,6 +55,16 @@ impl VfsDentry {
             None
         }
     }
+
+    /// remove
+    pub fn remove_cache(&mut self, name: &str) {
+        for i in 0..self.children.len() {
+            if self.children[i].borrow().name.as_str() == name {
+                self.children.remove(i);
+                return;
+            }
+        }
+    }
 }
 
 impl VfsMount {

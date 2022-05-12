@@ -114,6 +114,12 @@ pub fn fstat(fd: usize) -> Result<Stat, SysError> {
     Ok(stat)
 }
 
+pub fn unlink(path: &str) -> Result<(), SysError> {
+    let cstring = CString::from(path);
+    isize2result(sys_unlink(cstring.as_ptr() as usize))?;
+    Ok(())
+}
+
 pub fn sleep(seconds: usize) {
     let start_time = get_time();
     let mseconds = seconds * 1000;

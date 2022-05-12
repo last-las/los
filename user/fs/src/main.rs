@@ -143,6 +143,10 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
             do_mkdir_at(message.args[FS_SYSCALL_ARG0],path.as_str(), message.args[FS_SYSCALL_ARG2], cur_fs)
         },
         SYSCALL_FSTAT => do_fstat(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], src_pid, cur_fs),
+        SYSCALL_UNLINK => {
+            let path = copy_path_from(src_pid, message.args[FS_SYSCALL_ARG0])?;
+            do_unlink(path.as_str(), cur_fs)
+        },
         _ => {
             panic!("Unknown FSYSCALL id: {}", message.args[SYSCALL_TYPE]);
         }

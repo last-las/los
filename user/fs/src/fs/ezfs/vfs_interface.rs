@@ -67,6 +67,10 @@ impl InodeOperations for EzFsInodeOperations {
         -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         return Err(SysError::new(EPERM));
     }
+
+    fn unlink(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError> {
+        return Err(SysError::new(EPERM));
+    }
 }
 
 impl FileOperations for EzFsFileOperations {

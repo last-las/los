@@ -152,6 +152,18 @@ impl RamFsInode {
         None
     }
 
+    pub fn remove(&mut self, name: &str) -> bool {
+        assert_eq!(self.file_type, FileTypeFlag::DT_DIR);
+        for i in 0..self.sub_nodes.len() {
+            if self.sub_nodes[i].borrow().name.as_str() == name {
+                self.sub_nodes.remove(i);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     pub fn set_rdev(&mut self, rdev: Rdev) {
         assert!(self.file_type.is_device());
         self.content.clear();

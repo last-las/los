@@ -30,9 +30,9 @@ pub struct RamFsFileOperations;
 impl InodeOperations for RamFsInodeOperations {
     fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         let super_block = parent.borrow().super_block.clone();
-        let minor_dev = super_block.borrow().rdev.into();
+        let rdev = super_block.borrow().rdev.into();
         let ino = parent.borrow().ino;
-        let ramfs_inode = get_ramfs_inode_from_related_ramfs(minor_dev, ino).unwrap();
+        let ramfs_inode = get_ramfs_inode_from_related_ramfs(rdev, ino).unwrap();
 
         // lookup on the `ramfs_inode`
         let result = ramfs_inode.borrow().lookup(name);
@@ -56,6 +56,7 @@ impl InodeOperations for RamFsInodeOperations {
         let new_ramfs_inode = alloc_ramfs_inode_on_related_ramfs(rdev);
         new_ramfs_inode.borrow_mut().mark_as_file();
         new_ramfs_inode.borrow_mut().set_name(name);
+        ramfs_inode.borrow_mut().sub_nodes.push(new_ramfs_inode.clone());
 
         Ok(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))
     }
@@ -93,6 +94,19 @@ impl InodeOperations for RamFsInodeOperations {
         new_ramfs_inode.borrow_mut().set_name(name);
 
         Ok(create_dentry_from_ramfs_inode(new_ramfs_inode, super_block))
+    }
+
+    fn unlink(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<(), SysError> {
+        let super_block = parent.borrow().super_block.clone();
+        let rdev = super_block.borrow().rdev.into();
+        let ino = parent.borrow().ino;
+        let ramfs_inode = get_ramfs_inode_from_related_ramfs(rdev, ino).unwrap();
+
+        return if ramfs_inode.borrow_mut().remove(name) {
+            Ok(())
+        } else {
+            Err(SysError::new(ENOENT))
+        }
     }
 }
 
