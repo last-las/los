@@ -34,7 +34,7 @@ impl Debug for SysError {
             EACCES => "EACCES: Permission denied",
             EFAULT => "EFAULT: Bad address",
             ENOTBLK => "ENOTBLK: Block device required",
-            EEXIST => "EEXIST: File exists",
+            EEXIST => "EEXIST: File doesn't exist",
             ENODEV => "ENODEV: No such device",
             ENOTDIR => "ENOTDIR: Not a directory",
             EINVAL => "EINVAL: Invalid argument",
