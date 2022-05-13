@@ -44,7 +44,6 @@ else ifeq ($(BOARD), k210)
 endif
 
 user:
-	@rm -rf $(USER_PATH)/deps
 	@cd ./user && python build.py && cargo build --release
 
 run:

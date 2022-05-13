@@ -38,6 +38,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
         drop(frame_allocator);
 
         let tmp_heap_frame = alloc_frame().unwrap();
+        tmp_heap_frame.fill_with(&[]);
         let tmp_heap_allocator = StupidAllocator::new(tmp_heap_frame.0.0 << 12, FRAME_SIZE);
         let mut root_table = PageTable::new_kernel_table(tmp_heap_allocator).unwrap();
 

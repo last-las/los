@@ -97,6 +97,7 @@ unsafe fn push_str_vector_onto_stack_in_c_style(vec: Vec<CString>, sp: &mut usiz
 }
 
 unsafe fn push_usize_vector_onto_stack_in_c_style(vec: Vec<usize>, sp: &mut usize) {
+    *sp -= *sp & 0b111;
     *sp -= core::mem::size_of::<usize>();
     (*sp as *mut usize).write(0);
 
