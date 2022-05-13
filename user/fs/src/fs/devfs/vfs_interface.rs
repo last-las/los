@@ -11,6 +11,7 @@ use crate::device::block::{Block, BLOCK_SIZE};
 use share::device::BlockDevice;
 use crate::device::character::Character;
 use share::syscall::error::{SysError, EPERM};
+use user_lib::syscall::{virt_copy, getpid};
 
 pub fn create_devfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     let val: u64 = rdev.into();
@@ -68,10 +69,10 @@ impl InodeOperations for  DevFsInodeOperations {
 }
 
 impl FileOperations for DevFsFileOperations {
-    fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8> {
+    fn read(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<usize, SysError> {
         let inode = file.borrow().dentry.borrow().inode.clone();
         let rdev = inode.borrow().rdev.unwrap();
-        let mut content = vec![0; size];
+        let mut content = vec![0; cnt];
 
         match inode.borrow().file_type {
             FileTypeFlag::DT_BLK => {
@@ -81,7 +82,7 @@ impl FileOperations for DevFsFileOperations {
 
                 let mut block_buffer = vec![0; BLOCK_SIZE];
                 let start_block_id = pos / BLOCK_SIZE;
-                let last_block_id = (pos + size - 1) / BLOCK_SIZE;
+                let last_block_id = (pos + cnt - 1) / BLOCK_SIZE;
 
                 for block_id in start_block_id..last_block_id + 1 {
                     block_device.read_block(block_id, block_buffer.as_mut_slice());
@@ -91,7 +92,7 @@ impl FileOperations for DevFsFileOperations {
                         start = pos % BLOCK_SIZE;
                     }
                     if block_id == last_block_id {
-                        end = (pos + size) % BLOCK_SIZE;
+                        end = (pos + cnt) % BLOCK_SIZE;
                     }
                     let src_slice: &[u8] = &block_buffer.as_slice()[start..end];
                     let dst_slice: &mut[u8] = &mut content.as_mut_slice()[content_start..content_start + src_slice.len()];
@@ -107,23 +108,32 @@ impl FileOperations for DevFsFileOperations {
             _ => panic!("devfs cannot read on file type except block or chr!")
         };
 
-        content
+        let length = content.len();
+        if length > 0 {
+            virt_copy(getpid(), content.as_ptr() as usize, proc_nr, buf_ptr, length)?;
+        }
+
+        Ok(length)
     }
 
-    fn write(&self, file: Rc<RefCell<File>>, content: &[u8]) {
+    fn write(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<(), SysError> {
         let inode = file.borrow().dentry.borrow().inode.clone();
         let rdev = inode.borrow().rdev.unwrap();
+        let content = vec![0; cnt];
+        virt_copy(proc_nr, buf_ptr, getpid(), content.as_ptr() as usize, cnt)?;
 
         match inode.borrow().file_type {
             FileTypeFlag::DT_BLK => {
-                panic!("System doesn't allow to write on block device now!!!");
+                return Err(SysError::new(EPERM));
             },
             FileTypeFlag::DT_CHR => {
                 let chr_device = Character::new(rdev);
-                chr_device.write(content);
+                chr_device.write(content.as_slice());
             },
             _ => panic!("devfs cannot write on file type except block or chr!")
         };
+
+        Ok(())
     }
 
     fn readdir(&self, _file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {

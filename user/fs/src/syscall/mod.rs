@@ -239,11 +239,8 @@ pub fn do_read(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<R
     if !file.borrow().readable() {
         return Err(SysError::new(EBADF));
     }
-    let content = file.borrow().fop.read(file.clone(), count);
-    let length = content.len();
-    if length > 0 {
-        virt_copy(getpid(), content.as_ptr() as usize, proc_nr, buf, length).unwrap();
-    }
+
+    let length = file.borrow().fop.read(file.clone(), buf, count, proc_nr)?;
     file.borrow_mut().pos += length;
 
     Ok(length)
@@ -257,11 +254,9 @@ pub fn do_write(fd: usize, buf: usize, count: usize, proc_nr: usize, cur_fs: Rc<
         return Err(SysError::new(EBADF));
     }
 
-    let buffer = [0; BUFFER_SIZE];
     for offset in (0..count).step_by(BUFFER_SIZE) {
         let length = usize::min(BUFFER_SIZE, count - offset);
-        virt_copy(proc_nr, buf, getpid(), buffer.as_ptr() as usize, length).unwrap();
-        file.borrow().fop.write(file.clone(), &buffer[0..length]);
+        file.borrow().fop.write(file.clone(), buf + offset, length, proc_nr)?;
         file.borrow_mut().pos += length;
     }
 

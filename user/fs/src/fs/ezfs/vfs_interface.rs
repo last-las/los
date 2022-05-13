@@ -11,7 +11,8 @@ use easy_fs::{Inode, EasyFileSystem};
 use easy_fs::DiskInodeType;
 use alloc::sync::Arc;
 use crate::device::block::Block;
-use share::syscall::error::{SysError, EEXIST, EPERM};
+use share::syscall::error::{SysError, EEXIST, EPERM, ENOENT};
+use user_lib::syscall::{virt_copy, getpid};
 
 pub fn create_ezfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     // create a new easy filesystem instance.
@@ -38,7 +39,7 @@ impl InodeOperations for EzFsInodeOperations {
         let root_inode = get_ez_fs_root_inode(rdev).unwrap();
         let result = root_inode.find(name);
         if result.is_none() {
-            return Err(SysError::new(EEXIST));
+            return Err(SysError::new(ENOENT));
         }
         let ezfs_inode = result.unwrap();
         let sp = parent.borrow().super_block.clone();
@@ -78,7 +79,7 @@ impl InodeOperations for EzFsInodeOperations {
 }
 
 impl FileOperations for EzFsFileOperations {
-    fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8> {
+    fn read(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<usize, SysError> {
         let rdev = file.borrow().dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
         let root_inode = get_ez_fs_root_inode(rdev).unwrap();
 
@@ -89,12 +90,17 @@ impl FileOperations for EzFsFileOperations {
         let ezfs_inode = root_inode.find(name.as_str()).unwrap();
         let write_ino = get_inode_id_from(ezfs_inode.clone());
         assert_eq!(ino, write_ino);
-        let mut content = vec![0; size];
+        let mut content = vec![0; cnt];
         ezfs_inode.read_at(pos, content.as_mut_slice());
-        content
+        let length = content.len();
+        if length > 0 {
+            virt_copy(getpid(), content.as_ptr() as usize, proc_nr, buf_ptr, length)?;
+        }
+
+        Ok(length)
     }
 
-    fn write(&self, file: Rc<RefCell<File>>, content: &[u8]) {
+    fn write(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<(), SysError> {
         let rdev = file.borrow().dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
         let root_inode = get_ez_fs_root_inode(rdev).unwrap();
 
@@ -105,7 +111,12 @@ impl FileOperations for EzFsFileOperations {
         let ezfs_inode = root_inode.find(name.as_str()).unwrap();
         let write_ino = get_inode_id_from(ezfs_inode.clone());
         assert_eq!(ino, write_ino);
-        ezfs_inode.write_at(pos, content);
+
+        let content = vec![0; cnt];
+        virt_copy(proc_nr, buf_ptr, getpid(), content.as_ptr() as usize, cnt)?;
+        ezfs_inode.write_at(pos, content.as_slice());
+
+        Ok(())
     }
 
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {

@@ -3,6 +3,7 @@ use core::cell::RefCell;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
 use alloc::vec::Vec;
 use share::file::{OpenFlag, Stat, FileTypeFlag};
+use share::syscall::error::SysError;
 
 pub struct File {
     pub fop: Rc<dyn FileOperations>,
@@ -48,7 +49,7 @@ impl File {
 }
 
 pub trait FileOperations {
-    fn read(&self, file: Rc<RefCell<File>>, size: usize) -> Vec<u8>;
-    fn write(&self, file: Rc<RefCell<File>>, content: &[u8]);
+    fn read(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<usize, SysError>;
+    fn write(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<(), SysError>;
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>>;
 }
