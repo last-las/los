@@ -34,6 +34,10 @@ pub fn sbi_console_putchar(ch: char) {
     sbi_legacy_call(SBI_LEGACY_CONSOLE_PUTCHAR, [ch as usize, 0, 0]);
 }
 
+pub fn sbi_console_getchar() -> isize {
+    sbi_legacy_call(SBI_LEGACY_CONSOLE_GETCHAR, [0, 0, 0]) as isize
+}
+
 #[allow(unused)]
 pub fn sbi_legacy_send_ipi(hart_mask: usize) {
     sbi_legacy_call(SBI_LEGACY_SEND_IPI, [hart_mask, 0, 0]);

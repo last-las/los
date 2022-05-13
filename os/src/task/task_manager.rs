@@ -6,7 +6,7 @@ use crate::config::MAX_TASK_NUMBER;
 use alloc::vec::Vec;
 
 pub fn fetch_a_task_from_manager() -> Option<Arc<TaskStruct>> {
-    TASK_MANAGER.lock().fetch()
+    TASK_MANAGER.lock().dequeue()
 }
 
 pub fn rm_task_from_manager(task_struct: Arc<TaskStruct>) {
@@ -19,7 +19,7 @@ pub fn add_a_task_to_manager(task_struct: Arc<TaskStruct>) {
 }
 
 pub fn return_task_to_manager(task_struct: Arc<TaskStruct>) {
-    TASK_MANAGER.lock().return_(task_struct);
+    TASK_MANAGER.lock().enqueue(task_struct);
 }
 
 pub fn get_task_by_pid(pid: usize) -> Option<Arc<TaskStruct>> {
@@ -30,9 +30,12 @@ lazy_static!{
     pub static ref TASK_MANAGER: Mutex<TaskManager> = Mutex::new(TaskManager::new());
 }
 
+const QUEUE_NUM: usize = 8;
+
+/// a simple multi queue scheduler.
 pub struct TaskManager {
     pid_2_task: Vec<Option<Arc<TaskStruct>>>,
-    task_queue: VecDeque<Arc<TaskStruct>>,
+    queues: [VecDeque<Arc<TaskStruct>>; QUEUE_NUM],
 }
 
 impl TaskManager {
@@ -41,29 +44,53 @@ impl TaskManager {
         (0..MAX_TASK_NUMBER).into_iter().for_each(|_| {
             pid_2_task.push(None);
         });
+
+        let queues = [
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+        ];
+
         Self {
             pid_2_task,
-            task_queue: VecDeque::new(),
+            queues,
         }
     }
 
     pub fn add(&mut self, task: Arc<TaskStruct>)  {
-        self.task_queue.push_back(task.clone());
         let pid = task.pid_handle.0;
         assert!(self.pid_2_task[pid].is_none());
-        self.pid_2_task[pid] = Some(task);
+        self.pid_2_task[pid] = Some(Arc::clone(&task));
+
+        self.enqueue(task);
     }
 
-    /// difference between add() and return_() is that add() is used when new task is created,
-    /// while return_ is used when an old task is temporarily stopped thus it is returned to the manager.
-    pub fn return_(&mut self, task: Arc<TaskStruct>) {
-        self.task_queue.push_back(task.clone());
+    /// difference between `add()` and `enqueue()` is that `add()` is used when new task is created,
+    /// while `enqueue()` is used when an old task is temporarily stopped thus it is returned to the manager.
+    pub fn enqueue(&mut self, task: Arc<TaskStruct>) {
         let pid =task.pid_handle.0;
         assert!(self.pid_2_task[pid].is_some());
+
+        let priority = task.acquire_inner_lock().priority;
+        assert!(priority < QUEUE_NUM);
+        self.queues[priority].push_back(task);
     }
 
-    pub fn fetch(&mut self) -> Option<Arc<TaskStruct>> {
-        self.task_queue.pop_front()
+    pub fn dequeue(&mut self) -> Option<Arc<TaskStruct>> {
+        let result = self.queues.iter().enumerate().find(|(_, queue)| {
+            queue.len() != 0
+        });
+        if result.is_none() {
+            return None;
+        }
+
+        let index = result.unwrap().0;
+        self.queues[index].pop_front()
     }
 
 
@@ -75,30 +102,5 @@ impl TaskManager {
     pub fn rm_task_by_pid(&mut self, pid: usize) -> bool {
         self.pid_2_task[pid].take();
         true
-    }
-}
-
-
-#[cfg(test)]
-mod test {
-    #[test]
-    pub fn test_task_manager() {
-        /*    info!("starting task_manager.rs test cases.");
-
-            let mut task_manager = TaskManager::new();
-            // 1. test add() and fetch()
-            task_manager.add(Arc::new(TaskStruct::new(0)));
-            assert!(task_manager.fetch().is_some());
-            assert!(task_manager.fetch().is_none());
-
-            // 2. test get_task_by_pid()
-            task_manager.add(Arc::new(TaskStruct::new(0)));
-            assert!(task_manager.get_task_by_pid(0).is_some());
-            assert!(task_manager.get_task_by_pid(1).is_some());
-            assert!(task_manager.get_task_by_pid(2).is_none());
-
-
-
-            info!("end of task_manager.rs test.\n");*/
     }
 }

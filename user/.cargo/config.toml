@@ -2,4 +2,4 @@
 target = "riscv64gc-unknown-none-elf"
 
 [target.riscv64gc-unknown-none-elf]
-rustflags = ["-Clink-arg=-Tlinker.ld", ]
+rustflags = ["-Clink-arg=-T./lib/linker.ld", ]

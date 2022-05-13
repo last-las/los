@@ -5,6 +5,7 @@
 #![feature(allocator_api)]
 #![feature(step_trait)]
 #![feature(slice_ptr_get)]
+#![feature(result_option_inspect)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -60,8 +61,8 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
         trap::init_stvec();
         timer::enable_time_interrupt();
         increase_alive_hart();
-
-        task::load_tasks();
+        task::print_app_names();
+        task::load_init_task();
         // enable_other_harts();
         info!("start running");
         processor::run_on_current_hart();

@@ -1,105 +1,55 @@
 mod ipc;
+mod mm;
+mod file;
+mod time;
+mod proc;
 
-use crate::task::{exit_current_and_run_next_task, stop_current_and_run_next_task};
-use crate::processor::get_cur_task_in_this_hart;
-use core::str::from_utf8;
-use crate::timer::get_time_ms;
-use crate::syscall::ipc::{sys_send, sys_receive};
-use crate::mm::address::{VirtualAddress, ceil};
-use crate::mm::memory_manager::RegionFlags;
-use crate::config::{MMAP_START_ADDRESS, FRAME_SIZE};
+use crate::syscall::mm::do_brk;
+use crate::syscall::file::*;
+use crate::syscall::time::do_get_time;
+use crate::syscall::ipc::{sys_receive, sys_send};
+use crate::syscall::proc::*;
+use crate::task::stop_current_and_run_next_task;
+use share::syscall::error::{SysError, EUNKOWN};
+use share::syscall::sys_const::*;
+use share::ffi::c_char;
+use crate::mm::available_frame;
 
-const SYSCALL_SEND: usize = 1;
-const SYSCALL_RECEIVE: usize = 2;
-const SYSCALL_WRITE: usize = 64;
-const SYSCALL_EXIT: usize = 93;
-const SYSCALL_YIELD: usize = 124;
-const SYSCALL_GET_TIME: usize = 169;
-const SYSCALL_BRK: usize = 214;
-const SYSCALL_TEST: usize = 1234;
 
-pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
-    match syscall_id {
+pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
+    let result: Result<usize, SysError> = match syscall_id {
         SYSCALL_SEND => sys_send(args[0], args[1]),
         SYSCALL_RECEIVE => sys_receive(args[0], args[1]),
-        SYSCALL_WRITE => sys_write(args[0], VirtualAddress::new(args[1]), args[2]),
-        SYSCALL_EXIT => sys_exit(args[0] as isize),
-        SYSCALL_YIELD => sys_yield(),
-        SYSCALL_GET_TIME => sys_get_time(),
-        SYSCALL_BRK => sys_brk(VirtualAddress::new(args[0])),
-        SYSCALL_TEST =>  sys_test(),
-        _ => {
-            panic!("unknown syscall_id {}", syscall_id);
-        }
-    }
-}
+        SYSCALL_READ => do_read(args[0], args[1] as *mut u8, args[2]),
+        SYSCALL_WRITE => do_write(args[0], args[1] as *const u8, args[2]),
+        SYSCALL_EXIT => do_exit(args[0] as isize),
+        SYSCALL_YIELD => do_yield(),
+        SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),
+        SYSCALL_SET_PRIORITY => do_set_priority(args[0], args[1], args[2] as isize),
+        SYSCALL_GET_TIME => do_get_time(),
+        SYSCALL_GETPID => do_get_pid(),
+        SYSCALL_GETPPID => do_get_ppid(),
+        SYSCALL_BRK => do_brk(args[0]),
+        SYSCALL_FORK => do_fork(args[0] as u32, args[1], args[2], args[3], args[4]),
+        SYSCALL_EXEC => do_exec(args[0], args[1] as *const *const c_char, args[2] as *const *const c_char),
+        SYSCALL_WAITPID => do_waitpid(args[0] as isize, args[1], args[2]),
 
-pub fn sys_test() -> isize {
-    let value = 1234;
-    stop_current_and_run_next_task();
-    value
-}
+        SYSCALL_TEST =>  do_test(),
 
-pub fn sys_write(fd: usize, buf_ptr_va: VirtualAddress, length: usize) -> isize {
-    if fd != 1 {
-        return -1;
-    }
-    let buf_ptr = buf_ptr_va.0 as *const u8;
-    let buffer = unsafe {
-        core::slice::from_raw_parts(buf_ptr, length)
+        DEBUG_FRAME_USAGE => debug_frame_usage(),
+
+        _ => Err(SysError::new(EUNKOWN))
     };
-    print!("{}", from_utf8(buffer).unwrap());
-    0
+
+    SysError::mux(result)
+
+
 }
 
-pub fn sys_exit(exit_code: isize) -> isize {
-    info!("task exit with exit_code:{}", exit_code);
-    exit_current_and_run_next_task();
-    0
+pub fn do_test() -> Result<usize, SysError>{
+    unimplemented!();
 }
 
-pub fn sys_get_time() -> isize {
-    get_time_ms() as isize
-}
-
-pub fn sys_brk(mut new_brk: VirtualAddress) -> isize {
-    let cur_task = get_cur_task_in_this_hart();
-    let mut inner = cur_task.acquire_inner_lock();
-    let mut brk = inner.mem_manager.brk;
-    let mut size = new_brk.0.abs_diff(brk.0);
-
-    if new_brk.0 == 0 {
-        return brk.0 as isize;
-    }
-
-    if new_brk >= brk { // alloc
-        if new_brk.0 >= MMAP_START_ADDRESS {
-            return -1;
-        }
-
-        if ! brk.is_aligned() {
-            if size <= (FRAME_SIZE - brk.offset()) {
-                inner.mem_manager.brk = new_brk;
-                return new_brk.0 as isize;
-            }
-            size -= FRAME_SIZE - brk.offset();
-            brk = brk.ceil().into();
-        }
-        inner.mem_manager.add_area(brk, ceil(size), RegionFlags::W | RegionFlags::R, None);
-    } else { // dealloc
-        let brk_start = inner.mem_manager.brk_start;
-        if new_brk < brk_start {
-            return 0;
-        }
-        size += new_brk.offset();
-        new_brk = new_brk.floor().into();
-        inner.mem_manager.delete_area(new_brk, ceil(size));
-    }
-    inner.mem_manager.brk = new_brk;
-    new_brk.0 as isize
-}
-
-pub fn sys_yield() -> isize {
-    stop_current_and_run_next_task();
-    0
+pub fn debug_frame_usage() -> Result<usize, SysError> {
+    Ok(available_frame())
 }

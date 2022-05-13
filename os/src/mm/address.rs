@@ -1,7 +1,7 @@
 use crate::config::{RAM_MAPPING_OFFSET, FRAME_SIZE};
 use core::fmt::{Debug, Formatter};
 use core::iter::Step;
-use crate::processor::get_cur_task_in_this_hart;
+use crate::processor::clone_cur_task_in_this_hart;
 
 pub const PAGE_SIZE_BITS: usize = 12;
 
@@ -38,6 +38,16 @@ impl PhysicalPageNum {
     pub fn new(v: usize) -> Self {
         Self {
             0: v,
+        }
+    }
+
+    pub fn inc(&mut self) {
+        self.0 += 1;
+    }
+
+    pub fn add(&self, v: usize) -> Self {
+        Self {
+            0: self.0 + v
         }
     }
 }
@@ -202,6 +212,12 @@ impl PhysicalAddress {
             0: self.0 + v
         }
     }
+
+    pub fn sub(&self, v: usize) -> Self {
+        Self {
+            0: self.0 - v
+        }
+    }
 }
 
 impl From<PhysicalPageNum> for PhysicalAddress {
@@ -215,7 +231,7 @@ impl From<PhysicalPageNum> for PhysicalAddress {
 impl From<VirtualAddress> for PhysicalAddress {
     fn from(va: VirtualAddress) -> Self {
         let vpn = va.floor();
-        let cur_task = get_cur_task_in_this_hart();
+        let cur_task = clone_cur_task_in_this_hart();
         let cur_task_inner = cur_task.acquire_inner_lock();
         let ppn = cur_task_inner.mem_manager.page_table.translate(vpn).unwrap();
 

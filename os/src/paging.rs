@@ -7,6 +7,7 @@ use crate::kmain;
 use crate::processor::suspend_current_hart;
 use crate::mm::heap::stupid_allocator::StupidAllocator;
 use core::arch::asm;
+use crate::sbi::sbi_shutdown;
 
 extern "C" {
     pub fn __kernel_start();
@@ -38,22 +39,22 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
 
         let tmp_heap_frame = alloc_frame().unwrap();
         let tmp_heap_allocator = StupidAllocator::new(tmp_heap_frame.0.0 << 12, FRAME_SIZE);
-        let mut root_table = PageTable::new_kernel_table(tmp_heap_allocator);
+        let mut root_table = PageTable::new_kernel_table(tmp_heap_allocator).unwrap();
 
         unsafe {
             // higher half kernel
             root_table.map_with_offset(__text_start as usize, __text_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::X);
+                                       PTEFlags::V | PTEFlags::R | PTEFlags::X).unwrap();
             root_table.map_with_offset(__rodata_start as usize, __rodata_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R);
+                                       PTEFlags::V | PTEFlags::R).unwrap();
             root_table.map_with_offset(__data_start as usize, __data_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W);
+                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
             root_table.map_with_offset(__bss_start as usize, __bss_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W);
+                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
 
             // ram mapping
             root_table.map_with_offset(RAM_START_ADDRESS, RAM_START_ADDRESS + RAM_SIZE, RAM_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W);
+                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
 
 
             // set global satp for all harts
@@ -61,6 +62,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
         }
 
         core::mem::forget(root_table);
+        core::mem::drop(tmp_heap_frame); // This frame is no longer useful.
     }
 
     unsafe {

@@ -1,32 +1,38 @@
 use crate::mm::page_table::{PageTable, PTEFlags};
 use alloc::vec::Vec;
 use crate::mm::frame_allocator::FrameTracker;
-use crate::mm::address::{VirtualAddress, VirtualPageNum};
+use crate::mm::address::{VirtualAddress, VirtualPageNum, PhysicalAddress};
 use crate::config::{FRAME_SIZE, MAX_USER_ADDRESS};
 use alloc::boxed::Box;
 use core::fmt::{Debug, Formatter};
 use crate::mm::{alloc_frame, address};
 use core::arch::asm;
+use share::syscall::error::{SysError, EACCES};
 
 #[allow(unused)]
 pub struct MemoryManager {
     pub page_table: PageTable,
     pub region_list: RegionList,
-    pub brk_start: VirtualAddress, // the start of programme break. This value should not be changed after initializing
+    pub brk_start: VirtualAddress,
+    // the start of programme break. This value should not be changed after initializing
     pub brk: VirtualAddress,
 }
 
 impl MemoryManager {
-    pub fn new(data: &[u8]) -> Option<(Self, usize, usize)> {
-        let page_table = PageTable::new_user_table();
+    pub fn new(data: &[u8]) -> Result<(Self, usize, usize), SysError> {
+        let page_table = PageTable::new_user_table()?;
         let region_list = RegionList::empty();
-        let mut mem_manager = MemoryManager {page_table, region_list,
-            brk_start: VirtualAddress::new(0) , brk: VirtualAddress::new(0)};
+        let mut mem_manager = MemoryManager {
+            page_table,
+            region_list,
+            brk_start: VirtualAddress::new(0),
+            brk: VirtualAddress::new(0),
+        };
 
         let elf = xmas_elf::ElfFile::new(data).unwrap();
         let elf_header = elf.header;
         if elf_header.pt1.magic != [0x7f, 0x45, 0x4c, 0x46] {
-            return None;
+            return Err(SysError::new(EACCES));
         }
 
         let ph_count = elf_header.pt2.ph_count();
@@ -47,32 +53,54 @@ impl MemoryManager {
 
             let segment_data: &[u8] =
                 &elf.input[ph.offset() as usize..(ph.offset() as usize + ph.file_size() as usize)];
-            mem_manager.add_area(start, address::ceil(size), flags, Some(segment_data));
+            mem_manager.add_area(start, address::ceil(size), flags, Some(segment_data))?;
         }
 
         let stack_top = MAX_USER_ADDRESS;
         mem_manager.add_area(
             VirtualAddress::new(stack_top - FRAME_SIZE), FRAME_SIZE,
-            RegionFlags::R | RegionFlags::W, None
-        );
+            RegionFlags::R | RegionFlags::W, None,
+        )?;
 
         let brk = mem_manager.region_list.find_unused_region(1).unwrap();
         mem_manager.brk = brk;
         mem_manager.brk_start = brk;
 
         let pc = elf_header.pt2.entry_point() as usize;
-        Some((mem_manager, pc, stack_top))
+        Ok((mem_manager, pc, stack_top))
     }
 
-    pub fn add_area(&mut self, start: VirtualAddress, size: usize, flags: RegionFlags, data: Option<&[u8]>) {
-        let mut memory_region = MemoryRegion::new(start, size, flags);
-        if data.is_none() {
-            memory_region.map_and_fill(&mut self.page_table, &[]);
-        } else {
-            memory_region.map_and_fill(&mut self.page_table, data.unwrap());
+    pub fn clone(&self) -> Result<Self, SysError> {
+        let mut page_table = PageTable::new_user_table()?;
+        let mut region_list = RegionList::empty();
+        for mem in self.region_list.iter() {
+            let new_region = mem.clone_with_new_frames()?;
+            new_region.mapped_by(&mut page_table)?;
+            region_list.insert(Box::new(new_region));
         }
 
+        Ok(
+            Self {
+                page_table,
+                region_list,
+                brk_start: self.brk_start,
+                brk: self.brk,
+            }
+        )
+    }
+
+    pub fn add_area(&mut self, start: VirtualAddress, size: usize, flags: RegionFlags, data: Option<&[u8]>) -> Result<(), SysError> {
+        let mut memory_region = MemoryRegion::new(start, size, flags);
+        let data = match data {
+            Some(data) => data,
+            None => &[]
+        };
+        memory_region.fill(data)?;
+        memory_region.mapped_by(&mut self.page_table)?;
+
         self.region_list.insert(Box::new(memory_region));
+
+        Ok(())
     }
 
     pub fn delete_area(&mut self, start: VirtualAddress, size: usize) -> bool {
@@ -224,7 +252,9 @@ impl RegionList {
         true
     }
 
-
+    pub fn iter(&self) -> RegionListIter {
+        RegionListIter::new(self.region_head.as_ref())
+    }
 
     fn find_first_region_containing(&mut self, va: VirtualAddress) -> Option<&mut Box<MemoryRegion>> {
         if self.region_head.is_none() { return None; }
@@ -251,7 +281,7 @@ impl RegionList {
                 let next = start.next.take().unwrap();
                 start.next = next.next;
                 self.length -= 1;
-                if start.next.is_none() { break }
+                if start.next.is_none() { break; }
             } else {
                 start = start.next.as_mut().unwrap();
             }
@@ -335,6 +365,30 @@ impl RegionList {
     }
 }
 
+pub struct RegionListIter<'a> {
+    current_region: Option<&'a Box<MemoryRegion>>,
+}
+
+impl<'a> RegionListIter<'a> {
+    pub fn new(current_region: Option<&'a Box<MemoryRegion>>) -> Self {
+        Self {
+            current_region
+        }
+    }
+}
+
+impl<'a> Iterator for RegionListIter<'a> {
+    type Item = &'a Box<MemoryRegion>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut result = None;
+        if self.current_region.is_some() {
+            result = self.current_region.take();
+            self.current_region = result.as_ref().unwrap().next.as_ref();
+        }
+        result
+    }
+}
 
 pub struct MemoryRegion {
     frames: Vec<FrameTracker>,
@@ -361,7 +415,64 @@ impl MemoryRegion {
         }
     }
 
-    pub fn map_and_fill(&mut self, page_table: &mut PageTable, data: &[u8]) {
+    pub fn clone_with_new_frames(&self) -> Result<Self, SysError> {
+        let mut frames = Vec::new();
+        for i in 0..self.region_size / FRAME_SIZE {
+            let frame = alloc_frame()?;
+            let frame_data: &[u8; FRAME_SIZE] = PhysicalAddress::from(self.frames[i].0).as_mut();
+            frame.fill_with(frame_data);
+
+            frames.push(frame);
+        }
+
+        Ok(
+            Self {
+                frames,
+                start: self.start,
+                region_size: self.region_size,
+                flags: self.flags,
+                next: None,
+            }
+        )
+    }
+
+    pub fn fill(&mut self, data: &[u8]) -> Result<(), SysError> {
+        let mut start = 0;
+        let len = data.len();
+        for _ in (0..self.region_size).step_by(FRAME_SIZE) {
+            let mut frame = alloc_frame()?;
+            frame.fill_with(&data[start..len.min(start + FRAME_SIZE)]);
+            self.frames.push(frame);
+
+            if start + FRAME_SIZE >= len {
+                start = len;
+            } else {
+                start += FRAME_SIZE;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn mapped_by(&self, page_table: &mut PageTable) -> Result<(), SysError> {
+        let mut flags = PTEFlags::V | PTEFlags::U;
+        if self.flags.contains(RegionFlags::R) { flags |= PTEFlags::R };
+        if self.flags.contains(RegionFlags::W) { flags |= PTEFlags::W };
+        if self.flags.contains(RegionFlags::X) { flags |= PTEFlags::X };
+
+        let start_vpn: VirtualPageNum = self.start.into();
+        let end_vpn: VirtualPageNum = self.end().into();
+        let mut frame_iter = self.frames.iter();
+
+        for vpn in start_vpn..end_vpn {
+            let frame = frame_iter.next().unwrap();
+            page_table.map(frame.0, vpn, flags)?;
+        }
+
+        Ok(())
+    }
+
+    /*pub fn map_and_fill(&mut self, page_table: &mut PageTable, data: &[u8]) {
         let start_vpn: VirtualPageNum = self.start.into();
         let end_vpn: VirtualPageNum = self.end().into();
         let mut flags = PTEFlags::V | PTEFlags::U;
@@ -383,9 +494,9 @@ impl MemoryRegion {
                 start += FRAME_SIZE;
             }
         }
-    }
+    }*/
 
-    pub fn delete(&mut self, del_region_start: VirtualAddress, size: usize) -> bool{
+    pub fn delete(&mut self, del_region_start: VirtualAddress, size: usize) -> bool {
         let del_region_end = del_region_start.add(size);
         assert!(del_region_start.is_aligned() && del_region_end.is_aligned());
         assert!(del_region_end <= self.end());
@@ -429,7 +540,6 @@ impl MemoryRegion {
     pub fn contain(&self, va: VirtualAddress) -> bool {
         va >= self.start && va < self.end()
     }
-
 }
 
 bitflags! {
@@ -448,6 +558,7 @@ mod test {
     use crate::config::FRAME_SIZE;
     use alloc::boxed::Box;
     use crate::mm::page_table::PageTable;
+    use share::syscall::error::SysError;
 
     const REGION_SIZE: usize = FRAME_SIZE * 20;
 
@@ -455,11 +566,12 @@ mod test {
     pub fn test_delete_front_on_memory_region() {
         let _ = init_frame_allocator();
 
-        let mut page_table = PageTable::new();
+        let mut page_table = PageTable::new().unwrap();
         let start = VirtualAddress::new(0);
         let size = FRAME_SIZE * 5;
         let mut memory_region = MemoryRegion::new(start, size, RegionFlags::R);
-        memory_region.map_and_fill(&mut page_table, &[]);
+        memory_region.fill(&[]).unwrap();
+        memory_region.mapped_by(&mut page_table).unwrap();
         memory_region.delete(start, FRAME_SIZE);
 
         assert_eq!(memory_region.start.0, FRAME_SIZE);
@@ -478,11 +590,12 @@ mod test {
     pub fn test_delete_middle_on_memory_region() {
         let _ = init_frame_allocator();
 
-        let mut page_table = PageTable::new();
+        let mut page_table = PageTable::new().unwrap();
         let start = VirtualAddress::new(0);
         let size = FRAME_SIZE * 5;
         let mut memory_region = MemoryRegion::new(start, size, RegionFlags::R);
-        memory_region.map_and_fill(&mut page_table, &[]);
+        memory_region.fill(&[]).unwrap();
+        memory_region.mapped_by(&mut page_table).unwrap();
         memory_region.delete(start.add(FRAME_SIZE * 2), FRAME_SIZE);
 
         assert_eq!(memory_region.start.0, 0);
@@ -513,11 +626,12 @@ mod test {
     pub fn test_delete_tail_on_memory_region() {
         let _ = init_frame_allocator();
 
-        let mut page_table = PageTable::new();
+        let mut page_table = PageTable::new().unwrap();
         let start = VirtualAddress::new(0);
         let size = FRAME_SIZE * 5;
         let mut memory_region = MemoryRegion::new(start, size, RegionFlags::R);
-        memory_region.map_and_fill(&mut page_table, &[]);
+        memory_region.fill(&[]).unwrap();
+        memory_region.mapped_by(&mut page_table).unwrap();
         memory_region.delete(start.add(FRAME_SIZE * 4), FRAME_SIZE);
 
         assert_eq!(memory_region.start.0, 0);
@@ -537,23 +651,23 @@ mod test {
         let start = VirtualAddress::new(0x80200000);
         let region1 = MemoryRegion::new(
             start.add(FRAME_SIZE * 0), FRAME_SIZE,
-            RegionFlags::R
+            RegionFlags::R,
         );
         let region2 = MemoryRegion::new(
             start.add(FRAME_SIZE * 1), FRAME_SIZE,
-            RegionFlags::R
+            RegionFlags::R,
         );
         let region3 = MemoryRegion::new(
             start.add(FRAME_SIZE * 2), FRAME_SIZE,
-            RegionFlags::R
+            RegionFlags::R,
         );
         let region4 = MemoryRegion::new(
             start.add(FRAME_SIZE * 3), FRAME_SIZE,
-            RegionFlags::R
+            RegionFlags::R,
         );
         let region5 = MemoryRegion::new(
             start.add(FRAME_SIZE * 4), FRAME_SIZE,
-            RegionFlags::R
+            RegionFlags::R,
         );
 
         let mut region_list = RegionList::empty();
@@ -572,8 +686,8 @@ mod test {
     #[test]
     pub fn test_delete_single_region_on_region_list() {
         let _ = init_frame_allocator();
-        let mut page_table = PageTable::new();
-        let mut region_list = create_a_testing_region_list(&mut page_table);
+        let mut page_table = PageTable::new().unwrap();
+        let mut region_list = create_a_testing_region_list(&mut page_table).unwrap();
 
         // 1. delete second region
         let va = VirtualAddress::new(FRAME_SIZE * 2);
@@ -597,8 +711,8 @@ mod test {
     #[test]
     pub fn test_delete_part_of_region_on_region_list() {
         let _ = init_frame_allocator();
-        let mut page_table = PageTable::new();
-        let mut region_list = create_a_testing_region_list(&mut page_table);
+        let mut page_table = PageTable::new().unwrap();
+        let mut region_list = create_a_testing_region_list(&mut page_table).unwrap();
 
         // 1. delete 3rd frame
         let va = VirtualAddress::new(FRAME_SIZE * 3);
@@ -622,12 +736,12 @@ mod test {
     #[test]
     pub fn test_is_region_exist_on_region_list() {
         let _ = init_frame_allocator();
-        let mut page_table = PageTable::new();
-        let mut region_list = create_a_testing_region_list(&mut page_table);
+        let mut page_table = PageTable::new().unwrap();
+        let mut region_list = create_a_testing_region_list(&mut page_table).unwrap();
 
         let start = VirtualAddress::new(0);
         let size = 9 * FRAME_SIZE;
-        assert!(region_list.is_region_exists(start,size));
+        assert!(region_list.is_region_exists(start, size));
 
         // del 4th frame
         let del_start = VirtualAddress::new(FRAME_SIZE * 3);
@@ -635,7 +749,7 @@ mod test {
         assert!(region_list.delete(del_start, del_size));
 
         // 1st-9th frames should not exist because of missing 4th.
-        assert!(!region_list.is_region_exists(start,size));
+        assert!(!region_list.is_region_exists(start, size));
         // 1st-4th and 4th-9th frames should not exist.
         assert!(!region_list.is_region_exists(VirtualAddress::new(0), FRAME_SIZE * 4));
         assert!(!region_list.is_region_exists(VirtualAddress::new(FRAME_SIZE * 3), FRAME_SIZE * 6));
@@ -647,8 +761,8 @@ mod test {
     #[test]
     pub fn test_delete_continuous_regions_on_region_list() {
         let _ = init_frame_allocator();
-        let mut page_table = PageTable::new();
-        let mut region_list = create_a_testing_region_list(&mut page_table);
+        let mut page_table = PageTable::new().unwrap();
+        let mut region_list = create_a_testing_region_list(&mut page_table).unwrap();
 
         // 1. delete 2nd,3rd frames
         let va = VirtualAddress::new(FRAME_SIZE);
@@ -663,10 +777,35 @@ mod test {
         assert_eq!(region_list.length(), 2);
     }
 
+    #[test]
+    pub fn test_iter_on_region_list() {
+        let _ = init_frame_allocator();
+        let mut page_table = PageTable::new().unwrap();
+        let mut region_list = create_a_testing_region_list(&mut page_table).unwrap();
+        let mut region_iter = region_list.iter();
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start, VirtualAddress::new(0));
+        assert_eq!(region.region_size, 2 * FRAME_SIZE);
+
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start, VirtualAddress::new(2 * FRAME_SIZE));
+        assert_eq!(region.region_size, 3 * FRAME_SIZE);
+
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start, VirtualAddress::new(5 * FRAME_SIZE));
+        assert_eq!(region.region_size, 2 * FRAME_SIZE);
+
+        let region = region_iter.next().unwrap();
+        assert_eq!(region.start, VirtualAddress::new(7 * FRAME_SIZE));
+        assert_eq!(region.region_size, 2 * FRAME_SIZE);
+
+        assert!(region_iter.next().is_none());
+    }
+
     // TODO: test region_list's sortable feature
     fn init_frame_allocator() -> Box<[u8; REGION_SIZE]> {
         let frame_region: Box<[u8; REGION_SIZE]> = Box::new([0; REGION_SIZE]);
-        let start =  ceil(frame_region.as_ptr() as usize);
+        let start = ceil(frame_region.as_ptr() as usize);
         let end = start + REGION_SIZE - FRAME_SIZE;
         let mut inner = FRAME_ALLOCATOR.lock();
         inner.init(PhysicalAddress::new(start), PhysicalAddress::new(end));
@@ -674,7 +813,7 @@ mod test {
         frame_region
     }
 
-    fn create_a_testing_region_list(page_table: &mut PageTable) -> RegionList {
+    fn create_a_testing_region_list(page_table: &mut PageTable) -> Result<RegionList, SysError> {
         /*
             create a region list like this: (a region is described as "[start, end, RegionFlags]")
             [0, 8k, R | W] -> [8k, 20k, W] -> [20k, 28k, X] -> [28k, 36k, R]
@@ -684,29 +823,34 @@ mod test {
         let mut va = VirtualAddress::new(0);
         let size = 2 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size, RegionFlags::R | RegionFlags::W);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[])?;
+        region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         let size = 3 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size, RegionFlags::W);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[])?;
+        region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         let size = 2 * FRAME_SIZE;
-        let mut region = MemoryRegion::new(va, size,RegionFlags::X);
-        region.map_and_fill(page_table, &[]);
+        let mut region = MemoryRegion::new(va, size, RegionFlags::X);
+        region.fill(&[])?;
+        region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         let size = 2 * FRAME_SIZE;
         let mut region = MemoryRegion::new(va, size, RegionFlags::R);
-        region.map_and_fill(page_table, &[]);
+        region.fill(&[])?;
+        region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
         va = va.add(size);
 
         assert_eq!(region_list.length, 4);
-        region_list
+
+        Ok(region_list)
     }
 }

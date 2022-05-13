@@ -45,7 +45,7 @@ endif
 
 user:
 	@rm -rf $(USER_PATH)/deps
-	@cd ./user && python build.py
+	@cd ./user && python build.py && cargo build --release
 
 run:
 ifeq ($(BOARD),qemu)
