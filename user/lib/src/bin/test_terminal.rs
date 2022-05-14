@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+#[macro_use]
 extern crate user_lib;
 
 use user_lib::syscall::{terminal_read, terminal_write};
@@ -15,13 +16,15 @@ fn main() {
     termios.c_lflag.remove(Clflag::ECHO);
     tc_set_attr(1, termios).unwrap();
 
-    read_write();
+    // read_write();
 }
 
 fn read_write() {
     const LENGTH: usize = 50;
 
     let mut buf = [0; LENGTH];
+    sbi_println!("read from terminal: ");
     let cnt = terminal_read(0, &mut buf).unwrap();
+    sbi_println!("write to terminal: ");
     terminal_write(1, &buf[..cnt]).unwrap();
 }

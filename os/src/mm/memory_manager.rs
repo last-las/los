@@ -441,7 +441,7 @@ pub enum RegionType {
 
 impl Debug for MemoryRegion {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!("Region(start:{:#x}, end:{:#x})", self.start.0, self.start.add(self.region_size - 1).0))
+        f.write_fmt(format_args!("Region(start:{:#x}, end:{:#x}, {:?})", self.start.0, self.start.add(self.region_size - 1).0, self.flags))
     }
 }
 

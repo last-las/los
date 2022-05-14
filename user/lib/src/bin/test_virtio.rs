@@ -14,9 +14,7 @@ const BLK_COUNT: usize = 1024;
 #[no_mangle]
 fn main() {
     let mut buffer: [u8; BLK_SZ] = [0; BLK_SZ];
-    read_block(0, buffer.as_mut_ptr() as usize);
-    println!("{:?}", buffer);
-/*    let buffer_ptr = buffer.as_ptr() as usize;
+    let buffer_ptr = buffer.as_ptr() as usize;
 
     for i in 0..BLK_COUNT {
         buffer.fill((i % 0xff) as u8);
@@ -28,7 +26,7 @@ fn main() {
         read_block(i, buffer_ptr);
         compared_block.fill((i % 0xff) as u8);
         assert_eq!(buffer, compared_block);
-    }*/
+    }
 }
 
 fn read_block(block_id: usize, ptr: usize) {
