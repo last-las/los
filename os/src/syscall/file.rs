@@ -2,7 +2,7 @@ use share::syscall::error::SysError;
 use crate::syscall::ipc::{kcall_send, kcall_receive};
 use share::ipc::{Msg, REPLY_STATUS, FSYSCALL, SYSCALL_TYPE, FS_SYSCALL_ARG0, FS_SYSCALL_ARG1, FS_SYSCALL_ARG2, FS_SYSCALL_ARG3, FS_SYSCALL_ARG4, FS_PID};
 use crate::processor::get_cur_task_in_this_hart;
-use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, SYSCALL_MKDIRAT, SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK, SYSCALL_FSTAT};
+use share::syscall::sys_const::{SYSCALL_GETCWD, SYSCALL_DUP, SYSCALL_DUP3, SYSCALL_CHDIR, SYSCALL_OPEN, SYSCALL_CLOSE, SYSCALL_WRITE, SYSCALL_MKDIRAT, SYSCALL_READ, SYSCALL_GETDENTS, SYSCALL_MOUNT, SYSCALL_UNMOUNT, SYSCALL_LSEEK, SYSCALL_FSTAT, SYSCALL_UNLINK, SYSCALL_RMDIR};
 
 pub fn do_lseek(fd: usize, offset: usize, whence: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_LSEEK, [fd, offset, whence, 0, 0])
@@ -60,6 +60,14 @@ pub fn do_mkdir_at(dir_fd: usize, path_ptr: usize, mode: usize) -> Result<usize,
 
 pub fn do_fstat(fd: usize, stat_ptr: usize) -> Result<usize, SysError> {
     send_receive_fs(SYSCALL_FSTAT, [fd, stat_ptr, 0, 0, 0])
+}
+
+pub fn do_unlink(path_ptr: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_UNLINK, [path_ptr, 0, 0, 0, 0])
+}
+
+pub fn do_rmdir(path_ptr: usize) -> Result<usize, SysError> {
+    send_receive_fs(SYSCALL_RMDIR, [path_ptr, 0, 0, 0, 0])
 }
 
 fn send_receive_fs(syscall_id: usize, args: [usize; 5]) -> Result<usize, SysError> {

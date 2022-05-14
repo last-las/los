@@ -19,11 +19,11 @@ pub struct VfsDentry {
 }
 
 pub struct VfsMount {
-    /// Root dentry of the mounted tree.
+    /// Root dentry of current fs.
     pub mount_root: Rc<RefCell<VfsDentry>>,
-    /// dentry of mountpoint.
+    /// dentry of mountpoint on parent fs.
     pub mount_point: Option<Rc<RefCell<VfsDentry>>>,
-    /// Fs we are mounted on.
+    /// Parent that current fs is mounted on.
     pub mount_parent: Option<Rc<RefCell<VfsMount>>>,
     /// Pointer to super block.
     pub mnt_sb: Rc<RefCell<SuperBlock>>,
@@ -53,6 +53,16 @@ impl VfsDentry {
             Some(self.children[index].clone())
         } else {
             None
+        }
+    }
+
+    /// remove
+    pub fn remove_cache(&mut self, name: &str) {
+        for i in 0..self.children.len() {
+            if self.children[i].borrow().name.as_str() == name {
+                self.children.remove(i);
+                return;
+            }
         }
     }
 }
