@@ -17,6 +17,7 @@ pub fn do_exec(path_ptr: usize, argv: *const *const c_char, envp: *const *const 
     let user_sp = unsafe { push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp) };
     modify_current_task_struct(mem_manager, pc, user_sp);
 
+    clear_i_cache();
     Ok(0)
 }
 
@@ -65,6 +66,12 @@ fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usi
     let trap_context_ref = inner.trap_context_ref();
     *trap_context_ref = TrapContext::new(pc, user_sp);
     inner.mem_manager = mem_manager;
+}
+
+fn clear_i_cache() {
+    unsafe {
+        asm!{"fence.i"}
+    }
 }
 
 fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const c_char) -> Vec<CString> {
