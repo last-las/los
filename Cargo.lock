@@ -132,6 +132,9 @@ dependencies = [
 [[package]]
 name = "share"
 version = "0.1.0"
+dependencies = [
+ "bitflags",
+]
 
 [[package]]
 name = "spin"

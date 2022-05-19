@@ -41,6 +41,7 @@ mod timer;
 mod config;
 mod mm;
 mod paging;
+mod plic;
 
 
 #[cfg(not(test))]
@@ -60,6 +61,8 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
         heap_allocator::init_heap();
         trap::init_stvec();
         timer::enable_time_interrupt();
+        plic::enable_external_interrupt();
+        plic::init();
         increase_alive_hart();
         task::print_app_names();
         task::load_init_task();

@@ -1,7 +1,7 @@
 use crate::mm::address::{VirtualAddress, ceil};
 use crate::processor::clone_cur_task_in_this_hart;
 use crate::config::{MMAP_START_ADDRESS, FRAME_SIZE};
-use crate::mm::memory_manager::RegionFlags;
+use crate::mm::memory_manager::{RegionFlags, RegionType};
 use share::syscall::error::{SysError, ENOMEM};
 
 pub fn do_brk(mut new_brk: usize) -> Result<usize, SysError> {
@@ -29,7 +29,10 @@ pub fn do_brk(mut new_brk: usize) -> Result<usize, SysError> {
             size -= FRAME_SIZE - brk.offset();
             brk = brk.ceil().into();
         }
-        inner.mem_manager.add_area(brk, ceil(size), RegionFlags::W | RegionFlags::R, None);
+        inner.mem_manager.add_area(
+            brk, ceil(size),
+            RegionFlags::W | RegionFlags::R, RegionType::DEFAULT, None
+        )?;
     } else { // dealloc
         let brk_start = inner.mem_manager.brk_start;
         if new_brk < brk_start {

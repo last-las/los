@@ -12,7 +12,6 @@ use share::syscall::error::{SysError, ECHILD};
 use crate::processor::clone_cur_task_in_this_hart;
 
 pub fn do_exit(exit_code: isize) -> Result<usize, SysError> {
-    info!("task exit with exit_code:{}", exit_code);
     exit_current_and_run_next_task(exit_code as usize);
     Ok(0)
 }

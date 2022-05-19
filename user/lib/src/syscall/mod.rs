@@ -5,6 +5,7 @@ use share::syscall::error::{SysError, ENOMEM};
 use alloc::vec::Vec;
 use alloc::string::String;
 use crate::env::get_envp_copy;
+use share::ipc::Msg;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -18,12 +19,24 @@ pub fn exit(exit_code: usize) -> isize {
     sys_exit(exit_code)
 }
 
+pub fn yield_() {
+    sys_yield();
+}
+
 pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
     isize2result(sys_read(fd, buf))
 }
 
+pub fn _read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(_sys_read(fd, buf))
+}
+
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
+}
+
+pub fn _write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+    isize2result(_sys_write(fd, buf))
 }
 
 pub fn sleep(seconds: usize) {
@@ -97,4 +110,44 @@ pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result
         None => 0,
     };
     isize2result(sys_waitpid(pid as usize, status_ptr, options))
+}
+
+pub fn send(dst_pid: usize, msg: &Msg) -> Result<usize, SysError> {
+    isize2result(sys_send(dst_pid, msg))
+}
+
+pub fn receive(dst_pid: isize, msg: &mut Msg) -> Result<usize, SysError> {
+    isize2result(sys_receive(dst_pid, msg))
+}
+
+pub fn dev_read(dev_phys_addr: usize, byte_size: usize) -> Result<usize, SysError> {
+    isize2result(k_read_dev(dev_phys_addr, byte_size))
+}
+
+pub fn dev_write(dev_phys_addr: usize, val: usize, byte_size: usize) -> Result<usize, SysError> {
+    isize2result(k_write_dev(dev_phys_addr, val, byte_size))
+}
+
+pub fn dev_read_u8(dev_phys_addr: usize) -> Result<usize, SysError> {
+    isize2result(k_read_dev(dev_phys_addr, 1))
+}
+
+pub fn dev_write_u8(dev_phys_addr: usize, val: u8) -> Result<usize, SysError> {
+    isize2result(k_write_dev(dev_phys_addr, val as usize, 1))
+}
+
+pub fn dev_write_u32(dev_phys_addr: usize, val: u32) -> Result<usize, SysError> {
+    isize2result(k_write_dev(dev_phys_addr, val as usize, 4))
+}
+
+pub fn virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> Result<usize, SysError> {
+    isize2result(k_virt_copy(src_proc, src_ptr, dst_proc, dst_ptr, length))
+}
+
+pub fn continuous_alloc(size: usize) -> Result<usize, SysError> {
+    isize2result(k_continuous_alloc(size))
+}
+
+pub fn virt_to_phys(virt_addr: usize) -> Result<usize, SysError> {
+    isize2result(k_virt_to_phys(virt_addr))
 }

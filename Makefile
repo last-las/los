@@ -2,9 +2,11 @@ TARGET := riscv64gc-unknown-none-elf
 MODE := release
 KERNEL_ELF := ./target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
-export CPU_NUMS = 1
+BOOTLOADER := ./bootloader/rustsbi-qemu.bin
+export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
+FS_IMG := ./fs.img
 
 # board and bootloader
 BOARD ?= qemu
@@ -46,14 +48,19 @@ endif
 user:
 	@cd ./user && python build.py && cargo build --release
 
-run:
+fs-img:
+	@dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024
+
+run: fs-img
 ifeq ($(BOARD),qemu)
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \
 		-bios $(BOOTLOADER) \
 		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
-		-smp $(CPU_NUMS)
+		-smp $(CPU_NUMS) \
+		-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+		-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 else
 	@cp $(BOOTLOADER) $(BOOTLOADER).copy
 	dd if=$(KERNEL_BIN) of=$(BOOTLOADER).copy bs=$(BOOTLOADER_SIZE) seek=1
@@ -71,7 +78,10 @@ debug:
 	 	-nographic \
  		-bios $(BOOTLOADER) \
  		-device loader,file=$(KERNEL_BIN),addr=0x80200000 \
- 		-s -S
+ 		-s -S \
+ 		-smp $(CPU_NUMS) \
+		-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+		-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 clean:
 	@cargo clean

@@ -1,4 +1,2 @@
 [workspace]
-members = ["init", "lib", "shell"]
-
-exclude = ["servers"]
+members = ["init", "lib", "shell", "fs", "drivers/*"]

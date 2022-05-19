@@ -3,6 +3,7 @@ mod mm;
 mod file;
 mod time;
 mod proc;
+mod device;
 
 use crate::syscall::mm::do_brk;
 use crate::syscall::file::*;
@@ -14,14 +15,25 @@ use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
 use share::ffi::c_char;
 use crate::mm::available_frame;
+use crate::syscall::device::{kcall_read_dev, kcall_write_dev, kcall_virt_copy, kcall_continuous_alloc, kcall_virt_to_phys};
+
+pub use ipc::notify;
 
 
 pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {
-        SYSCALL_SEND => sys_send(args[0], args[1]),
-        SYSCALL_RECEIVE => sys_receive(args[0], args[1]),
+        KCALL_SEND => sys_send(args[0], args[1]),
+        KCALL_RECEIVE => sys_receive(args[0] as isize, args[1]),
+        KCALL_READ_DEV => kcall_read_dev(args[0], args[1]),
+        KCALL_WRITE_DEV => kcall_write_dev(args[0], args[1], args[2]),
+        KCALL_VIRT_COPY => kcall_virt_copy(args[0], args[1], args[2], args[3], args[4]),
+        KCALL_CONTINUOUS_ALLOC => kcall_continuous_alloc(args[0]),
+        KCALL_VIRT_TO_PHYS => kcall_virt_to_phys(args[0]),
+
         SYSCALL_READ => do_read(args[0], args[1] as *mut u8, args[2]),
+        _SYSCALL_READ => _do_read(args[0], args[1], args[2]),
         SYSCALL_WRITE => do_write(args[0], args[1] as *const u8, args[2]),
+        _SYSCALL_WRITE => _do_write(args[0], args[1], args[2]),
         SYSCALL_EXIT => do_exit(args[0] as isize),
         SYSCALL_YIELD => do_yield(),
         SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),

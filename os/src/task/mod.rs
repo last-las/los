@@ -10,7 +10,7 @@ use crate::loader::{get_app_ref_data, get_app_names};
 use spin::Mutex;
 
 pub use kernel_stack::KernelStack;
-pub use task_struct::{TaskStruct, TaskStructInner, RuntimeFlags, ReceiveProc};
+pub use task_struct::{TaskStruct, TaskStructInner, RuntimeFlags};
 pub use task_manager::{fetch_a_task_from_manager, add_a_task_to_manager, get_task_by_pid};
 pub use task_context::TaskContext;
 pub use trap_context::TrapContext;
@@ -79,6 +79,7 @@ pub fn stop_current_and_run_next_task() {
 
 pub fn exit_current_and_run_next_task(exit_code: usize) {
     let cur_task = take_task_in_current_hart();
+    info!("task {} exit with exit_code:{}",cur_task.pid(), exit_code);
     let mut cur_task_inner = cur_task.acquire_inner_lock();
     // mark current task as zombie
     cur_task_inner.flag = RuntimeFlags::ZOMBIE(exit_code);

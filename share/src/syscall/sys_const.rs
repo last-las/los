@@ -1,7 +1,7 @@
-pub const SYSCALL_SEND: usize = 1;
-pub const SYSCALL_RECEIVE: usize = 2;
 pub const SYSCALL_READ: usize = 63;
+pub const _SYSCALL_READ: usize = KCALL_MASK | SYSCALL_READ;
 pub const SYSCALL_WRITE: usize = 64;
+pub const _SYSCALL_WRITE: usize = KCALL_MASK | SYSCALL_WRITE;
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;
 pub const SYSCALL_GET_PRIORITY: usize = 140;
@@ -16,3 +16,12 @@ pub const SYSCALL_WAITPID: usize = 260;
 pub const SYSCALL_TEST: usize = 1234;
 
 pub const DEBUG_FRAME_USAGE: usize = 1001;
+
+pub const KCALL_MASK: usize = 0x1000;
+pub const KCALL_SEND: usize = KCALL_MASK | 1;
+pub const KCALL_RECEIVE: usize = KCALL_MASK | 2;
+pub const KCALL_READ_DEV: usize = KCALL_MASK | 3;
+pub const KCALL_WRITE_DEV: usize = KCALL_MASK | 4;
+pub const KCALL_VIRT_COPY: usize = KCALL_MASK | 5;
+pub const KCALL_CONTINUOUS_ALLOC: usize = KCALL_MASK | 6;
+pub const KCALL_VIRT_TO_PHYS: usize = KCALL_MASK | 7;

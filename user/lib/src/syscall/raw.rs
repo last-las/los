@@ -58,6 +58,21 @@ fn syscall3(id: usize, arg1: usize, arg2: usize, arg3: usize) -> isize {
     ret
 }
 
+fn syscall4(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize) -> isize {
+    let ret;
+    unsafe {
+        asm!(
+        "ecall",
+        inout("a0") arg1 => ret,
+        in("a1") arg2,
+        in("a2") arg3,
+        in("a3") arg4,
+        in("a7") id,
+        );
+    }
+    ret
+}
+
 #[inline(always)]
 fn syscall5(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5: usize) -> isize {
     let ret;
@@ -78,20 +93,28 @@ fn syscall5(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5:
 
 pub fn sys_send(dst_pid: usize, msg: &Msg) -> isize {
     let msg_ptr = msg as *const _ as usize;
-    syscall2(SYSCALL_SEND, dst_pid, msg_ptr)
+    syscall2(KCALL_SEND, dst_pid, msg_ptr)
 }
 
-pub fn sys_receive(dst_pid: usize, msg: &mut Msg) -> isize {
+pub fn sys_receive(dst_pid: isize, msg: &mut Msg) -> isize {
     let msg_ptr = msg as *mut _ as usize;
-    syscall2(SYSCALL_RECEIVE, dst_pid, msg_ptr)
+    syscall2(KCALL_RECEIVE, dst_pid as usize, msg_ptr)
 }
 
 pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
     syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }
 
+pub fn _sys_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(_SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
 pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn _sys_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(_SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }
 
 pub fn sys_exit(exit_code: usize) -> isize{
@@ -144,4 +167,24 @@ pub fn sys_test() -> isize {
 
 pub fn debug_frame_usage() -> usize {
     syscall0(DEBUG_FRAME_USAGE) as usize
+}
+
+pub fn k_read_dev(dev_phys_addr: usize, byte_size: usize) -> isize {
+    syscall2(KCALL_READ_DEV, dev_phys_addr, byte_size)
+}
+
+pub fn k_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> isize {
+    syscall3(KCALL_WRITE_DEV, dev_phys_addr, val, byte_size)
+}
+
+pub fn k_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> isize {
+    syscall5(KCALL_VIRT_COPY, src_proc, src_ptr, dst_proc, dst_ptr, length)
+}
+
+pub fn k_continuous_alloc(size: usize) -> isize {
+    syscall1(KCALL_CONTINUOUS_ALLOC, size)
+}
+
+pub fn k_virt_to_phys(virt_addr: usize) -> isize {
+    syscall1(KCALL_VIRT_TO_PHYS, virt_addr)
 }

@@ -95,11 +95,18 @@ impl TaskManager {
 
 
     pub fn get_task_by_pid(&self, pid: usize) -> Option<Arc<TaskStruct>> {
-        self.pid_2_task[pid].clone()
+        if pid >= MAX_TASK_NUMBER {
+            None
+        } else {
+            self.pid_2_task[pid].clone()
+        }
     }
 
     /// This function should be removed when the signal module is implemented.
     pub fn rm_task_by_pid(&mut self, pid: usize) -> bool {
+        if pid >= MAX_TASK_NUMBER {
+            return false;
+        }
         self.pid_2_task[pid].take();
         true
     }

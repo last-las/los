@@ -7,7 +7,7 @@ _start:
     lla t1, boot_stack
     add sp, t1, t0
 
-    bnez a0, end_clear_bss
+    bgtz a0, end_clear_bss  # only hart0 invokes clear_bss
     lla t0, __bss_start
     lla t1, __bss_end
 clear_bss:

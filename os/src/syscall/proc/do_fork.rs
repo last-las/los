@@ -4,6 +4,7 @@ use crate::processor::clone_cur_task_in_this_hart;
 use share::syscall::error::{SysError, EAGAIN};
 use alloc::vec::Vec;
 use spin::Mutex;
+// clone
 
 #[allow(unused_variables)]
 pub fn do_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_ptr: usize) -> Result<usize, SysError>{
@@ -40,7 +41,8 @@ fn copy_process(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_
         wait_queue: Vec::new(),
         flag: RuntimeFlags::READY,
         task_context,
-        msg_ptr: None,
+        message_holder: None,
+        interrupt_flag: false,
         mem_manager,
         priority: parent_inner.priority,
         children: Vec::new(),

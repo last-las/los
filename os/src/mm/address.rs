@@ -22,7 +22,7 @@ pub struct PhysicalPageNum(pub usize);
 pub struct VirtualPageNum(pub usize);
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub struct PhysicalAddress(usize);
+pub struct PhysicalAddress(pub usize);
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct VirtualAddress(pub usize);
