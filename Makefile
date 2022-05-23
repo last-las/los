@@ -46,7 +46,7 @@ else ifeq ($(BOARD), k210)
 endif
 
 user:
-	@cd ./user && python build.py && cargo build --release
+	@cd ./user && python build.py && cargo build --release --features "board_$(BOARD)"
 
 fs-img:
 	@dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024

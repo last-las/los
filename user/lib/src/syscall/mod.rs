@@ -136,6 +136,10 @@ pub fn dev_write_u8(dev_phys_addr: usize, val: u8) -> Result<usize, SysError> {
     isize2result(k_write_dev(dev_phys_addr, val as usize, 1))
 }
 
+pub fn dev_read_u32(dev_phys_addr: usize) -> Result<usize, SysError> {
+    isize2result(k_read_dev(dev_phys_addr, 4))
+}
+
 pub fn dev_write_u32(dev_phys_addr: usize, val: u32) -> Result<usize, SysError> {
     isize2result(k_write_dev(dev_phys_addr, val as usize, 4))
 }

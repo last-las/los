@@ -1,7 +1,8 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 
-mod uart_16550;
+mod uart;
+mod standard;
 
 #[macro_use]
 extern crate user_lib;
@@ -10,12 +11,12 @@ extern crate alloc;
 #[macro_use]
 extern crate lazy_static;
 
-use crate::uart_16550::{REG_THR_OFFSET, REG_RHR_OFFSET, read_reg, Uart, write_reg, REG_IER_OFFSET};
 use share::ipc::Msg;
 use user_lib::syscall::{receive, dev_write_u8, virt_copy, send, getpid};
 use share::ipc::*;
 use share::terminal::{Clflag, TC_GET_ATTR, TC_SET_ATTR, TC_GET_PGRP, TC_SET_PGRP, Termios, Ciflag};
 use core::mem::size_of;
+use crate::uart::Uart;
 
 const BS: u8 = 0x08;
 const LF: u8 = 0x0a;
@@ -25,7 +26,6 @@ const CTRL_C: u8 = 0x3;
 
 #[no_mangle]
 fn main() {
-    uart_16550::init();
     let mut uart = Uart::new();
     let mut message = Msg::empty();
 
@@ -52,7 +52,7 @@ fn main() {
 
 pub fn do_interrupt(uart: &mut Uart) {
     let mut byte = uart.dev_read();
-    write_reg(REG_IER_OFFSET, 0x01);
+    uart.enable_recv_intr();
 
     /* Map CR to LF, ignore CR, or map LF to CR. */
     if byte == CR {

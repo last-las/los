@@ -14,7 +14,7 @@ fn main() {
     fork_and_exec("terminal"); // pid = 1
     fork_and_exec("idle"); // pid = 2
     fork_and_exec("shell"); // pid = 3
-    fork_and_exec("virtio-blk"); // pid = 4
+    // fork_and_exec("virtio-blk"); // pid = 4
 
     loop {
         match waitpid(-1, None, 0) {
