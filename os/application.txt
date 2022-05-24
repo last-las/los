@@ -1,1 +1,1 @@
-hello_world
+init terminal virtio-blk fs
