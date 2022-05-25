@@ -16,3 +16,5 @@ pub const UART_BASE_ADDRESS: usize = 0x1000_0000;
 #[cfg(feature = "board_k210")]
 pub const UART_BASE_ADDRESS: usize = 0x3800_0000;
 pub const VIRTIO0_START_ADDRESS: usize = 0x1000_1000;
+
+pub const RTC_BASE_ADDRESS: usize = 0x5046_0000;
