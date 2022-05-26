@@ -2,8 +2,13 @@ use core::alloc::Layout;
 use buddy_allocator::{Heap, LockedHeap};
 use crate::syscall::{brk, getpid};
 
+<<<<<<< Updated upstream
 // change from 0x80_000 to 0x8000
 const USER_HEAP_SIZE: usize = 0x80_000;
+=======
+// 20220526 change from 0x80_000 to 0x8000
+const USER_HEAP_SIZE: usize = 0x8000;
+>>>>>>> Stashed changes
 
 // TODO-FUTURE: The size of heap should be dynamic rather than fix size `USER_HEAP_ALLOCATOR`
 #[global_allocator]
@@ -16,6 +21,8 @@ pub fn init_heap() {
     brk(Some(cur_pos + USER_HEAP_SIZE)).unwrap();
     unsafe {
         USER_HEAP_ALLOCATOR.lock().init(cur_pos, USER_HEAP_SIZE);
+        // USER_HEAP_ALLOCATOR.lock()
+        //     .init(HEAP_SPACE.as_ptr() as usize, USER_HEAP_SIZE);
     }
 }
 

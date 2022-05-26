@@ -1,7 +1,27 @@
+<<<<<<< Updated upstream
 use share::syscall::sys_const::{SYSCALL_BRK, SYSCALL_WRITE, KCALL_SBI_WRITE};
 use core::arch::asm;
 
 #[inline(always)]
+=======
+use share::syscall::sys_const::{SYSCALL_BRK, SYSCALL_WRITE, KCALL_SBI_WRITE, SYSCALL_GETPID};
+use core::arch::asm;
+
+#[inline(always)]
+fn syscall0(id: usize) -> isize {
+    let ret;
+    unsafe {
+        asm!(
+        "ecall",
+        out("a0")  ret,
+        in("a7") id,
+        );
+    }
+    ret
+}
+
+#[inline(always)]
+>>>>>>> Stashed changes
 fn syscall(id: usize, arg: usize) -> isize {
     let ret;
     unsafe {
@@ -39,4 +59,11 @@ pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
 
 pub fn k_sbi_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(KCALL_SBI_WRITE, fd, buf.as_ptr() as usize, buf.len())
+<<<<<<< Updated upstream
+=======
+}
+
+pub fn sys_get_pid() -> isize {
+    syscall0(SYSCALL_GETPID)
+>>>>>>> Stashed changes
 }
