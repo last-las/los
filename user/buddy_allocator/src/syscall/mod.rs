@@ -22,11 +22,8 @@ pub fn write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
 
 pub fn sbi_write(fd: usize, buf: &[u8]) -> isize {
     k_sbi_write(fd, buf)
-<<<<<<< Updated upstream
-=======
 }
 
 pub fn getpid() -> usize {
     sys_get_pid() as usize
->>>>>>> Stashed changes
 }

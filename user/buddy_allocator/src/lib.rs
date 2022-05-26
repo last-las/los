@@ -25,10 +25,7 @@ mod console;
 
 pub use syscall::*;
 pub use frame::*;
-<<<<<<< Updated upstream
-=======
 use crate::console::sbi_print;
->>>>>>> Stashed changes
 
 /// A heap that uses buddy system
 ///
@@ -81,11 +78,6 @@ impl Heap {
 
     /// Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap(&mut self, mut start: usize, mut end: usize) {
-<<<<<<< Updated upstream
-        // avoid unaligned access on some platforms
-        start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
-        end = end & (!size_of::<usize>() + 1);
-=======
         sbi_println!("\nprocess pid: {}", getpid());
         sbi_println!("trying to add to heap...");
         sbi_println!("non-aligned start: {}", start);
@@ -95,17 +87,11 @@ impl Heap {
         end = end & (!size_of::<usize>() + 1);
         sbi_println!("aligned start: {}", start);
         sbi_println!("aligned end: {}", end);
->>>>>>> Stashed changes
         assert!(start <= end);
 
         let mut total = 0;
         let mut current_start = start;
 
-<<<<<<< Updated upstream
-        while current_start + size_of::<usize>() <= end {
-            let lowbit = current_start & (!current_start + 1);
-            let size = min(lowbit, prev_power_of_two(end - current_start));
-=======
         sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
         while current_start + size_of::<usize>() <= end {
             let lowbit = current_start & (!current_start + 1);
@@ -113,15 +99,12 @@ impl Heap {
             sbi_println!("prev_power_of_two:{}", prev_power_of_two(end - current_start));
             let size = min(lowbit, prev_power_of_two(end - current_start));
             sbi_println!("size:min(lowbit, prev_power_of_two) {}", size);
->>>>>>> Stashed changes
             total += size;
 
             self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
             current_start += size;
         }
 
-<<<<<<< Updated upstream
-=======
         sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
         self.total += total;
     }
@@ -149,7 +132,6 @@ impl Heap {
         current_start += size;
 
         sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
->>>>>>> Stashed changes
         self.total += total;
     }
 
@@ -166,12 +148,9 @@ impl Heap {
             layout.size().next_power_of_two(),
             max(layout.align(), size_of::<usize>()),
         );
-<<<<<<< Updated upstream
-=======
         // trailing_zeros()返回二进制表示中尾随零的数量
         // let n = Wrapping(0b0101000i64);
         // assert_eq!(n.trailing_zeros(), 3);
->>>>>>> Stashed changes
         let class = size.trailing_zeros() as usize;
         for i in class..self.free_list.len() {
             // Find the first non-empty size class
@@ -180,11 +159,8 @@ impl Heap {
                 for j in (class + 1..i + 1).rev() {
                     if let Some(block) = self.free_list[j].pop() {
                         unsafe {
-<<<<<<< Updated upstream
-=======
                             // 把freelist[j]拆成两个freelist[j - 1]，地址靠后的先入栈，前面一个再入栈
                             // j = 15, 1 << (j - 1) = 1 << 14 = pow(2, 14)
->>>>>>> Stashed changes
                             self.free_list[j - 1]
                                 .push((block as usize + (1 << (j - 1))) as *mut usize);
                             self.free_list[j - 1].push(block);
@@ -214,10 +190,7 @@ impl Heap {
 
     /// Dealloc a range of memory from the heap
     pub fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
-<<<<<<< Updated upstream
-=======
         // 找到dealloc的大小
->>>>>>> Stashed changes
         let size = max(
             layout.size().next_power_of_two(),
             max(layout.align(), size_of::<usize>()),
@@ -375,17 +348,6 @@ impl LockedHeap {
         LockedHeap {
             inner: Mutex::new(Heap::new()),
             rescue: |heap: &mut Heap, layout: Layout| unsafe {
-<<<<<<< Updated upstream
-                // get current brk
-                let cur_brk = brk(None).unwrap();
-                // sbi_println!("current brk is {}", cur_brk);
-                // get request
-                let request_size = layout.size();
-                // sbi_println!("request size is {}", request_size);
-                // suppose that current heap has been used up
-                let new_brk = brk(Some(cur_brk + request_size)).unwrap();// if Err, panic
-                heap.add_to_heap(cur_brk, new_brk);
-=======
                 sbi_println!("alloc fail..enter rescue...");
                 // get current brk
                 let cur_brk = brk(None).unwrap();
@@ -402,7 +364,6 @@ impl LockedHeap {
                 let new_brk = brk(Some(cur_brk + allocated_size)).unwrap();// if Err, panic
                 sbi_println!("new brk is {}", new_brk);
                 heap.add_to_heap_rescue(cur_brk, new_brk);
->>>>>>> Stashed changes
             },
         }
     }
@@ -428,21 +389,12 @@ unsafe impl GlobalAlloc for LockedHeap {
                 allocation.as_ptr()
             },
             Err(_) => {
-<<<<<<< Updated upstream
-=======
                 sbi_println!("\nprocess pid:{} alloc fail, current heap:", getpid());
->>>>>>> Stashed changes
                 sbi_println!("allocated: {}", inner.allocated);
                 sbi_println!("user: {}", inner.user);
                 sbi_println!("total: {}", inner.total);
                 sbi_println!("layout: {:#?}", layout);
                 (self.rescue)(&mut inner, layout);
-<<<<<<< Updated upstream
-                inner
-                    .alloc(layout)
-                    .ok()
-                    .map_or(0 as *mut u8, |allocation| allocation.as_ptr())
-=======
                 let result = inner
                     .alloc(layout)
                     .ok()
@@ -454,7 +406,6 @@ unsafe impl GlobalAlloc for LockedHeap {
                     sbi_println!("rescue success!\n");
                 }
                 result
->>>>>>> Stashed changes
             }
         }
     }
@@ -467,11 +418,8 @@ unsafe impl GlobalAlloc for LockedHeap {
 }
 
 pub(crate) fn prev_power_of_two(num: usize) -> usize {
-<<<<<<< Updated upstream
-=======
     // 返回二进制表示中前导零的数量
     // let n = Wrapping(u64::MAX) >> 2;
     // assert_eq!(n.leading_zeros(), 2);
->>>>>>> Stashed changes
     1 << (8 * (size_of::<usize>()) - num.leading_zeros() as usize - 1)
 }
