@@ -9,7 +9,7 @@ edition = "2018"
 user_lib = { path = "../../lib" }
 share = { path = "../../../share" }
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-k210-pac = "0.2.0"
+k210-pac = { path = "../k210-pac-master" }
 
 [features]
 board_qemu = []

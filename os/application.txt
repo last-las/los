@@ -1,1 +1,1 @@
-hello_world
+00hello_world 01power3 02power5 03sleep 04ipc 05brk 06heap 07fork 08exec 09waitpid1 09waitpid2 10env 10env_child 11getpid 12setpriority 13speed idle init rtc shell terminal test_terminal test_virtio virtio-blk

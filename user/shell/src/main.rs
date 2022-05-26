@@ -6,9 +6,9 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
+use share::terminal::{Ciflag, Clflag, Termios};
 use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, exit, waitpid, debug_frame_usage};
-use share::terminal::{Termios, Ciflag, Clflag};
+use user_lib::syscall::{debug_frame_usage, exec, exit, fork, waitpid};
 use user_lib::termios::tc_set_attr;
 
 #[no_mangle]
@@ -23,7 +23,7 @@ fn main() {
         if line.len() == 0 {
             continue;
         }
-        if line.as_str() =="frame_usage"  {
+        if line.as_str() == "frame_usage" {
             println!("available frames: {:#x}", debug_frame_usage());
             continue;
         }

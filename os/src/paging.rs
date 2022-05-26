@@ -1,6 +1,6 @@
 use crate::config::{
     FRAME_SIZE, KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, RAM_SIZE, RAM_START_ADDRESS,
-    UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
+    RTC_BASE_ADDRESS, SYSCTL_ADDRESS, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
 };
 use crate::kmain;
 use crate::mm::address::PhysicalAddress;
@@ -108,10 +108,20 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
+            //sysctl mapping
             root_table
                 .map_with_offset(
-                    PLIC_START_ADDRESS,
-                    PLIC_START_ADDRESS + 0x100_0000,
+                    SYSCTL_ADDRESS,
+                    SYSCTL_ADDRESS + 0x10000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // rtc mapping
+            root_table
+                .map_with_offset(
+                    RTC_BASE_ADDRESS,
+                    RTC_BASE_ADDRESS + 0x10000,
                     RAM_MAPPING_OFFSET,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )

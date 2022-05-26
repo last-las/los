@@ -1,13 +1,43 @@
+use self::rtc::{
+    RtcTime, RtcWkAlarm, REG_ALARM_TIME, REG_INTERRUPT_CTRL, REG_REGISTER_CTRL, REG_TIME,
+    RTC_BASE_ADDRESS,
+};
 use k210_pac::{
     rtc::{register_ctrl, RegisterBlock, REGISTER_CTRL},
     Peripherals, RTC,
 };
-use user_lib::syscall::{dev_read_u32, dev_write_u32};
 
-use self::rtc::{
-    RtcTime, RtcWkAlarm, NSEC_PER_SEC, REG_ALARM_TIME, REG_INTERRUPT_CTRL, REG_REGISTER_CTRL,
-    REG_TIME, RTC_BASE_ADDRESS,
-};
+pub mod sysctl_mod {
+    use user_lib::syscall::dev_write;
+    const SYSCTL_ADDRESS: usize = 0x5044_0000;
+    const SOFT_RESET: usize = 0x30;
+    const PERI_RESET: usize = 0x34;
+    const CLK_EN_CENT: usize = 0x28;
+    const APB1_CLK_EN: usize = 4;
+    const CLK_EN_PERI: usize = 0x2c;
+    const RTC_CLK_EN_PERI: usize = 29;
+    use user_lib::syscall::*;
+    /// reset rtc
+    pub fn rtc_reset() {
+        let peri = dev_read_u32(SYSCTL_ADDRESS + PERI_RESET).unwrap() as u32;
+        let peri = (peri & !(0x01 << 29)) | (((1 as u32) & 0x01) << 29);
+        dev_write_u32(SYSCTL_ADDRESS + PERI_RESET, peri);
+
+        let peri = (peri & !(0x01 << 29)) | (((0 as u32) & 0x01) << 29);
+        dev_write_u32(SYSCTL_ADDRESS + PERI_RESET, peri);
+    }
+
+    /// enable rtc
+    pub fn rtc_enbale() {
+        let clk_en_cent = dev_read_u32(SYSCTL_ADDRESS + CLK_EN_CENT).unwrap() as u32;
+        let clk_en_cent = (clk_en_cent & !(0x01 << 4)) | (((1 as u32) & 0x01) << 4);
+        dev_write_u32(SYSCTL_ADDRESS + CLK_EN_CENT, clk_en_cent).unwrap();
+
+        let clk_en_peri = dev_read_u32(SYSCTL_ADDRESS + CLK_EN_PERI).unwrap() as u32;
+        let clk_en_peri = (clk_en_peri & !(0x01 << 29)) | (((1 as u32) & 0x01) << 29);
+        dev_write_u32(SYSCTL_ADDRESS + CLK_EN_PERI, clk_en_peri).unwrap();
+    }
+}
 
 pub mod rtc {
     //? k210
@@ -21,15 +51,6 @@ pub mod rtc {
     pub const REG_INTERRUPT_CTRL: usize = 0x18;
     pub const REG_REGISTER_CTRL: usize = 0x1c;
     pub const REG_EXTENDED: usize = 0x28;
-
-    //? Parameters used to convert the timespec values
-    pub const MSEC_PER_SEC: usize = 1000;
-    pub const USEC_PER_MSEC: usize = 1000;
-    pub const NSEC_PER_USEC: usize = 1000;
-    pub const NSEC_PER_MSEC: usize = 1000000;
-    pub const USEC_PER_SEC: usize = 1000000;
-    pub const NSEC_PER_SEC: usize = 1000000000;
-    pub const FSEC_PER_SEC: usize = 1000000000000000;
 
     pub const RTC_DAYS_IN_MONTH: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     pub const RTC_YDAYS: [[usize; 13]; 2] = [
@@ -83,8 +104,8 @@ pub mod rtc {
                 tm_mday: day,
                 tm_mon: month - 1,
                 tm_year: year - 1900,
-                tm_wday: get_weekday(year, month, day),
-                tm_yday: rtc_month_days(month, year) + day,
+                tm_wday: get_weekday(year, month - 1, day),
+                tm_yday: rtc_month_days(month - 1, year) + day,
                 tm_isdst: -1,
             }
         }
@@ -141,6 +162,262 @@ pub mod rtc {
     pub fn register_ctrl_set(reg: usize, value: usize) {}
 }
 
+//todo
+pub mod register_ctrl_mod {
+    use user_lib::syscall::dev_read_u8;
+    use user_lib::syscall::dev_write;
+
+    use super::rtc::REG_REGISTER_CTRL;
+    use super::rtc::RTC_BASE_ADDRESS;
+
+    const READ_ENABLE: usize = 0;
+    const WRITE_ENABLE: usize = 1;
+    const TIMER_MASK: usize = 13;
+    const ALARM_MASK: usize = 21;
+    const INITIAL_COUNT_MASK: usize = 29;
+    const INTERRUPT_REGISTER_MASK: usize = 30;
+
+    pub fn read_enable(value: bool) {
+        dev_write(
+            RTC_BASE_ADDRESS + REG_REGISTER_CTRL + READ_ENABLE,
+            ((value as u32) & 0x01) as usize,
+            1,
+        )
+        .unwrap();
+    }
+    pub fn read_read_enable() -> usize {
+        (dev_read_u8(RTC_BASE_ADDRESS + REG_REGISTER_CTRL + READ_ENABLE).unwrap() & 0x01) as usize
+    }
+    pub fn write_enable(value: bool) {
+        dev_write(
+            RTC_BASE_ADDRESS + REG_REGISTER_CTRL + WRITE_ENABLE,
+            ((value as u32) & 0x01) as usize,
+            1,
+        )
+        .unwrap();
+    }
+    pub fn read_write_enable() -> usize {
+        (dev_read_u8(RTC_BASE_ADDRESS + REG_REGISTER_CTRL + WRITE_ENABLE).unwrap() & 0x01) as usize
+    }
+    pub fn initial_count_mask(value: bool) {
+        dev_write(
+            RTC_BASE_ADDRESS + REG_REGISTER_CTRL + INITIAL_COUNT_MASK,
+            ((value as u32) & 0x01) as usize,
+            1,
+        )
+        .unwrap();
+    }
+    pub fn read_initial_count_mask() -> usize {
+        (dev_read_u8(RTC_BASE_ADDRESS + REG_REGISTER_CTRL + INITIAL_COUNT_MASK).unwrap() & 0x01)
+            as usize
+    }
+
+    pub fn interrupt_register_mask(value: bool) {
+        dev_write(
+            RTC_BASE_ADDRESS + REG_REGISTER_CTRL + INTERRUPT_REGISTER_MASK,
+            ((value as u32) & 0x01) as usize,
+            1,
+        )
+        .unwrap();
+    }
+
+    pub fn read_interrupt_register_mask() -> usize {
+        (dev_read_u8(RTC_BASE_ADDRESS + REG_REGISTER_CTRL + INTERRUPT_REGISTER_MASK).unwrap()
+            & 0x01) as usize
+    }
+
+    pub fn alarm_mask(value: u8) {
+        dev_write(
+            RTC_BASE_ADDRESS + ALARM_MASK + REG_REGISTER_CTRL,
+            (value & 0xff) as usize,
+            1,
+        )
+        .unwrap();
+    }
+
+    pub fn read_alarm_mask() -> usize {
+        dev_read_u8(RTC_BASE_ADDRESS + ALARM_MASK + REG_REGISTER_CTRL).unwrap() & 0xff
+    }
+
+    pub fn timer_mask(value: u8) {
+        dev_write(
+            RTC_BASE_ADDRESS + REG_REGISTER_CTRL + TIMER_MASK,
+            (value & 0xff) as usize,
+            1,
+        )
+        .unwrap();
+    }
+    pub fn read_time_mask() -> usize {
+        dev_read_u8(RTC_BASE_ADDRESS + REG_REGISTER_CTRL + TIMER_MASK).unwrap() & 0xff
+    }
+}
+
+pub mod initial_count_mod {
+    use super::rtc::{REG_INITIAL_COUNT, RTC_BASE_ADDRESS};
+    use user_lib::syscall::*;
+
+    const INITIAL_COUNT_ADDTESS: usize = RTC_BASE_ADDRESS + REG_INITIAL_COUNT;
+
+    fn read_initial_count_reg() -> u32 {
+        dev_read_u32(INITIAL_COUNT_ADDTESS).unwrap() as u32
+    }
+
+    fn write_initial_count_reg(value: u32) {
+        dev_write_u32(INITIAL_COUNT_ADDTESS, value).unwrap();
+    }
+
+    pub fn write_initial_count(count: u32) {
+        let v = read_initial_count_reg();
+        let v = (v & !0xffff_ffff) | ((count as u32) & 0xffff_ffff);
+        write_initial_count_reg(v);
+    }
+}
+
+pub mod current_count_mod {
+    use super::rtc::{REG_CURRENT_COUNT, RTC_BASE_ADDRESS};
+    use user_lib::syscall::*;
+
+    const CURRENT_COUNT_ADDTESS: usize = RTC_BASE_ADDRESS + REG_CURRENT_COUNT;
+
+    fn read_current_count_reg() -> u32 {
+        dev_read_u32(CURRENT_COUNT_ADDTESS).unwrap() as u32
+    }
+
+    fn write_current_count_reg(value: u32) {
+        dev_write_u32(CURRENT_COUNT_ADDTESS, value).unwrap();
+    }
+
+    pub fn write_current_count(count: u32) {
+        let v = read_current_count_reg();
+        let v = (v & !0xffff_ffff) | ((count as u32) & 0xffff_ffff);
+        write_current_count_reg(v);
+    }
+}
+
+pub mod time_mod {
+    use super::rtc::{REG_TIME, RTC_BASE_ADDRESS};
+    use user_lib::syscall::*;
+    const TIME_ADDRESS: usize = RTC_BASE_ADDRESS + REG_TIME;
+    // 初始化!
+    pub fn reset_time() {
+        dev_write_u32(TIME_ADDRESS, 0).unwrap();
+    }
+
+    fn read_hour() -> u8 {
+        let v = dev_read_u32(TIME_ADDRESS).unwrap();
+        ((v >> 24) & 0x1f) as u8
+    }
+    fn write_hour(hour: usize) {
+        let v = dev_read_u32(TIME_ADDRESS).unwrap() as u32;
+        let v = (v & !(0x1f << 24)) | (((hour as u32) & 0x1f) << 24);
+        dev_write_u32(TIME_ADDRESS, v).unwrap();
+    }
+
+    fn read_minute() -> u8 {
+        let v = dev_read_u32(TIME_ADDRESS).unwrap();
+        ((v >> 16) & 0x3f) as u8
+    }
+    fn write_minute(value: usize) {
+        let v = dev_read_u32(TIME_ADDRESS).unwrap() as u32;
+        let v = (v & &!(0x3f << 16)) | (((value as u32) & 0x3f) << 16);
+        dev_write_u32(TIME_ADDRESS, v).unwrap();
+    }
+
+    fn read_second() -> u8 {
+        let v = dev_read_u32(TIME_ADDRESS).unwrap();
+        ((v >> 10) & 0x3f) as u8
+    }
+    fn write_second(value: usize) {
+        let v = dev_read_u32(TIME_ADDRESS).unwrap() as u32;
+        let v = (v & &!(0x3f << 10)) | (((value as u32) & 0x3f) << 10);
+        dev_write_u32(TIME_ADDRESS, v).unwrap();
+    }
+    // 设置时间
+    pub fn set_time(hour: usize, minute: usize, second: usize) {
+        write_second(second);
+        write_minute(minute);
+        write_hour(hour);
+    }
+    // 读取时间
+    pub fn read_time() -> (u8, u8, u8) {
+        (read_hour(), read_minute(), read_second())
+    }
+}
+
+pub mod date_mod {
+
+    use super::rtc::{REG_DATE, RTC_BASE_ADDRESS};
+    use user_lib::syscall::*;
+
+    const DATE_ADDRESS: usize = RTC_BASE_ADDRESS + REG_DATE;
+
+    fn read_date_reg() -> u32 {
+        dev_read_u32(DATE_ADDRESS).unwrap() as u32
+    }
+
+    fn write_date_reg(value: u32) {
+        dev_write_u32(DATE_ADDRESS, value).unwrap();
+    }
+
+    fn read_week() -> u8 {
+        let v = read_date_reg();
+        (v & 0x07) as u8
+    }
+    fn write_week(value: u8) {
+        let v = read_date_reg();
+        let v = (v & !0x07) | ((value as u32) & 0x07);
+        write_date_reg(v);
+    }
+
+    fn read_day() -> u8 {
+        let v = read_date_reg();
+        ((v >> 8) & 0x1f) as u8
+    }
+    fn write_day(value: u8) {
+        let v = read_date_reg();
+        let v = (v & !(0x1f << 8)) | (((value as u32) & 0x1f) << 8);
+        write_date_reg(v);
+    }
+
+    fn read_month() -> u8 {
+        let v = read_date_reg();
+        ((v >> 16) & 0x0f) as u8
+    }
+    fn write_month(value: u8) {
+        let v = read_date_reg();
+        let v = (v & !(0x0f << 16)) | (((value as u32) & 0x0f) << 16);
+        write_date_reg(v);
+    }
+
+    fn read_year() -> u16 {
+        let v = read_date_reg();
+        ((v >> 20) & 0x0fff) as u16
+    }
+    fn write_year(value: u16) {
+        let v = read_date_reg();
+        let v = (v & !(0x0fff << 20)) | (((value as u32) & 0x0fff) << 20);
+        write_date_reg(v);
+    }
+
+    // 设置日期
+    pub fn set_date(year: usize, month: usize, day: usize, week: usize) {
+        write_year(year as u16);
+        write_month(month as u8);
+        write_day(day as u8);
+        write_week(week as u8);
+    }
+
+    // 读取日期
+    pub fn read_date() -> (usize, usize, usize, usize) {
+        (
+            read_year() as usize,
+            read_month() as usize,
+            read_day() as usize,
+            read_week() as usize,
+        )
+    }
+}
+
 pub struct Rtc {
     pub time: RtcTime,
     pub alarm: RtcWkAlarm,
@@ -160,37 +437,38 @@ impl Rtc {
     }
     /// 初始化
     pub fn init(&self) {
-        write_reg(REG_REGISTER_CTRL, 0xffffff);
-        // unsafe {
-        //     self.rtc.register_ctrl.write(|f| {
-        //         f.alarm_mask()
-        //             .bits(0xff)
-        //             .timer_mask()
-        //             .bits(0xff)
-        //             .initial_count_mask()
-        //             .set_bit()
-        //             .interrupt_register_mask()
-        //             .set_bit()
-        //     });
+        sysctl_mod::rtc_reset();
+        sysctl_mod::rtc_enbale();
 
-        //     self.rtc.initial_count.write(|f| f.count().bits(26000000));
+        register_ctrl_mod::alarm_mask(0xff);
+        register_ctrl_mod::timer_mask(0xff);
+        register_ctrl_mod::initial_count_mask(true);
+        register_ctrl_mod::interrupt_register_mask(true);
 
-        //     self.rtc.current_count.write(|f| f.count().bits(1));
+        initial_count_mod::write_initial_count(26000000);
+        current_count_mod::write_current_count(1);
 
-        //     self.rtc
-        //         .register_ctrl
-        //         .write(|f| f.read_enable().set_bit().write_enable().set_bit())
-        // }
+        register_ctrl_mod::read_enable(true);
+        register_ctrl_mod::write_enable(true);
+
+        time_mod::reset_time();
     }
 
-    // 读取时间，返回年月日
-    pub fn read_time(&self) -> (usize, usize, usize) {
+    // 读取日期，返回年月日
+    pub fn read_date(&self) -> (usize, usize, usize) {
         let tm = &self.time;
 
         (tm.tm_year, tm.tm_mon, tm.tm_mday)
     }
 
-    // 设置rtc time的时间
+    // 读取时间，返回时分秒
+    pub fn read_time(&self) -> (usize, usize, usize) {
+        let tm = &self.time;
+
+        (tm.tm_hour, tm.tm_min, tm.tm_sec)
+    }
+
+    // 设置rtc time的日期和时间
     pub fn set_time(
         &mut self,
         year: usize,
@@ -201,26 +479,9 @@ impl Rtc {
         second: usize,
     ) {
         let tm = RtcTime::new(year, month, day, hour, minute, second);
-        unsafe {
-            self.rtc.time.write(|f| {
-                f.hour()
-                    .bits(hour as u8)
-                    .minute()
-                    .bits(minute as u8)
-                    .second()
-                    .bits(second as u8)
-            });
-            self.rtc.date.write(|f| {
-                f.year()
-                    .bits((tm.tm_year + 1900) as u16)
-                    .week()
-                    .bits(tm.tm_wday as u8)
-                    .month()
-                    .bits((tm.tm_mon + 1) as u8)
-                    .day()
-                    .bits(tm.tm_mday as u8)
-            })
-        }
+        time_mod::set_time(tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+        date_mod::set_date(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_wday);
         self.time = tm;
     }
 
@@ -231,16 +492,4 @@ impl Rtc {
     pub fn rtc_interrupt(&self) {}
 
     pub fn rtc_alarm_irq_enable(&self, enable: bool) {}
-}
-
-fn do_div(n: usize, base: usize) -> usize {
-    n / base
-}
-
-fn write_reg(reg: usize, dword: u32) {
-    dev_write_u32(RTC_BASE_ADDRESS + reg, dword).unwrap();
-}
-
-fn read_reg(reg: usize) -> u32 {
-    dev_read_u32(RTC_BASE_ADDRESS + reg).unwrap() as u32
 }

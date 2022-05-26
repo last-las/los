@@ -18,3 +18,4 @@ pub const UART_BASE_ADDRESS: usize = 0x3800_0000;
 pub const VIRTIO0_START_ADDRESS: usize = 0x1000_1000;
 
 pub const RTC_BASE_ADDRESS: usize = 0x5046_0000;
+pub const SYSCTL_ADDRESS: usize = 0x5044_0000;

@@ -4,7 +4,7 @@ KERNEL_ELF := ./target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
 BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
-export LOG = INFO
+export LOG = ERROR
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 FS_IMG := ./fs.img
 
@@ -22,7 +22,7 @@ else ifeq ($(BOARD), k210)
 endif
 
 # Run k210
-K210_SERIALPORT := /dev/ttyUSB0
+K210_SERIALPORT := /dev/tty.usbserial-1420
 k210_BURNER := ./tools/kflash.py
 
 
@@ -40,9 +40,9 @@ test:
 
 switch-check:
 ifeq ($(BOARD), qemu)
-	@(which last-qemu) || (rm last-k210 -f && touch last-qemu && make clean)
+	@(which last-qemu) || (touch last-qemu && make clean)
 else ifeq ($(BOARD), k210)
-	@(which last-k210) || (rm last-qemu -f && touch last-k210 && make clean)
+	@(which last-k210) || (touch last-k210 && make clean)
 endif
 
 user:
