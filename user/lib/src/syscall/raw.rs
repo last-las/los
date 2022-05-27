@@ -1,6 +1,6 @@
+use core::arch::asm;
 use share::ipc::Msg;
 use share::syscall::sys_const::*;
-use core::arch::asm;
 
 #[inline(always)]
 fn syscall0(id: usize) -> isize {
@@ -14,7 +14,6 @@ fn syscall0(id: usize) -> isize {
     }
     ret
 }
-
 
 #[inline(always)]
 fn syscall1(id: usize, arg: usize) -> isize {
@@ -90,7 +89,6 @@ fn syscall5(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5:
     ret
 }
 
-
 pub fn sys_send(dst_pid: usize, msg: &Msg) -> isize {
     let msg_ptr = msg as *const _ as usize;
     syscall2(KCALL_SEND, dst_pid, msg_ptr)
@@ -117,7 +115,7 @@ pub fn _sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(_SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }
 
-pub fn sys_exit(exit_code: usize) -> isize{
+pub fn sys_exit(exit_code: usize) -> isize {
     syscall1(SYSCALL_EXIT, exit_code)
 }
 
@@ -149,8 +147,21 @@ pub fn sys_brk(new_brk: usize) -> isize {
     syscall1(SYSCALL_BRK, new_brk)
 }
 
-pub fn sys_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_ptr: usize) -> isize {
-    syscall5(SYSCALL_FORK, flags as usize, stack, ptid_ptr, tls_ptr, ctid_ptr)
+pub fn sys_fork(
+    flags: u32,
+    stack: usize,
+    ptid_ptr: usize,
+    tls_ptr: usize,
+    ctid_ptr: usize,
+) -> isize {
+    syscall5(
+        SYSCALL_FORK,
+        flags as usize,
+        stack,
+        ptid_ptr,
+        tls_ptr,
+        ctid_ptr,
+    )
 }
 
 pub fn sys_exec(path_ptr: usize, argv_ptr: usize, envp_ptr: usize) -> isize {
@@ -177,8 +188,21 @@ pub fn k_write_dev(dev_phys_addr: usize, val: usize, byte_size: usize) -> isize 
     syscall3(KCALL_WRITE_DEV, dev_phys_addr, val, byte_size)
 }
 
-pub fn k_virt_copy(src_proc: usize, src_ptr: usize, dst_proc: usize, dst_ptr: usize, length: usize) -> isize {
-    syscall5(KCALL_VIRT_COPY, src_proc, src_ptr, dst_proc, dst_ptr, length)
+pub fn k_virt_copy(
+    src_proc: usize,
+    src_ptr: usize,
+    dst_proc: usize,
+    dst_ptr: usize,
+    length: usize,
+) -> isize {
+    syscall5(
+        KCALL_VIRT_COPY,
+        src_proc,
+        src_ptr,
+        dst_proc,
+        dst_ptr,
+        length,
+    )
 }
 
 pub fn k_continuous_alloc(size: usize) -> isize {

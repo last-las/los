@@ -1,4 +1,6 @@
 pub mod sysctl_mod {
+    use core::arch::asm;
+
     use user_lib::syscall::dev_write;
     const SYSCTL_ADDRESS: usize = 0x5044_0000;
     const SOFT_RESET: usize = 0x30;
@@ -8,6 +10,15 @@ pub mod sysctl_mod {
     const CLK_EN_PERI: usize = 0x2c;
     const RTC_CLK_EN_PERI: usize = 29;
     use user_lib::syscall::*;
+
+    fn read_sysctl_reg() -> u32 {
+        dev_read_u32(SYSCTL_ADDRESS).unwrap() as u32
+    }
+
+    fn write_sysctl_reg(value: u32) {
+        dev_write_u32(SYSCTL_ADDRESS, value).unwrap();
+    }
+
     /// reset rtc
     pub fn rtc_reset() {
         let peri = dev_read_u32(SYSCTL_ADDRESS + PERI_RESET).unwrap() as u32;
@@ -27,6 +38,20 @@ pub mod sysctl_mod {
         let clk_en_peri = dev_read_u32(SYSCTL_ADDRESS + CLK_EN_PERI).unwrap() as u32;
         let clk_en_peri = (clk_en_peri & !(0x01 << 29)) | (((1 as u32) & 0x01) << 29);
         dev_write_u32(SYSCTL_ADDRESS + CLK_EN_PERI, clk_en_peri).unwrap();
+    }
+
+    /// 读取时钟周期
+    fn read_cycle() -> usize {
+        sys_get_time() as usize
+    }
+
+    // read CPU current freq
+    pub fn sync_clock_freq() {
+        let freq = 1;
+        let start_freq = read_cycle();
+        while read_cycle() - start_freq < freq {
+            continue;
+        }
     }
 }
 
@@ -64,6 +89,13 @@ pub mod rtc {
             weekday = (23 * month / 9 + day + 4 + year / 4 - year / 100 + year / 400) % 7;
         }
         weekday
+    }
+    // 时钟模式
+    pub enum TimerMode {
+        RtcTimerPause,   //< 0: Timer pause */
+        RtcTimerRunning, //< 1: Timer time running */
+        RtcTimerSetting, //< 2: Timer time setting */
+        RtcTimerMax,     //< Max count of this enum*/
     }
 
     //? time data
@@ -169,10 +201,35 @@ pub mod rtc {
 }
 
 pub mod register_ctrl_mod {
-    use super::rtc::{REG_REGISTER_CTRL, RTC_BASE_ADDRESS};
+    use super::{
+        rtc::{TimerMode, REG_REGISTER_CTRL, RTC_BASE_ADDRESS},
+        sysctl_mod,
+    };
     use user_lib::syscall::*;
 
     const REGISTER_CTRL_ADDTESS: usize = RTC_BASE_ADDRESS + REG_REGISTER_CTRL;
+
+    pub fn rtc_timer_set_mode(mode: TimerMode) {
+        match mode {
+            TimerMode::RtcTimerPause => {
+                write_read_enable(false);
+                write_write_enable(false);
+            }
+            TimerMode::RtcTimerRunning => {
+                write_read_enable(true);
+                write_write_enable(false);
+            }
+            TimerMode::RtcTimerSetting => {
+                write_read_enable(false);
+                write_write_enable(true);
+            }
+            _ => {
+                write_read_enable(false);
+                write_write_enable(false);
+            }
+        }
+        sysctl_mod::sync_clock_freq();
+    }
 
     fn read_register_ctrl_reg() -> u32 {
         dev_read_u32(REGISTER_CTRL_ADDTESS).unwrap() as u32
@@ -264,10 +321,6 @@ pub mod time_mod {
     use super::rtc::{REG_TIME, RTC_BASE_ADDRESS};
     use user_lib::syscall::*;
     const TIME_ADDRESS: usize = RTC_BASE_ADDRESS + REG_TIME;
-    // 初始化!
-    pub fn reset_time() {
-        dev_write_u32(TIME_ADDRESS, 0).unwrap();
-    }
 
     fn read_time_reg() -> u32 {
         dev_read_u32(TIME_ADDRESS).unwrap() as u32
@@ -523,21 +576,65 @@ pub mod interrupt_ctrl_mod {
         dev_write_u32(INTERRUPT_CTRL_ADDTESS, value).unwrap();
     }
 
+    /// Enable or disable RTC tick interrupt
     pub fn write_tick_enable(value: bool) {
         let v = read_interrupt_ctrl_reg();
         let v = (v & !0x01) | ((value as u32) & 0x01);
         write_interrupt_ctrl_reg(v);
     }
 
-    pub fn alarm_enable(value: bool) {
+    /// Enable or disable RTC alarm interrupt
+    fn write_alarm_enable(value: bool) {
         let v = read_interrupt_ctrl_reg();
         let v = (v & !(0x01 << 1)) | (((value as u32) & 0x01) << 1);
         write_interrupt_ctrl_reg(v);
     }
 
-    pub fn write_tick_interrupt_mode(value: u8) {
+    ///Set the interrupt mode of RTC tick interrupt
+    /*
+    RTC_INT_SECOND, /*!< 0: Interrupt every second */
+    RTC_INT_MINUTE, /*!< 1: Interrupt every minute */
+    RTC_INT_HOUR,   /*!< 2: Interrupt every hour */
+    RTC_INT_DAY,    /*!< 3: Interrupt every day */
+    RTC_INT_MAX     /*!< Max count of this enum*/
+    */
+    fn write_tick_interrupt_mode(value: u8) {
         let v = read_interrupt_ctrl_reg();
         let v = (v & !(0x03 << 2)) | (((value as u32) & 0x03) << 2);
         write_interrupt_ctrl_reg(v);
+    }
+
+    /// Register callback of tick interrupt
+    /// `mode`    Tick interrupt mode           \
+    ///  0:second 1:minute    2:hour 3:day \
+    pub fn rtc_tick_irq_register(mode: u8) {
+        write_tick_enable(false);
+        write_tick_interrupt_mode(mode);
+        write_tick_enable(true);
+    }
+
+    /// Register callback of alarm interrupt
+    ///*
+    ///* @param   is_single_shot Indicates if single shot
+    ///* @param   mask  The alarm compare mask for RTC alarm interrupt
+    ///*   (rtc_mask_t) {
+    ///*        .second = 1, Set this mask to compare Second
+    ///*         .minute = 0, Set this mask to compare Minute
+    ///*         .hour = 0,   Set this mask to compare Hour
+    ///*         .week = 0,   Set this mask to compare Week
+    ///*         .day = 0,    Set this mask to compare Day
+    ///*         .month = 0,  Set this mask to compare Month
+    ///*         .year = 0,   Set this mask to compare Year
+    ///*   }
+    ///* @param       callback  Callback of tick interrupt
+    ///* @param       ctx       Param of callback
+    ///* @param       priority  Priority of tick interrupt
+    ///*
+    pub fn rtc_alarm_irq_register(mode: u8) {
+        write_tick_enable(false);
+        write_alarm_enable(false);
+        write_tick_interrupt_mode(mode);
+        write_tick_enable(true);
+        write_alarm_enable(true);
     }
 }

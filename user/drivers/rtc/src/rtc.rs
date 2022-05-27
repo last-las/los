@@ -1,7 +1,4 @@
-use k210_pac::{
-    rtc::{register_ctrl, RegisterBlock, REGISTER_CTRL},
-    Peripherals, RTC,
-};
+use k210_pac::Peripherals;
 
 use crate::mods::rtc::*;
 use crate::mods::*;
@@ -9,7 +6,6 @@ use crate::mods::*;
 pub struct Rtc {
     pub time: RtcTime,
     pub alarm: RtcWkAlarm,
-    pub rtc: RTC,
 }
 
 impl Rtc {
@@ -19,7 +15,6 @@ impl Rtc {
             Rtc {
                 time: RtcTime::default(),
                 alarm: RtcWkAlarm::default(),
-                rtc: p.RTC,
             }
         }
     }
@@ -36,10 +31,7 @@ impl Rtc {
         initial_count_mod::write_initial_count(26000000);
         current_count_mod::write_current_count(1);
 
-        register_ctrl_mod::write_read_enable(true);
-        register_ctrl_mod::write_write_enable(true);
-
-        time_mod::reset_time();
+        register_ctrl_mod::rtc_timer_set_mode(TimerMode::RtcTimerRunning);
     }
 
     // 读取日期，返回年月日
@@ -86,6 +78,7 @@ impl Rtc {
         (tm.tm_hour, tm.tm_min, tm.tm_sec)
     }
 
+    // 设置alarm
     pub fn set_alarm(
         &mut self,
         year: usize,
@@ -105,5 +98,13 @@ impl Rtc {
         );
 
         self.alarm = tm;
+    }
+
+    pub fn irq_register(&self, mode: u8) {
+        interrupt_ctrl_mod::rtc_tick_irq_register(mode);
+    }
+
+    pub fn tick_interrupt_enable(&self, enable: bool) {
+        interrupt_ctrl_mod::write_tick_enable(enable);
     }
 }

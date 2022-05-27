@@ -1,17 +1,20 @@
-use riscv::register::{sie, sip};
+use crate::config::{RTC_BASE_ADDRESS, UART_BASE_ADDRESS};
 use crate::mm::address::PhysicalAddress;
-use crate::syscall::notify;
 #[cfg(feature = "board_k210")]
 use crate::sbi::interrupt::enable_mext;
+use crate::sbi::sbi_console_getchar;
+use crate::syscall::notify;
 #[cfg(feature = "board_k210")]
 use core::arch::asm;
-use crate::config::UART_BASE_ADDRESS;
-use crate::sbi::sbi_console_getchar;
+use riscv::register::{sie, sip};
 
 #[cfg(feature = "board_qemu")]
 const UART_IRQ: u32 = 10;
 #[cfg(feature = "board_k210")]
 const UART_IRQ: u32 = 33;
+
+/// rtc irq
+const RTC_IRQ: u32 = 20;
 
 // I can't find official document about this part... so take a look at xv6-k210 project's memlayout.h
 pub const PLIC_START_ADDRESS: usize = 0xc00_0000;
@@ -26,22 +29,30 @@ const PLIC_S_CLAIM: usize = PLIC_START_ADDRESS + 0x20_1004;
 const PLIC_M_COMPLETE: usize = PLIC_M_CLAIM;
 const PLIC_S_COMPLETE: usize = PLIC_S_CLAIM;
 
+const RTC_PID: usize = 4;
+
 pub fn enable_external_interrupt() {
     unsafe {
         #[cfg(feature = "board_qemu")]
         sie::set_sext();
-        #[cfg(feature = "board_k210")]  // There is only mext on k210. Our rustsbi will convert mext into ssoft.
-            {
-                enable_mext();
-                sie::set_ssoft();
-            }
+        #[cfg(feature = "board_k210")]
+        // There is only mext on k210. Our rustsbi will convert mext into ssoft.
+        {
+            enable_mext();
+            sie::set_ssoft();
+        }
     }
 }
 
 pub fn init() {
     set_priority(UART_IRQ, 7);
+
+    set_priority(RTC_IRQ, 6);
+
     set_threshold(0);
     enable(UART_IRQ);
+
+    enable(RTC_IRQ);
 }
 
 pub fn handle_interrupt() {
@@ -51,6 +62,10 @@ pub fn handle_interrupt() {
                 notify(1);
                 disable_uart_interrupt();
             }
+            // RTC_IRQ => {
+            //     notify(RTC_PID);
+            //     disable_rtc_interrupt();
+            // }
             _ => {
                 panic!("Unknown external interrupt: {}", interrupt);
             }
@@ -59,16 +74,16 @@ pub fn handle_interrupt() {
     }
 
     #[cfg(feature = "board_k210")]
-        {
-            unsafe {
-                let sip = sip::read().bits() ^ 2;
-                asm! {
-                "csrw sip, {}",
-                in(reg) sip,
-                }
+    {
+        unsafe {
+            let sip = sip::read().bits() ^ 2;
+            asm! {
+            "csrw sip, {}",
+            in(reg) sip,
             }
-            enable_mext();
         }
+        enable_mext();
+    }
 }
 
 pub fn set_priority(id: u32, prio: u8) {
@@ -81,9 +96,9 @@ pub fn set_priority(id: u32, prio: u8) {
 
 pub fn set_threshold(tsh: u8) {
     #[cfg(feature = "board_qemu")]
-        let tsh_reg: *mut u32 = PhysicalAddress::new(PLIC_S_THRESHOLD).as_raw_mut();
+    let tsh_reg: *mut u32 = PhysicalAddress::new(PLIC_S_THRESHOLD).as_raw_mut();
     #[cfg(feature = "board_k210")]
-        let tsh_reg: *mut u32 = PhysicalAddress::new(PLIC_M_THRESHOLD).as_raw_mut();
+    let tsh_reg: *mut u32 = PhysicalAddress::new(PLIC_M_THRESHOLD).as_raw_mut();
     let actual_tsh = tsh & 7;
     unsafe {
         tsh_reg.write_volatile(actual_tsh as u32);
@@ -92,9 +107,9 @@ pub fn set_threshold(tsh: u8) {
 
 pub fn enable(mut id: u32) {
     #[cfg(feature = "board_qemu")]
-        let mut enable_reg: *mut u32 = PhysicalAddress::new(PLIC_S_ENABLE).as_raw_mut();
+    let mut enable_reg: *mut u32 = PhysicalAddress::new(PLIC_S_ENABLE).as_raw_mut();
     #[cfg(feature = "board_k210")]
-        let mut enable_reg: *mut u32 = PhysicalAddress::new(PLIC_M_ENABLE).as_raw_mut();
+    let mut enable_reg: *mut u32 = PhysicalAddress::new(PLIC_M_ENABLE).as_raw_mut();
 
     if id >= 32 {
         unsafe {
@@ -109,12 +124,11 @@ pub fn enable(mut id: u32) {
     }
 }
 
-
 pub fn next_interrupt_number() -> Option<u32> {
     #[cfg(feature = "board_qemu")]
-        let claim_reg: *mut u32 = PhysicalAddress::new(PLIC_S_CLAIM).as_raw_mut();
+    let claim_reg: *mut u32 = PhysicalAddress::new(PLIC_S_CLAIM).as_raw_mut();
     #[cfg(feature = "board_k210")]
-        let claim_reg: *mut u32 = PhysicalAddress::new(PLIC_M_CLAIM).as_raw_mut();
+    let claim_reg: *mut u32 = PhysicalAddress::new(PLIC_M_CLAIM).as_raw_mut();
     let claim_number;
     unsafe {
         claim_number = claim_reg.read_volatile();
@@ -128,9 +142,9 @@ pub fn next_interrupt_number() -> Option<u32> {
 
 pub fn complete(id: u32) {
     #[cfg(feature = "board_qemu")]
-        let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_S_COMPLETE).as_raw_mut();
+    let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_S_COMPLETE).as_raw_mut();
     #[cfg(feature = "board_k210")]
-        let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_M_COMPLETE).as_raw_mut();
+    let complete_reg: *mut u32 = PhysicalAddress::new(PLIC_M_COMPLETE).as_raw_mut();
     unsafe {
         complete_reg.write_volatile(id);
     }
@@ -150,6 +164,15 @@ fn disable_uart_interrupt() {
 fn disable_uart_interrupt() {
     const REG_IER_OFFSET: usize = 0x10;
     let pa = PhysicalAddress::new(UART_BASE_ADDRESS + REG_IER_OFFSET);
+    let dword: *mut u32 = pa.as_raw_mut();
+    unsafe {
+        dword.write_volatile(0);
+    }
+}
+
+fn disable_rtc_interrupt() {
+    const REG_IER_OFFSET: usize = 0x00;
+    let pa = PhysicalAddress::new(RTC_BASE_ADDRESS + 0x28 + REG_IER_OFFSET);
     let dword: *mut u32 = pa.as_raw_mut();
     unsafe {
         dword.write_volatile(0);

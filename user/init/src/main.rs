@@ -7,14 +7,15 @@ extern crate user_lib;
 extern crate alloc;
 
 use user_lib::io::read_line;
-use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, getpid};
+use user_lib::syscall::{exec, exit, fork, getpid, sys_yield, waitpid};
 
 #[no_mangle]
 fn main() {
     fork_and_exec("terminal"); // pid = 1
     fork_and_exec("idle"); // pid = 2
     fork_and_exec("shell"); // pid = 3
-    // fork_and_exec("virtio-blk"); // pid = 4
+                            // fork_and_exec("virtio-blk"); // pid = 4
+    fork_and_exec("rtc"); // pid=4
 
     loop {
         match waitpid(-1, None, 0) {
