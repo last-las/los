@@ -2,8 +2,8 @@ use core::alloc::Layout;
 use buddy_allocator::{Heap, LockedHeap};
 use crate::syscall::{brk, getpid};
 
-// 20220526 change from 0x80_000 to 0x8000
-const USER_HEAP_SIZE: usize = 0x8000;
+// 20220527 change from 0x80_000 to 0x2000
+const USER_HEAP_SIZE: usize = 0x2000;
 
 // TODO-FUTURE: The size of heap should be dynamic rather than fix size `USER_HEAP_ALLOCATOR`
 #[global_allocator]

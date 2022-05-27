@@ -80,8 +80,8 @@ impl Heap {
     pub unsafe fn add_to_heap(&mut self, mut start: usize, mut end: usize) {
         sbi_println!("\nprocess pid: {}", getpid());
         sbi_println!("trying to add to heap...");
-        sbi_println!("non-aligned start: {}", start);
-        sbi_println!("no-aligned end: {}", end);
+        // sbi_println!("non-aligned start: {}", start);
+        // sbi_println!("no-aligned end: {}", end);
         // avoid unaligned access on some platforms
         start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
         end = end & (!size_of::<usize>() + 1);
@@ -92,7 +92,7 @@ impl Heap {
         let mut total = 0;
         let mut current_start = start;
 
-        sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
+        // sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
         while current_start + size_of::<usize>() <= end {
             let lowbit = current_start & (!current_start + 1);
             sbi_println!("lowbit: {}", lowbit);
@@ -105,16 +105,17 @@ impl Heap {
             current_start += size;
         }
 
-        sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
+        // sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
         self.total += total;
     }
 
+    // please rescue my life T^T
     /// Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap_rescue(&mut self, mut start: usize, mut end: usize) {
         sbi_println!("\nprocess pid: {}", getpid());
         sbi_println!("trying to add to heap...");
-        sbi_println!("non-aligned start: {}", start);
-        sbi_println!("no-aligned end: {}", end);
+        // sbi_println!("non-aligned start: {}", start);
+        // sbi_println!("no-aligned end: {}", end);
         // avoid unaligned access on some platforms
         start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
         end = end & (!size_of::<usize>() + 1);
@@ -125,13 +126,13 @@ impl Heap {
         let mut total = 0;
         let mut current_start = start;
 
-        sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
+        // sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
         let size = end - current_start;
         total += size;
         self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
         current_start += size;
 
-        sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
+        // sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
         self.total += total;
     }
 
@@ -198,17 +199,19 @@ impl Heap {
         let class = size.trailing_zeros() as usize;
 
         unsafe {
-            // Put back into free list
+            // Put back into free list，把要回收的block放回链表尾
             self.free_list[class].push(ptr.as_ptr() as *mut usize);
 
             // Merge free buddy lists
             let mut current_ptr = ptr.as_ptr() as usize;
             let mut current_class = class;
             while current_class < self.free_list.len() {
+                // 找到伙伴块的地址
                 let buddy = current_ptr ^ (1 << current_class);
                 let mut flag = false;
                 for block in self.free_list[current_class].iter_mut() {
                     if block.value() as usize == buddy {
+                        // 拿出伙伴块
                         block.pop();
                         flag = true;
                         break;
@@ -221,6 +224,7 @@ impl Heap {
                     current_ptr = min(current_ptr, buddy);
                     current_class += 1;
                     self.free_list[current_class].push(current_ptr as *mut usize);
+                    // sbi_println!("free buddy fuound: {}\n{:#?}", buddy, self.free_list);
                 } else {
                     break;
                 }
@@ -336,7 +340,7 @@ pub struct LockedHeap {
 
 #[cfg(feature = "use_spin")]
 impl LockedHeap {
-    /// Creates an empty heap
+    /// Creates an empty heap with rescue function
     pub const fn new(rescue: fn(&mut Heap, Layout)) -> LockedHeap {
         LockedHeap {
             inner: Mutex::new(Heap::new()),
@@ -358,7 +362,14 @@ impl LockedHeap {
                 let allocated_size = max(
                     layout.size().next_power_of_two(),
                     max(layout.align(), size_of::<usize>()),
-                );
+                ) * 2;
+                // get the largest size of free chunk
+                // let mut allocated_size = 0;
+                // for class in (0..heap.free_list.len()).rev() {
+                //     if !heap.free_list[class].is_empty() {
+                //         allocated_size = (1 << class) as usize;
+                //         break;
+                // }
                 sbi_println!("allocated size is {}", allocated_size);
                 // suppose that current heap has been used up
                 let new_brk = brk(Some(cur_brk + allocated_size)).unwrap();// if Err, panic
@@ -418,7 +429,7 @@ unsafe impl GlobalAlloc for LockedHeap {
 }
 
 pub(crate) fn prev_power_of_two(num: usize) -> usize {
-    // 返回二进制表示中前导零的数量
+    // leading_zeros()返回二进制表示中前导零的数量
     // let n = Wrapping(u64::MAX) >> 2;
     // assert_eq!(n.leading_zeros(), 2);
     1 << (8 * (size_of::<usize>()) - num.leading_zeros() as usize - 1)

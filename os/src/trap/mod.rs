@@ -36,6 +36,7 @@ pub fn trap_handler() {
         },
         _ => {
             info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
+            // sstatus ：其中的一些控制位标志发生异常时的处理器状态，如 sstatus.SPP 表示发生异常时处理器在哪个特权级
             match sstatus::read().spp() {
                 sstatus::SPP::User => schedule(RuntimeFlags::ZOMBIE(1)),
                 sstatus::SPP::Supervisor => panic!("Supervisor trap!"),
