@@ -1,6 +1,0 @@
-[workspace]
-members = [
-    "os",
-]
-
-exclude = [ "user", "share", "easy-fs", "easy-fs-fuse" ]
