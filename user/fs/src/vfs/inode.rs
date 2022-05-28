@@ -7,6 +7,7 @@ use share::file::FileTypeFlag;
 use share::syscall::error::SysError;
 
 pub struct VfsInode {
+    //fat32中表示目录项所在的簇号和相对簇的偏移
     pub ino: usize,
     pub size: usize,
     pub rdev: Option<Rdev>,

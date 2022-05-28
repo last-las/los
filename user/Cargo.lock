@@ -24,22 +24,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "easy-fs"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "share",
- "spin 0.7.1",
-]
-
-[[package]]
 name = "fs"
 version = "0.1.0"
 dependencies = [
  "bitflags",
- "easy-fs",
  "lazy_static",
  "share",
+ "simple-fat32",
  "spin 0.7.1",
  "user_lib",
 ]
@@ -75,6 +66,15 @@ name = "share"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "simple-fat32"
+version = "0.0.1"
+dependencies = [
+ "lazy_static",
+ "share",
+ "spin 0.7.1",
 ]
 
 [[package]]
