@@ -1,5 +1,5 @@
 [package]
-name = "rtc"
+name = "k210"
 version = "0.1.0"
 edition = "2018"
 
@@ -7,10 +7,3 @@ edition = "2018"
 
 [dependencies]
 user_lib = { path = "../../lib" }
-share = { path = "../../../share" }
-k210 = { path = "../k210" }
-
-
-[features]
-board_qemu = []
-board_k210 = []

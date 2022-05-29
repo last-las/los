@@ -3,6 +3,8 @@
 
 use core::panic;
 
+use crate::mods::date_mod::read_date;
+use crate::mods::time_mod::read_time;
 use crate::rtc::Rtc;
 pub mod mods;
 mod rtc;
@@ -14,6 +16,8 @@ use share::ipc::Msg;
 use share::ipc::*;
 use user_lib::syscall::*;
 
+use core::assert;
+
 #[no_mangle]
 fn main() {
     let mut rtc = Rtc::new();
@@ -21,22 +25,18 @@ fn main() {
 
     println!("rtc init.");
 
-    rtc.irq_register(0);
+    rtc.irq_register(1);
 
     // interrupt_ctrl_mod::rtc_alarm_irq_register(0);
 
     let (y, mn, d, h, m, s) = (2022, 5, 27, 19, 55, 00);
-    rtc.set_time(y, mn, d, h, m, s);
+    rtc.timer_set(y, mn, d, h, m, s);
 
     let (hour, min, sec) = rtc.read_time();
     let (year, mon, day) = rtc.read_date();
 
     //? date&time test
     assert!(year == y && mon == mn && day == d && hour == h && min == m && sec == s);
-    // panic!(
-    //     "{}/{}/{} {}:{:02}:{:02} <{}>",
-    //     year, mon, day, hour, min, sec, week
-    // ); // 2001/12/11 10:9:8
 
     rtc.set_alarm(2022, 5, 27, 19, 56, 00);
     let (hour, min, sec) = rtc.read_alarm_time();
@@ -49,7 +49,6 @@ fn main() {
 
     loop {
         receive(-1, &mut message).unwrap();
-        println!("ok");
 
         let nr = message.args[DEVICE];
         assert_eq!(nr, 0);
@@ -71,7 +70,7 @@ fn main() {
 
 pub fn do_interrupt(rtc: &mut Rtc) {
     rtc.tick_interrupt_enable(true);
-    panic!("time: {:?}", rtc.read_time());
+    println!("interrupt! time: {:?}", rtc.read_time());
 }
 
 pub fn do_open(rtc: &mut Rtc, message: Msg) {}

@@ -62,10 +62,10 @@ pub fn handle_interrupt() {
                 notify(1);
                 disable_uart_interrupt();
             }
-            // RTC_IRQ => {
-            //     notify(RTC_PID);
-            //     disable_rtc_interrupt();
-            // }
+            RTC_IRQ => {
+                notify(RTC_PID);
+                disable_rtc_interrupt();
+            }
             _ => {
                 panic!("Unknown external interrupt: {}", interrupt);
             }

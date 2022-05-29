@@ -1,7 +1,6 @@
 pub mod sysctl_mod {
     use core::arch::asm;
 
-    use user_lib::syscall::dev_write;
     const SYSCTL_ADDRESS: usize = 0x5044_0000;
     const SOFT_RESET: usize = 0x30;
     const PERI_RESET: usize = 0x34;
@@ -228,7 +227,7 @@ pub mod register_ctrl_mod {
                 write_write_enable(false);
             }
         }
-        sysctl_mod::sync_clock_freq();
+        // sysctl_mod::sync_clock_freq();
     }
 
     fn read_register_ctrl_reg() -> u32 {
@@ -437,8 +436,8 @@ pub mod date_mod {
     // 读取日期
     pub fn read_date() -> (usize, usize, usize, usize) {
         (
-            read_year() as usize,
-            read_month() as usize,
+            read_year() as usize + 1900,
+            read_month() as usize + 1,
             read_day() as usize,
             read_week() as usize,
         )

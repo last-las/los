@@ -1,6 +1,7 @@
 use crate::config::{
-    FRAME_SIZE, KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, RAM_SIZE, RAM_START_ADDRESS,
-    RTC_BASE_ADDRESS, SYSCTL_ADDRESS, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
+    DMAC_ADDRESS, FPIOA_ADDRESS, FRAME_SIZE, GPIOHS_ADDRESS, KERNEL_MAPPING_OFFSET,
+    RAM_MAPPING_OFFSET, RAM_SIZE, RAM_START_ADDRESS, RTC_BASE_ADDRESS, SPI0_ADDRESS,
+    SYSCTL_ADDRESS, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
 };
 use crate::kmain;
 use crate::mm::address::PhysicalAddress;
@@ -117,11 +118,47 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
+            // fpioa mapping
+            root_table
+                .map_with_offset(
+                    FPIOA_ADDRESS,
+                    FPIOA_ADDRESS + 0x10000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // gpiohs mapping
+            root_table
+                .map_with_offset(
+                    GPIOHS_ADDRESS,
+                    GPIOHS_ADDRESS + 0x1000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
             // rtc mapping
             root_table
                 .map_with_offset(
                     RTC_BASE_ADDRESS,
                     RTC_BASE_ADDRESS + 0x10000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // spi0 mapping
+            root_table
+                .map_with_offset(
+                    SPI0_ADDRESS,
+                    SPI0_ADDRESS + 0x10000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // dmac mapping
+            root_table
+                .map_with_offset(
+                    DMAC_ADDRESS,
+                    DMAC_ADDRESS + 0x10000,
                     RAM_MAPPING_OFFSET,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
