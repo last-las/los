@@ -14,6 +14,7 @@ use std::sync::Mutex;
 use std::sync::Arc;
 #[allow(unused)]
 use clap::{Arg, App};
+use simple_fat32::BlockDevice;
 
 const BLOCK_SZ: usize = 512;
 
