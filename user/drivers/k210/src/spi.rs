@@ -5,59 +5,24 @@ use crate::dmac::{address_increment, burst_length, transfer_width, DMAC};
 use crate::sysctl::{self, dma_channel};
 
 use self::spi::{ctrlr0, spi_ctrlr0, SPI0};
-use core::marker::Sized;
-mod spi;
+pub mod spi;
 
-/// Extension trait that constrains SPI peripherals
-pub trait SPIExt: Sized {
-    /// Constrains SPI peripheral so it plays nicely with the other abstractions
-    fn constrain(self) -> SPIImpl<Self>;
-}
 use core::convert::TryInto;
-use core::ops::Deref;
-/// Trait for generalizing over SPI0 and SPI1 (SPI2 is slave-only and SPI3 is !!!special!!!)
-pub trait SPI01: Deref<Target = SPI0> {
-    #[doc(hidden)]
-    const CLK: sysctl::clock;
-    #[doc(hidden)]
-    const DIV: sysctl::threshold;
-    #[doc(hidden)]
-    const DMA_RX: sysctl::dma_select;
-    #[doc(hidden)]
-    const DMA_TX: sysctl::dma_select;
+
+const CLK: sysctl::clock = sysctl::clock::SPI0;
+const DIV: sysctl::threshold = sysctl::threshold::SPI0;
+const DMA_RX: sysctl::dma_select = sysctl::dma_select::SSI0_RX_REQ;
+const DMA_TX: sysctl::dma_select = sysctl::dma_select::SSI0_TX_REQ;
+
+pub struct SPI {
+    spi: SPI0,
 }
 
-impl SPI01 for SPI0 {
-    const CLK: sysctl::clock = sysctl::clock::SPI0;
-    const DIV: sysctl::threshold = sysctl::threshold::SPI0;
-    const DMA_RX: sysctl::dma_select = sysctl::dma_select::SSI0_RX_REQ;
-    const DMA_TX: sysctl::dma_select = sysctl::dma_select::SSI0_TX_REQ;
-}
-// impl SPI01 for SPI1 {
-//     const CLK: sysctl::clock = sysctl::clock::SPI1;
-//     const DIV: sysctl::threshold = sysctl::threshold::SPI1;
-//     const DMA_RX: sysctl::dma_select = sysctl::dma_select::SSI1_RX_REQ;
-//     const DMA_TX: sysctl::dma_select = sysctl::dma_select::SSI1_TX_REQ;
-// }
-
-impl<SPI: SPI01> SPIExt for SPI {
-    fn constrain(self) -> SPIImpl<SPI> {
-        SPIImpl::<SPI>::new(self)
+impl SPI {
+    pub fn new() -> Self {
+        Self { spi: SPI0::new() }
     }
 }
-
-pub struct SPIImpl<IF> {
-    spi: IF,
-}
-
-// /** Borrow frame format from pac */
-// pub use ctrlr0::FRAME_FORMAT_A as frame_format;
-// /** Borrow tmod from pac */
-// pub use ctrlr0::TMOD_A as tmod;
-// /** Borrow work mode from pac */
-// pub use ctrlr0::WORK_MODE_A as work_mode;
-// /** Borrow aitm from pac */
-// pub use spi_ctrlr0::AITM_A as aitm;
 
 use core::convert::Into;
 use core::marker::Copy;
@@ -67,47 +32,6 @@ pub use ctrlr0::FRAME_FORMAT_A as frame_format;
 pub use ctrlr0::TMOD_A as tmod;
 pub use ctrlr0::WORK_MODE_A as work_mode;
 pub use spi_ctrlr0::AITM_A as aitm;
-
-pub trait SPI {
-    fn configure(
-        &self,
-        work_mode: work_mode,
-        frame_format: frame_format,
-        data_bit_length: u8,
-        endian: u32,
-        instruction_length: u8,
-        address_length: u8,
-        wait_cycles: u8,
-        instruction_address_trans_mode: aitm,
-        tmod: tmod,
-    );
-    fn set_clk_rate(&self, spi_clk: u32) -> u32;
-    fn recv_data<X: TruncU32>(&self, chip_select: u32, rx: &mut [X]);
-    fn recv_data_dma(
-        &self,
-        dmac: &DMAC,
-        channel_num: dma_channel,
-        chip_select: u32,
-        rx: &mut [u32],
-    );
-    fn send_data<X: Into<u32> + Copy>(&self, chip_select: u32, tx: &[X]);
-    fn send_data_dma(&self, dmac: &DMAC, channel_num: dma_channel, chip_select: u32, tx: &[u32]);
-    fn fill_data(&self, chip_select: u32, value: u32, tx_len: usize);
-    fn fill_data_dma(
-        &self,
-        dmac: &DMAC,
-        channel_num: dma_channel,
-        chip_select: u32,
-        value: u32,
-        tx_len: usize,
-    );
-}
-
-impl<IF: SPI01> SPIImpl<IF> {
-    pub fn new(spi: IF) -> Self {
-        Self { spi }
-    }
-}
 
 /** Trait for trunction of a SPI frame from u32 register to other unsigned integer types. */
 pub trait TruncU32 {
@@ -129,9 +53,9 @@ impl TruncU32 for u8 {
     }
 }
 
-impl<IF: SPI01> SPI for SPIImpl<IF> {
+impl SPI {
     /// Configure SPI transaction
-    fn configure(
+    pub fn configure(
         &self,
         work_mode: work_mode,
         frame_format: frame_format,
@@ -156,68 +80,66 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
         assert!(address_length % 4 == 0 && address_length <= 60);
         let addr_l: u8 = address_length / 4;
 
-        unsafe {
-            self.spi.imr.write(0x00);
-            self.spi.dmacr.write(0x00);
-            self.spi.dmatdlr.write(0x10);
-            self.spi.dmardlr.write(0x00);
-            self.spi.ser.write(0x00);
-            self.spi.ssienr.write(0x00);
-            self.spi
-                .ctrlr0
-                .write_work_mode(work_mode)
-                .write_tmod(tmod)
-                .write_frame_format(frame_format)
-                .write_data_length(data_bit_length - 1);
-            // self.spi.ctrlr0.write(|w| {
-            //     w.work_mode()
-            //         .variant(work_mode)
-            //         .tmod()
-            //         .variant(tmod)
-            //         .frame_format()
-            //         .variant(frame_format)
-            //         .data_length()
-            //         .bits(data_bit_length - 1)
-            // });
-            self.spi
-                .spi_ctrlr0
-                .write_aitm(instruction_address_trans_mode)
-                .write_addr_length(addr_l)
-                .write_inst_length(inst_l)
-                .write_wait_cycle(wait_cycles);
-            // self.spi.spi_ctrlr0.write(|w| {
-            //     w.aitm()
-            //         .variant(instruction_address_trans_mode)
-            //         .addr_length()
-            //         .bits(addr_l)
-            //         .inst_length()
-            //         .bits(inst_l)
-            //         .wait_cycles()
-            //         .bits(wait_cycles)
-            // });
-            self.spi.endian.write(endian);
-            // self.spi.endian.write(|w| w.bits(endian));
-        }
+        self.spi.imr.write(0x00);
+        self.spi.dmacr.write(0x00);
+        self.spi.dmatdlr.write(0x10);
+        self.spi.dmardlr.write(0x00);
+        self.spi.ser.write(0x00);
+        self.spi.ssienr.write(0x00);
+        self.spi
+            .ctrlr0
+            .write_work_mode(work_mode)
+            .write_tmod(tmod)
+            .write_frame_format(frame_format)
+            .write_data_length(data_bit_length - 1);
+        // self.spi.ctrlr0.write(|w| {
+        //     w.work_mode()
+        //         .variant(work_mode)
+        //         .tmod()
+        //         .variant(tmod)
+        //         .frame_format()
+        //         .variant(frame_format)
+        //         .data_length()
+        //         .bits(data_bit_length - 1)
+        // });
+        self.spi
+            .spi_ctrlr0
+            .write_aitm(instruction_address_trans_mode)
+            .write_addr_length(addr_l)
+            .write_inst_length(inst_l)
+            .write_wait_cycle(wait_cycles);
+        // self.spi.spi_ctrlr0.write(|w| {
+        //     w.aitm()
+        //         .variant(instruction_address_trans_mode)
+        //         .addr_length()
+        //         .bits(addr_l)
+        //         .inst_length()
+        //         .bits(inst_l)
+        //         .wait_cycles()
+        //         .bits(wait_cycles)
+        // });
+        self.spi.endian.write(endian);
+        // self.spi.endian.write(|w| w.bits(endian));
     }
 
     /// Set SPI clock rate
-    fn set_clk_rate(&self, spi_clk: u32) -> u32 {
-        sysctl::clock_enable(IF::CLK);
-        sysctl::clock_set_threshold(IF::DIV, 0);
+    pub fn set_clk_rate(&self, spi_clk: u32) -> u32 {
+        sysctl::clock_enable(CLK);
+        sysctl::clock_set_threshold(DIV, 0);
         let clock_freq: u32 = sysctl::clock_get_freq(sysctl::clock::SPI0);
         let spi_baudr = clock_freq / spi_clk;
         // Clamp baudrate divider to valid range
         //panic!("{} / {} = {}", clock_freq, spi_clk, spi_baudr);
         let mut spi_baudr = cmp::min(cmp::max(spi_baudr, 2), 65534);
-        unsafe {
-            self.spi.baudr.write(spi_baudr);
-        }
+
+        self.spi.baudr.write(spi_baudr);
+
         clock_freq / spi_baudr
     }
 
     /// Receive arbitrary data
     // make sure to set tmod to tmod::RECV
-    fn recv_data<X: TruncU32>(&self, chip_select: u32, rx: &mut [X]) {
+    pub fn recv_data<X: TruncU32>(&self, chip_select: u32, rx: &mut [X]) {
         if rx.len() == 0 {
             return;
         }
@@ -248,7 +170,7 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
 
     /// Receive 32-bit data using DMA.
     // make sure to set tmod to tmod::RECV
-    fn recv_data_dma(
+    pub fn recv_data_dma(
         &self,
         dmac: &DMAC,
         channel_num: dma_channel,
@@ -258,36 +180,34 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
         if rx.len() == 0 {
             return;
         }
-        unsafe {
-            // self.spi
-            //     .ctrlr1
-            //     .write(|w| w.bits((rx.len() - 1).try_into().unwrap()));
-            self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
-            self.spi.ssienr.write(0x01);
-            self.spi.dmacr.write(0x3); /*enable dma receive */
+        // self.spi
+        //     .ctrlr1
+        //     .write(|w| w.bits((rx.len() - 1).try_into().unwrap()));
+        self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
+        self.spi.ssienr.write(0x01);
+        self.spi.dmacr.write(0x3); /*enable dma receive */
 
-            sysctl::dma_select(channel_num, IF::DMA_RX);
-            dmac.set_single_mode(
-                channel_num,
-                self.spi.dr.as_ptr() as u64,
-                rx.as_ptr() as u64,
-                address_increment::NOCHANGE,
-                address_increment::INCREMENT,
-                burst_length::LENGTH_1,
-                transfer_width::WIDTH_32,
-                rx.len() as u32,
-            );
-            self.spi.dr[0].write(0xffffffff);
-            self.spi.ser.write(1 << chip_select);
-            dmac.wait_done(channel_num);
+        sysctl::dma_select(channel_num, DMA_RX);
+        dmac.set_single_mode(
+            channel_num,
+            self.spi.dr.as_ptr() as u64,
+            rx.as_ptr() as u64,
+            address_increment::NOCHANGE,
+            address_increment::INCREMENT,
+            burst_length::LENGTH_1,
+            transfer_width::WIDTH_32,
+            rx.len() as u32,
+        );
+        self.spi.dr[0].write(0xffffffff);
+        self.spi.ser.write(1 << chip_select);
+        dmac.wait_done(channel_num);
 
-            self.spi.ser.write(0x00);
-            self.spi.ssienr.write(0x00);
-        }
+        self.spi.ser.write(0x00);
+        self.spi.ssienr.write(0x00);
     }
 
     /// Send arbitrary data
-    fn send_data<X: Into<u32> + Copy>(&self, chip_select: u32, tx: &[X]) {
+    pub fn send_data<X: Into<u32> + Copy>(&self, chip_select: u32, tx: &[X]) {
         unsafe {
             self.spi.ser.write(1 << chip_select);
             self.spi.ssienr.write(0x01);
@@ -315,12 +235,18 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
     /// data unit in a 32-bit word.
     /// This is intentionally left to the caller: the difficulty here is to avoid the need for alloc/freeing()
     /// buffers every time as the SDK does because this is highly undesirable!
-    fn send_data_dma(&self, dmac: &DMAC, channel_num: dma_channel, chip_select: u32, tx: &[u32]) {
+    pub fn send_data_dma(
+        &self,
+        dmac: &DMAC,
+        channel_num: dma_channel,
+        chip_select: u32,
+        tx: &[u32],
+    ) {
         unsafe {
             self.spi.dmacr.write(0x2); /*enable dma transmit*/
             self.spi.ssienr.write(0x01);
 
-            sysctl::dma_select(channel_num, IF::DMA_TX);
+            sysctl::dma_select(channel_num, DMA_TX);
             dmac.set_single_mode(
                 channel_num,
                 tx.as_ptr() as u64,
@@ -343,7 +269,7 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
     }
 
     /// Send repeated data
-    fn fill_data(&self, chip_select: u32, value: u32, mut tx_len: usize) {
+    pub fn fill_data(&self, chip_select: u32, value: u32, mut tx_len: usize) {
         unsafe {
             self.spi.ser.write(1 << chip_select);
             self.spi.ssienr.write(0x01);
@@ -366,7 +292,7 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
     }
 
     /// Send repeated data (using DMA)
-    fn fill_data_dma(
+    pub fn fill_data_dma(
         &self,
         dmac: &DMAC,
         channel_num: dma_channel,
@@ -378,7 +304,7 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
             self.spi.dmacr.write(0x2); /*enable dma transmit*/
             self.spi.ssienr.write(0x01);
 
-            sysctl::dma_select(channel_num, IF::DMA_TX);
+            sysctl::dma_select(channel_num, DMA_TX);
             let val = [value];
             // simple trick to repeating a value: don't increment the source address
             dmac.set_single_mode(

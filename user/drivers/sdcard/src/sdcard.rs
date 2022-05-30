@@ -1,26 +1,34 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 #![allow(unused)]
+extern crate alloc;
 
-// use k210_pac::{Peripherals, SPI0};
-// use k210_soc::spi::{aitm, frame_format, tmod, work_mode, SPIExt, SPIImpl, SPI};
+use alloc::sync::Arc;
+use core::any::Any;
+use core::assert;
+use core::convert::TryInto;
+use k210::sleep::usleep;
+use k210::spi::{aitm, frame_format, tmod, work_mode, SPI};
+use k210::*;
 use lazy_static::*;
 use spin::Mutex;
 use user_lib::syscall::get_time;
 
-use core::assert;
+type BlockDeviceImpl = crate::SDCardWrapper;
 
-use super::BlockDevice;
-use core::convert::TryInto;
+pub trait BlockDevice: Send + Sync + Any {
+    fn read_block(&self, block_id: usize, buf: &mut [u8]);
+    fn write_block(&self, block_id: usize, buf: &[u8]);
+}
 
-use k210::*;
+lazy_static! {
+    pub static ref BLOCK_DEVICE: Arc<dyn BlockDevice> = Arc::new(BlockDeviceImpl::new());
+}
 
-pub struct SDCard<SPI> {
+pub struct SDCard {
     spi: SPI,
     spi_cs: u32,
     cs_gpionum: u8,
-    //dmac: &'a DMAC,
-    //channel: dma_channel,
 }
 
 /*
@@ -156,41 +164,33 @@ pub struct SDCardInfo {
     pub CardBlockSize: u64, /* Card Block Size */
 }
 
-impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
-    pub fn new(
-        spi: X,
-        spi_cs: u32,
-        cs_gpionum: u8, /*, dmac: &'a DMAC, channel: dma_channel*/
-    ) -> Self {
+impl SDCard {
+    pub fn new(spi: SPI, spi_cs: u32, cs_gpionum: u8) -> Self {
         Self {
             spi,
             spi_cs,
             cs_gpionum,
-            /*
-            dmac,
-            channel,
-             */
         }
     }
 
-    fn CS_HIGH(&self) {
+    pub fn CS_HIGH(&self) {
         gpiohs::set_pin(self.cs_gpionum, true);
     }
 
-    fn CS_LOW(&self) {
+    pub fn CS_LOW(&self) {
         gpiohs::set_pin(self.cs_gpionum, false);
     }
 
-    fn HIGH_SPEED_ENABLE(&self) {
+    pub fn HIGH_SPEED_ENABLE(&self) {
         self.spi.set_clk_rate(10000000); //10000000
     }
 
-    fn lowlevel_init(&self) {
+    pub fn lowlevel_init(&self) {
         gpiohs::set_direction(self.cs_gpionum, gpio::direction::OUTPUT);
         self.spi.set_clk_rate(200000);
     }
 
-    fn write_data(&self, data: &[u8]) {
+    pub fn write_data(&self, data: &[u8]) {
         self.spi.configure(
             work_mode::MODE0,
             frame_format::STANDARD,
@@ -205,25 +205,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
         self.spi.send_data(self.spi_cs, data);
     }
 
-    /*
-    fn write_data_dma(&self, data: &[u32]) {
-        self.spi.configure(
-            work_mode::MODE0,
-            frame_format::STANDARD,
-            8, /* data bits */
-            0, /* endian */
-            0, /*instruction length*/
-            0, /*address length*/
-            0, /*wait cycles*/
-            aitm::STANDARD,
-            tmod::TRANS,
-        );
-        self.spi
-            .send_data_dma(self.dmac, self.channel, self.spi_cs, data);
-    }
-     */
-
-    fn read_data(&self, data: &mut [u8]) {
+    pub fn read_data(&self, data: &mut [u8]) {
         self.spi.configure(
             work_mode::MODE0,
             frame_format::STANDARD,
@@ -245,7 +227,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
      * @param  crc: The CRC.
      * @retval None
      */
-    fn send_cmd(&self, cmd: CMD, arg: u32, crc: u8) {
+    pub fn send_cmd(&self, cmd: CMD, arg: u32, crc: u8) {
         /* SD chip select low */
         self.CS_LOW();
         /* Send the Cmd bytes */
@@ -266,7 +248,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
     }
 
     /* Send end-command sequence to SD card */
-    fn end_cmd(&self) {
+    pub fn end_cmd(&self) {
         /* SD chip select high */
         self.CS_HIGH();
         /* Send the cmd byte */
@@ -280,7 +262,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
      *         - 0xFF: Sequence failed
      *         - 0: Sequence succeed
      */
-    fn get_response(&self) -> u8 {
+    pub fn get_response(&self) -> u8 {
         let result = &mut [0u8];
         let mut timeout = 0x0FFF;
         /* Check if response is got or a timeout is happen */
@@ -305,7 +287,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
      *         - status 110: Data rejected due to a Write error.
      *         - status 111: Data rejected due to other error.
      */
-    fn get_dataresponse(&self) -> u8 {
+    pub fn get_dataresponse(&self) -> u8 {
         let response = &mut [0u8];
         /* Read resonse */
         self.read_data(response);
@@ -332,7 +314,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
      *         - `Err()`: Sequence failed
      *         - `Ok(info)`: Sequence succeed
      */
-    fn get_csdregister(&self) -> Result<SDCardCSD, ()> {
+    pub fn get_csdregister(&self) -> Result<SDCardCSD, ()> {
         let mut csd_tab = [0u8; 18];
         /* Send CMD9 (CSD register) */
         self.send_cmd(CMD::CMD9, 0, 0);
@@ -415,7 +397,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
      *         - `Err()`: Sequence failed
      *         - `Ok(info)`: Sequence succeed
      */
-    fn get_cidregister(&self) -> Result<SDCardCID, ()> {
+    pub fn get_cidregister(&self) -> Result<SDCardCID, ()> {
         let mut cid_tab = [0u8; 18];
         /* Send CMD10 (CID register) */
         self.send_cmd(CMD::CMD10, 0, 0);
@@ -468,7 +450,7 @@ impl</*'a,*/ X: SPI> SDCard</*'a,*/ X> {
      *         - `Err(())`: Sequence failed
      *         - `Ok(info)`: Sequence succeed
      */
-    fn get_cardinfo(&self) -> Result<SDCardInfo, ()> {
+    pub fn get_cardinfo(&self) -> Result<SDCardInfo, ()> {
         let mut info = SDCardInfo {
             SD_csd: self.get_csdregister()?,
             SD_cid: self.get_cidregister()?,
@@ -687,32 +669,34 @@ const SD_CS: u32 = 3;
 
 /** Connect pins to internal functions */
 fn io_init() {
-    fpioa::set_function(io::SPI0_SCLK, fpioa::function::SPI0_SCLK);
-    fpioa::set_function(io::SPI0_MOSI, fpioa::function::SPI0_D0);
-    fpioa::set_function(io::SPI0_MISO, fpioa::function::SPI0_D1);
-    fpioa::set_function(io::SPI0_CS0, fpioa::function::gpiohs(SD_CS_GPIONUM));
-    fpioa::set_io_pull(io::SPI0_CS0, fpioa::pull::DOWN); // GPIO output=pull down
+    fpioa::set_function(fpioa::io::SPI0_SCLK, fpioa::function::SPI0_SCLK);
+    fpioa::set_function(fpioa::io::SPI0_MOSI, fpioa::function::SPI0_D0);
+    fpioa::set_function(fpioa::io::SPI0_MISO, fpioa::function::SPI0_D1);
+    fpioa::set_function(fpioa::io::SPI0_CS0, fpioa::function::gpiohs(SD_CS_GPIONUM));
+    fpioa::set_io_pull(fpioa::io::SPI0_CS0, fpioa::pull::DOWN); // GPIO output=pull down
 }
 
-lazy_static! {
-    static ref PERIPHERALS: Mutex<Peripherals> = Mutex::new(Peripherals::take().unwrap());
-}
+// lazy_static! {
+//     static ref PERIPHERALS: Mutex<Peripherals> = Mutex::new(Peripherals::take().unwrap());
+// }
 
-fn init_sdcard() -> SDCard<SPIImpl<SPI0>> {
+fn init_sdcard() -> SDCard {
     // wait previous output
     usleep(100000);
-    let peripherals = unsafe { Peripherals::steal() };
+    // let peripherals = unsafe { Peripherals::steal() };
     sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL1, 300_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL2, 45_158_400).unwrap();
     let clocks = clock::Clocks::new();
 
     // peripherals.UARTHS.configure(115_200.bps(), &clocks);
-    UART_mod::configure(115_200.bps(), &clocks);
+    // UART_mod::configure(115_200.bps(), &clocks);
 
     io_init();
 
-    let spi = peripherals.SPI0.constrain();
+    // let spi = SPI0::new().constrain();
+    // let spi = SPI0::new();
+    let spi = SPI::new();
     let sd = SDCard::new(spi, SD_CS, SD_CS_GPIONUM);
     let info = sd.init().unwrap();
     let num_sectors = info.CardCapacity / 512;
@@ -722,7 +706,7 @@ fn init_sdcard() -> SDCard<SPIImpl<SPI0>> {
     sd
 }
 
-pub struct SDCardWrapper(Mutex<SDCard<SPIImpl<SPI0>>>);
+pub struct SDCardWrapper(Mutex<SDCard>);
 
 impl SDCardWrapper {
     pub fn new() -> Self {

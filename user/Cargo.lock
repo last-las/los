@@ -41,6 +41,7 @@ dependencies = [
 name = "k210"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "user_lib",
 ]
 
@@ -68,6 +69,17 @@ version = "0.1.0"
 dependencies = [
  "k210",
  "share",
+ "user_lib",
+]
+
+[[package]]
+name = "sdcard"
+version = "0.1.0"
+dependencies = [
+ "k210",
+ "lazy_static",
+ "share",
+ "spin 0.7.1",
  "user_lib",
 ]
 

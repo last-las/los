@@ -40,6 +40,28 @@ pub struct SPI0 {
     pub endian: ENDIAN,
 }
 
+impl SPI0 {
+    pub fn new() -> Self {
+        Self {
+            ctrlr0: CTRLR0 {},
+            ctrlr1: CTRLR1 {},
+            ssienr: SSIENR {},
+            ser: SER {},
+            baudr: BAUDR {},
+            txflr: TXFLR {},
+            rxflr: RXFLR {},
+            sr: SR {},
+            imr: IMR {},
+            dmacr: DMACR {},
+            dmatdlr: DMATDLR {},
+            dmardlr: DMARDLR {},
+            dr: [DR {}; 36],
+            spi_ctrlr0: SPI_CTRLR0 {},
+            endian: ENDIAN {},
+        }
+    }
+}
+
 impl Deref for SPI0 {
     type Target = SPI0;
     fn deref(&self) -> &Self::Target {
@@ -363,7 +385,7 @@ pub mod dr {
     use user_lib::syscall::{dev_read_u32, dev_write_u32};
 
     use super::SPI0_ADDRESS;
-
+    #[derive(Clone, Copy)]
     pub struct DR {}
     impl DR {
         pub fn read(&self) -> u32 {

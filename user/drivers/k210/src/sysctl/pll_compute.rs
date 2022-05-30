@@ -551,24 +551,4 @@ mod tests {
             brute_force_params(freq_in, freq_out),
         )
     }
-
-    #[test]
-    fn test_compute_params() {
-        assert_eq!(compute_params(26_000_000, 0), None);
-        assert_eq!(compute_params(0, 390_000_000), None);
-        assert_eq!(compute_params(26_000_000, 2_000_000_000), None);
-        assert_eq!(compute_params(2_000_000_000, 390_000_000), None);
-        assert_eq!(compute_params(20_000_000, 1_500_000_000), None);
-
-        assert!(verify_compute_params(26_000_000, 1_500_000_000));
-        assert!(verify_compute_params(26_000_000, 1_000_000_000));
-        assert!(verify_compute_params(26_000_000, 800_000_000));
-        assert!(verify_compute_params(26_000_000, 700_000_000));
-        assert!(verify_compute_params(26_000_000, 300_000_000));
-        assert!(verify_compute_params(26_000_000, 45_158_400));
-        assert!(verify_compute_params(26_000_000, 27_000_000));
-        assert!(verify_compute_params(27_000_000, 26_000_000));
-        assert!(verify_compute_params(390_000_000, 26_000_000));
-        assert!(verify_compute_params(390_000_000, 383_846_400));
-    }
 }
