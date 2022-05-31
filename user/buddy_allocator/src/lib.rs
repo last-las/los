@@ -95,10 +95,7 @@ impl Heap {
         // sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
         while current_start + size_of::<usize>() <= end {
             let lowbit = current_start & (!current_start + 1);
-            sbi_println!("lowbit: {}", lowbit);
-            sbi_println!("prev_power_of_two:{}", prev_power_of_two(end - current_start));
             let size = min(lowbit, prev_power_of_two(end - current_start));
-            sbi_println!("size:min(lowbit, prev_power_of_two) {}", size);
             total += size;
 
             self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
@@ -113,9 +110,7 @@ impl Heap {
     /// Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap_rescue(&mut self, mut start: usize, mut end: usize) {
         sbi_println!("\nprocess pid: {}", getpid());
-        sbi_println!("trying to add to heap...");
-        // sbi_println!("non-aligned start: {}", start);
-        // sbi_println!("no-aligned end: {}", end);
+        sbi_println!("trying to add to heap rescue...");
         // avoid unaligned access on some platforms
         start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
         end = end & (!size_of::<usize>() + 1);
@@ -197,7 +192,6 @@ impl Heap {
             max(layout.align(), size_of::<usize>()),
         );
         let class = size.trailing_zeros() as usize;
-
         unsafe {
             // Put back into free list，把要回收的block放回链表尾
             self.free_list[class].push(ptr.as_ptr() as *mut usize);
@@ -352,7 +346,7 @@ impl LockedHeap {
         LockedHeap {
             inner: Mutex::new(Heap::new()),
             rescue: |heap: &mut Heap, layout: Layout| unsafe {
-                sbi_println!("alloc fail..enter rescue...");
+                sbi_println!("\nalloc fail..enter rescue...");
                 // get current brk
                 let cur_brk = brk(None).unwrap();
                 sbi_println!("current brk is {}", cur_brk);
@@ -362,19 +356,24 @@ impl LockedHeap {
                 let allocated_size = max(
                     layout.size().next_power_of_two(),
                     max(layout.align(), size_of::<usize>()),
-                ) * 2;
-                // get the largest size of free chunk
-                // let mut allocated_size = 0;
-                // for class in (0..heap.free_list.len()).rev() {
-                //     if !heap.free_list[class].is_empty() {
-                //         allocated_size = (1 << class) as usize;
-                //         break;
-                // }
+                );
                 sbi_println!("allocated size is {}", allocated_size);
-                // suppose that current heap has been used up
-                let new_brk = brk(Some(cur_brk + allocated_size)).unwrap();// if Err, panic
-                sbi_println!("new brk is {}", new_brk);
-                heap.add_to_heap_rescue(cur_brk, new_brk);
+                let class = allocated_size.trailing_zeros() as usize;
+                let p: usize = 0xFFFFFFFFFFFFFFFF << class;
+                let q: usize = !p;
+                if cur_brk & q == 0 {
+                    // 对齐
+                    let new_brk = brk(Some(cur_brk + allocated_size)).unwrap();
+                    heap.add_to_heap_rescue(cur_brk, new_brk);
+                    sbi_println!("new brk is {}", new_brk);
+                } else {
+                    // 没对齐
+                    let new_brk_1 = (cur_brk & p) + (1usize << class);
+                    let new_brk = brk(Some(new_brk_1 + allocated_size)).unwrap();
+                    heap.add_to_heap(cur_brk, new_brk_1);
+                    heap.add_to_heap_rescue(new_brk_1, new_brk);
+                    sbi_println!("new brk is {}", new_brk);
+                }
             },
         }
     }

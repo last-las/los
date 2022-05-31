@@ -16,8 +16,6 @@ pub fn init_heap() {
     brk(Some(cur_pos + USER_HEAP_SIZE)).unwrap();
     unsafe {
         USER_HEAP_ALLOCATOR.lock().init(cur_pos, USER_HEAP_SIZE);
-        // USER_HEAP_ALLOCATOR.lock()
-        //     .init(HEAP_SPACE.as_ptr() as usize, USER_HEAP_SIZE);
     }
 }
 
