@@ -14,12 +14,13 @@ impl Write for Stdout {
     }
 }
 
-lazy_static!{
+/*lazy_static!{
     static ref STDOUT: Mutex<Stdout> = Mutex::new(Stdout);
-}
+}*/
 
 pub fn print(args: fmt::Arguments) {
-     STDOUT.lock().write_fmt(args).unwrap();
+     // STDOUT.lock().write_fmt(args).unwrap();
+    Stdout.write_fmt(args).unwrap();
 }
 
 #[macro_export]
