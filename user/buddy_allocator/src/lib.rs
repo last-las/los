@@ -17,15 +17,12 @@ use spin::Mutex;
 
 mod frame;
 pub mod linked_list;
-#[cfg(test)]
-mod test;
 mod syscall;
 #[macro_use]
 mod console;
 
 pub use syscall::*;
 pub use frame::*;
-use crate::console::sbi_print;
 
 /// A heap that uses buddy system
 ///
@@ -78,21 +75,12 @@ impl Heap {
 
     /// Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap(&mut self, mut start: usize, mut end: usize) {
-        sbi_println!("\nprocess pid: {}", getpid());
-        sbi_println!("trying to add to heap...");
-        // sbi_println!("non-aligned start: {}", start);
-        // sbi_println!("no-aligned end: {}", end);
         // avoid unaligned access on some platforms
         start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
         end = end & (!size_of::<usize>() + 1);
-        sbi_println!("aligned start: {}", start);
-        sbi_println!("aligned end: {}", end);
         assert!(start <= end);
-
         let mut total = 0;
         let mut current_start = start;
-
-        // sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
         while current_start + size_of::<usize>() <= end {
             let lowbit = current_start & (!current_start + 1);
             let size = min(lowbit, prev_power_of_two(end - current_start));
@@ -101,33 +89,20 @@ impl Heap {
             self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
             current_start += size;
         }
-
-        // sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
         self.total += total;
     }
 
     // please rescue my life T^T
     /// Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap_rescue(&mut self, mut start: usize, mut end: usize) {
-        sbi_println!("\nprocess pid: {}", getpid());
-        sbi_println!("trying to add to heap rescue...");
         // avoid unaligned access on some platforms
         start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
         end = end & (!size_of::<usize>() + 1);
-        sbi_println!("aligned start: {}", start);
-        sbi_println!("aligned end: {}", end);
         assert!(start <= end);
-
         let mut total = 0;
-        let mut current_start = start;
-
-        // sbi_println!("before add to heap, current free list:{:#?}", self.free_list);
-        let size = end - current_start;
+        let size = end - start;
         total += size;
-        self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
-        current_start += size;
-
-        // sbi_println!("after add to heap, now free list:{:#?}", self.free_list);
+        self.free_list[size.trailing_zeros() as usize].push(start as *mut usize);
         self.total += total;
     }
 
@@ -218,7 +193,6 @@ impl Heap {
                     current_ptr = min(current_ptr, buddy);
                     current_class += 1;
                     self.free_list[current_class].push(current_ptr as *mut usize);
-                    // sbi_println!("free buddy fuound: {}\n{:#?}", buddy, self.free_list);
                 } else {
                     break;
                 }
@@ -346,33 +320,25 @@ impl LockedHeap {
         LockedHeap {
             inner: Mutex::new(Heap::new()),
             rescue: |heap: &mut Heap, layout: Layout| unsafe {
-                sbi_println!("\nalloc fail..enter rescue...");
                 // get current brk
                 let cur_brk = brk(None).unwrap();
-                sbi_println!("current brk is {}", cur_brk);
                 // get request
                 let request_size = layout.size();
-                sbi_println!("request size is {}", request_size);
                 let allocated_size = max(
                     layout.size().next_power_of_two(),
                     max(layout.align(), size_of::<usize>()),
                 );
-                sbi_println!("allocated size is {}", allocated_size);
                 let class = allocated_size.trailing_zeros() as usize;
-                let p: usize = 0xFFFFFFFFFFFFFFFF << class;
-                let q: usize = !p;
-                if cur_brk & q == 0 {
+                if cur_brk & !(0xFFFFFFFFFFFFFFFF << class) == 0 {
                     // 对齐
                     let new_brk = brk(Some(cur_brk + allocated_size)).unwrap();
                     heap.add_to_heap_rescue(cur_brk, new_brk);
-                    sbi_println!("new brk is {}", new_brk);
                 } else {
                     // 没对齐
-                    let new_brk_1 = (cur_brk & p) + (1usize << class);
-                    let new_brk = brk(Some(new_brk_1 + allocated_size)).unwrap();
-                    heap.add_to_heap(cur_brk, new_brk_1);
-                    heap.add_to_heap_rescue(new_brk_1, new_brk);
-                    sbi_println!("new brk is {}", new_brk);
+                    let aligned_new_brk = (cur_brk & (0xFFFFFFFFFFFFFFFF << class)) + (1usize << class);
+                    let new_brk = brk(Some(aligned_new_brk + allocated_size)).unwrap();
+                    heap.add_to_heap(cur_brk, aligned_new_brk);
+                    heap.add_to_heap_rescue(aligned_new_brk, new_brk);
                 }
             },
         }
@@ -399,22 +365,11 @@ unsafe impl GlobalAlloc for LockedHeap {
                 allocation.as_ptr()
             },
             Err(_) => {
-                sbi_println!("\nprocess pid:{} alloc fail, current heap:", getpid());
-                sbi_println!("allocated: {}", inner.allocated);
-                sbi_println!("user: {}", inner.user);
-                sbi_println!("total: {}", inner.total);
-                sbi_println!("layout: {:#?}", layout);
                 (self.rescue)(&mut inner, layout);
                 let result = inner
                     .alloc(layout)
                     .ok()
                     .map_or(0 as *mut u8, |allocation| allocation.as_ptr());
-                sbi_println!("rescue result: {}", result as usize);
-                if result as usize == 0 {
-                    sbi_println!("rescue fail...\n");
-                } else {
-                    sbi_println!("rescue success!\n");
-                }
                 result
             }
         }
