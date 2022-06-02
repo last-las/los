@@ -13,6 +13,7 @@ pub static mut FAT32SYSTEMS: BTreeMap<u64, Arc<RwLock<FAT32Manager>>> = BTreeMap
 //FileSystem is "fat32"
 pub fn register_fatfs() {
     let filesystem = FileSystem::new("fat32", vfs_interface::create_fatfs_super_block);
+    //let filesystem = FileSystem::new("fat32", vfs_interface::no_func);
     assert!(register_filesystem(filesystem));
 }
 

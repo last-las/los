@@ -1,0 +1,18 @@
+[package]
+name = "buddy_allocator"
+keywords = ["allocator", "no_std", "heap"]
+version = "0.6.2"
+edition = "2018"
+license = "MIT"
+
+[features]
+default = ["use_spin"]
+use_spin = ["spin"]
+const_fn = []
+
+[dependencies.spin]
+version = "0.7"
+optional = true
+
+[dependencies]
+share = {path = "../../share"}

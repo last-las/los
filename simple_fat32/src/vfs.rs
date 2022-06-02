@@ -8,7 +8,7 @@ use super::{
     //print
 };
 use alloc::sync::Arc;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use spin::RwLock;
 
@@ -294,6 +294,9 @@ impl VFile{
         name: &str,
     ) -> Option<VFile> { 
         assert!( self.is_dir() );
+        if name=="."{
+            return Some(self.clone());
+        }
         let mut name_and_ext: Vec<&str> = name.split(".").collect();
         let name_ = name_and_ext[0].as_bytes();
         if name_and_ext.len() == 1 {
@@ -513,7 +516,6 @@ impl VFile{
             return None
         } 
         let mut list:Vec<(String, u8)> = Vec::new();
-        // DEBUG
         let mut offset:usize = 0;
         let mut short_ent =  ShortDirEntry::empty();
         loop {

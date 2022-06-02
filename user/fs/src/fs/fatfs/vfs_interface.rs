@@ -14,6 +14,7 @@ use crate::device::block::Block;
 use share::syscall::error::{SysError, EEXIST, EPERM, ENOENT};
 use user_lib::syscall::{virt_copy, getpid};
 
+
 pub fn create_fatfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     // create a new easy filesystem instance.
     let block = Block::new(rdev);
@@ -123,7 +124,7 @@ impl FileOperations for FATFsFileOperations {
         Ok(())
     }
 
-    
+    //now only "ls" the mount points
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
         let sp = file.borrow().dentry.borrow().inode.borrow().super_block.clone();
         let rdev = sp.borrow().rdev.into();
@@ -145,7 +146,7 @@ impl FileOperations for FATFsFileOperations {
 fn create_dentry_from_fatfs_inode(name: &str, fatfs_inode: Arc<VFile>, super_block: Rc<RefCell<SuperBlock>>)
     -> Rc<RefCell<VfsDentry>> {
     let ino = get_inode_id_from(fatfs_inode.clone());
-    let size = fatfs_inode.size as usize;
+    let size = fatfs_inode.get_size() as usize;
     let file_type = match fatfs_inode.is_dir(){
         false => FileTypeFlag::DT_REG,
         true => FileTypeFlag::DT_DIR,

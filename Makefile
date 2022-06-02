@@ -6,7 +6,7 @@ BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
-FS_IMG := $(USER_PATH)/fs.img
+FS_IMG := $(USER_PATH)fs.img
 OTHER_PATH := /home/las/workstation/testsuits-for-oskernel-main/riscv-syscalls-testing/user/build/riscv64/
 
 all: user fs-img
@@ -24,7 +24,7 @@ user:
 fs-img:
 	# @cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
 	@dd if=/dev/zero of=$(USER_PATH)fs.img bs=512KB count=256 #k210 128MB
-	@mkfs.vfat -F 32 $(USER_PATH)/fs.img
+	@mkfs.vfat -F 32 $(USER_PATH)fs.img
 	@cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 	#cd ./fat32-fuse && sh qemu_fs.sh
 
@@ -51,4 +51,4 @@ debug:
 		-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
 		-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
-
+.PHONY: user

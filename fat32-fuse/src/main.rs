@@ -77,7 +77,7 @@ fn fat32_pack() -> std::io::Result<()> {
             .create(true)
             .open(format!("{}{}", target_path, "fs.img"))?;
             //            .open("fat32.img")?;
-        f.set_len(16*2048*512).unwrap();
+        f.set_len(16*1024*512).unwrap();
         f
     })));
     /*let block_file = Arc::new(BlockFile(Mutex::new({
@@ -114,14 +114,13 @@ fn fat32_pack() -> std::io::Result<()> {
         let mut all_data: Vec<u8> = Vec::new();
         host_file.read_to_end(&mut all_data).unwrap();
         // create a file in easy-fs
-        println!("before create");
+        //println!("before create");
         let o_vfile = root_vfile.create(app.as_str(), ATTRIBUTE_ARCHIVE);
         if o_vfile.is_none(){
             continue;
         }
         let vfile = o_vfile.unwrap();
-        println!("after create");
-        // write data to easy-fs
+        //println!("after create");
         println!("file_len = {}", all_data.len());
         vfile.write_at(0, all_data.as_slice());
         fs_manager.read().cache_write_back();
