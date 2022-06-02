@@ -1,6 +1,6 @@
 use buddy_system_allocator::LockedHeap;
 
-const KERNEL_HEAP_SIZE: usize = 0x300_0000;
+const KERNEL_HEAP_SIZE: usize = 0x100_000;
 
 #[cfg_attr(not(test), global_allocator)]
 static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();

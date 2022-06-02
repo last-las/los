@@ -66,7 +66,7 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
         plic::init();
         increase_alive_hart();
 
-        // task::print_app_names();
+        task::print_app_names();
         task::load_init_tasks();
         // enable_other_harts();
         info!("start running");
