@@ -8,6 +8,7 @@ apps.append("init.rs")
 apps.append("terminal.rs")
 apps.append("virtio-blk.rs")
 apps.append("rtc.rs")
+apps.append("sdcard.rs")
 apps.sort()
 
 with open(OS_APPLICATION_TXT, "w") as f:

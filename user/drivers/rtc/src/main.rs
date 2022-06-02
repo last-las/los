@@ -25,6 +25,7 @@ fn main() {
 
     println!("rtc init.");
 
+    // 分钟中断
     rtc.irq_register(1);
 
     // interrupt_ctrl_mod::rtc_alarm_irq_register(0);

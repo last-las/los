@@ -7,15 +7,20 @@ use alloc::sync::Arc;
 use core::any::Any;
 use core::assert;
 use core::convert::TryInto;
+use k210::clock;
+
 use k210::sleep::usleep;
 use k210::spi::{aitm, frame_format, tmod, work_mode, SPI};
-use k210::*;
+use k210::time::{self, Bps};
 use lazy_static::*;
 use spin::Mutex;
 use user_lib::syscall::get_time;
 
+use k210::*;
+
 type BlockDeviceImpl = crate::SDCardWrapper;
 
+// todo
 pub trait BlockDevice: Send + Sync + Any {
     fn read_block(&self, block_id: usize, buf: &mut [u8]);
     fn write_block(&self, block_id: usize, buf: &[u8]);
@@ -682,7 +687,7 @@ fn io_init() {
 
 fn init_sdcard() -> SDCard {
     // wait previous output
-    usleep(100000);
+    // usleep(100000);
     // let peripherals = unsafe { Peripherals::steal() };
     sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL1, 300_000_000).unwrap();
@@ -691,6 +696,7 @@ fn init_sdcard() -> SDCard {
 
     // peripherals.UARTHS.configure(115_200.bps(), &clocks);
     // UART_mod::configure(115_200.bps(), &clocks);
+    uarth::configure(Bps::new(115_200), &clocks);
 
     io_init();
 

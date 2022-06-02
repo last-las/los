@@ -4,6 +4,12 @@
 #[derive(Clone, Copy)]
 pub struct Bps(pub u32);
 
+impl Bps {
+    pub fn new(bps: u32) -> Self {
+        Self(bps)
+    }
+}
+
 /// Hertz
 #[derive(Clone, Copy)]
 pub struct Hertz(pub u32);

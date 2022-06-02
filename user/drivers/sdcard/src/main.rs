@@ -9,6 +9,7 @@ extern crate user_lib;
 
 mod sdcard;
 
+#[no_mangle]
 fn main() {
     let sdcard = SDCardWrapper::new();
 }

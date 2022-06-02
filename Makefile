@@ -7,6 +7,7 @@ export CPU_NUMS = 2
 export LOG = ERROR
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 FS_IMG := ./fs.img
+SDCARD := /dev/disk1s2s1
 
 # board and bootloader
 BOARD ?= qemu
@@ -22,7 +23,7 @@ else ifeq ($(BOARD), k210)
 endif
 
 # Run k210
-K210_SERIALPORT := /dev/tty.usbserial-1420
+K210_SERIALPORT := /dev/tty.usbserial-1410
 k210_BURNER := ./tools/kflash.py
 
 
@@ -34,6 +35,12 @@ all: switch-check user
 	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
 		--strip-all \
 		-O binary $(KERNEL_BIN)
+
+# dev/zero永远输出0
+sdcard: 
+	@echo "Are you sure write to $(SDCARD) ? [y/N] " && read ans && [ $${ans:-N} = y ]
+	@sudo dd if=/dev/zero of=$(SDCARD) bs=1048576 count=16
+	@sudo dd if=$(FS_IMG) of=$(SDCARD)
 
 test:
 	@cross test --target riscv64gc-unknown-linux-gnu
