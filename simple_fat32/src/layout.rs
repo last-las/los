@@ -46,6 +46,8 @@ pub const ALL_LOWER_CASE:u8 = 0x08;
 
 type DataBlock = [u8; BLOCK_SZ];
 
+
+//BPB
 #[repr(packed)]
 #[derive(Clone, Copy, Debug)]
 pub struct FatBS {
@@ -79,6 +81,7 @@ impl FatBS {
     }
 }
 
+//start at offset 36
 #[repr(packed)]
 #[derive(Clone, Copy)]
 #[allow(unused)]

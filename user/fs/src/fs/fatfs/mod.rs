@@ -9,9 +9,8 @@ use alloc::collections::BTreeMap;
 // Global easy file system instances
 pub static mut FAT32SYSTEMS: BTreeMap<u64, Arc<RwLock<FAT32Manager>>> = BTreeMap::new();
 
-/*
-    easy-fs `BlockDevice` trait is moved to share::device
-*/
+
+//FileSystem is "fat32"
 pub fn register_fatfs() {
     let filesystem = FileSystem::new("fat32", vfs_interface::create_fatfs_super_block);
     assert!(register_filesystem(filesystem));

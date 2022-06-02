@@ -1,5 +1,5 @@
-dd if=/dev/zero of=fat32.img bs=512KB count=256
-sudo mkfs.vfat -F 32 fat32.img
-sudo chmod 777 fat32.img
+dd if=/dev/zero of=../user/target/riscv64gc-unknown-none-elf/release/fs.img bs=512 count=16384
+sudo mkfs.vfat -F 32 ../user/target/riscv64gc-unknown-none-elf/release/fs.img
+sudo chmod 777 ../user/target/riscv64gc-unknown-none-elf/release/fs.img
 #sudo mount fat32.img sd_mnt
-#sudo chmod 777 sd_mnt
+#sudo chmod 777 sd_mntS

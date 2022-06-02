@@ -13,7 +13,7 @@ use super::{
     //println,
 };
 //#[macro_use]
-use crate::{ layout::*, VFile};
+use crate::{ layout::*, VFile,};
 use alloc::vec::Vec;
 use alloc::string::String;
 use spin::RwLock;
@@ -82,11 +82,11 @@ impl FAT32Manager {
             for i in 0..4 {
                 let tmp = ssec_bytes[i] as u32;
                 start_sec = start_sec + (tmp << (8*i));
-                //println!("start sec = {}, buf = {}", start_sec , ssec_bytes[i])
+                
             }
             start_sec
         });
-        
+        //println!("start sec = {}, buf = {}", start_sec , ssec_bytes[i]);
         set_start_sec(start_sector as usize);
         
         // 读入 Boot Sector

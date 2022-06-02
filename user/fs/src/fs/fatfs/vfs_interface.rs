@@ -91,11 +91,11 @@ impl FileOperations for FATFsFileOperations {
         let ino = file.borrow().dentry.borrow().inode.borrow().ino;
         let pos = file.borrow().pos;
 
-        let ezfs_inode = root_inode.find_vfile_byname(name.as_str()).unwrap();
-        let write_ino = get_inode_id_from(Arc::new(ezfs_inode.clone()));
+        let fatfs_inode = root_inode.find_vfile_byname(name.as_str()).unwrap();
+        let write_ino = get_inode_id_from(Arc::new(fatfs_inode.clone()));
         assert_eq!(ino, write_ino);
         let mut content = vec![0; cnt];
-        ezfs_inode.read_at(pos, content.as_mut_slice());
+        fatfs_inode.read_at(pos, content.as_mut_slice());
         let length = content.len();
         if length > 0 {
             virt_copy(getpid(), content.as_ptr() as usize, proc_nr, buf_ptr, length)?;
@@ -112,13 +112,13 @@ impl FileOperations for FATFsFileOperations {
         let ino = file.borrow().dentry.borrow().inode.borrow().ino;
         let pos = file.borrow().pos;
 
-        let ezfs_inode = root_inode.find_vfile_byname(name.as_str()).unwrap();
-        let write_ino = get_inode_id_from(Arc::new(ezfs_inode.clone()));
+        let fatfs_inode = root_inode.find_vfile_byname(name.as_str()).unwrap();
+        let write_ino = get_inode_id_from(Arc::new(fatfs_inode.clone()));
         assert_eq!(ino, write_ino);
 
         let content = vec![0; cnt];
         virt_copy(proc_nr, buf_ptr, getpid(), content.as_ptr() as usize, cnt)?;
-        ezfs_inode.write_at(pos, content.as_slice());
+        fatfs_inode.write_at(pos, content.as_slice());
 
         Ok(())
     }
@@ -145,7 +145,7 @@ impl FileOperations for FATFsFileOperations {
 fn create_dentry_from_fatfs_inode(name: &str, fatfs_inode: Arc<VFile>, super_block: Rc<RefCell<SuperBlock>>)
     -> Rc<RefCell<VfsDentry>> {
     let ino = get_inode_id_from(fatfs_inode.clone());
-    let size = fatfs_inode.short_offset as usize;
+    let size = fatfs_inode.size as usize;
     let file_type = match fatfs_inode.is_dir(){
         false => FileTypeFlag::DT_REG,
         true => FileTypeFlag::DT_DIR,

@@ -97,6 +97,7 @@ fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMo
     }
 }
 
+//add device file
 fn attach_device_to(dev_dentry: Rc<RefCell<VfsDentry>>, name: &str, file_type: FileTypeFlag, rdev: Rdev) {
     let dev_inode = dev_dentry.borrow().inode.clone();
     let device_dentry = dev_inode.borrow().iop.mknod(name, file_type, rdev, dev_inode.clone()).unwrap();

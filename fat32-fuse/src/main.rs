@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use std::sync::Arc;
 #[allow(unused)]
 use clap::{Arg, App};
-use simple_fat32::BlockDevice;
+ use simple_fat32::BlockDevice;
 
 const BLOCK_SZ: usize = 512;
 
@@ -75,11 +75,20 @@ fn fat32_pack() -> std::io::Result<()> {
             .read(true)
             .write(true)
             .create(true)
-            .open("/dev/sdb")?;
+            .open(format!("{}{}", target_path, "fs.img"))?;
             //            .open("fat32.img")?;
+        f.set_len(16*2048*512).unwrap();
         f
     })));
-    
+    /*let block_file = Arc::new(BlockFile(Mutex::new({
+        let f = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(format!("{}{}", target_path, "fs.img"))?;
+        f.set_len(16 * 2048 * 512).unwrap();
+        f
+    })));*/
     let fs_manager = FAT32Manager::open(block_file.clone());
     let fs_reader = fs_manager.read();
     //println!("{:X}",fs_reader.get_fat().read().get_next_cluster(2, block_file.clone()));
@@ -140,7 +149,7 @@ fn ufs_test() -> std::io::Result<()> {
             .read(true)
             .write(true)
             .create(true)
-            .open("/dev/sdb1")?;    
+            .open("./fs.img")?;    
         //dev/sdb1
         //f.set_len(102400*512);
         //let mut f = File::open("src/fat32c.img")?;
@@ -150,7 +159,7 @@ fn ufs_test() -> std::io::Result<()> {
         f
     })));
 
-
+    println!("start opening");
     let print_flist = |flist:&mut Vec<(String,u8)>|{
         println!("### list:");
         #[allow(unused)]
@@ -186,7 +195,7 @@ fn ufs_test() -> std::io::Result<()> {
     let fs_manager = FAT32Manager::open(block_file.clone());
     let fs_reader = fs_manager.read();
     println!("{:X}",fs_reader.get_fat().read().get_next_cluster(2, block_file.clone()));
-    //loop{}
+    //test root
     let root_vfile = fs_reader.get_root_vfile(&fs_manager);
     drop(fs_reader);
     let mut flist = root_vfile.ls_lite().unwrap();
