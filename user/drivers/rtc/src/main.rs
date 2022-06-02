@@ -3,8 +3,6 @@
 
 use core::panic;
 
-use crate::mods::date_mod::read_date;
-use crate::mods::time_mod::read_time;
 use crate::rtc::Rtc;
 pub mod mods;
 mod rtc;
@@ -21,6 +19,7 @@ use core::assert;
 #[no_mangle]
 fn main() {
     let mut rtc = Rtc::new();
+
     rtc.init();
 
     println!("rtc init.");
@@ -29,21 +28,8 @@ fn main() {
 
     // interrupt_ctrl_mod::rtc_alarm_irq_register(0);
 
-    let (y, mn, d, h, m, s) = (2022, 5, 27, 19, 55, 00);
-    rtc.timer_set(y, mn, d, h, m, s);
-
-    let (hour, min, sec) = rtc.read_time();
-    let (year, mon, day) = rtc.read_date();
-
-    //? date&time test
-    assert!(year == y && mon == mn && day == d && hour == h && min == m && sec == s);
-
-    rtc.set_alarm(2022, 5, 27, 19, 56, 00);
-    let (hour, min, sec) = rtc.read_alarm_time();
-    let (year, mon, day) = rtc.read_alarm_date();
-
-    //? date&time test
-    assert!(year == 2022 && mon == 5 && day == 27 && hour == 19 && min == 56 && sec == 0);
+    test_date_time(&mut rtc);
+    test_alarm(&mut rtc);
 
     let mut message = Msg::empty();
 
@@ -68,9 +54,30 @@ fn main() {
     }
 }
 
+fn test_date_time(rtc: &mut Rtc) {
+    let (y, mn, d, h, m, s) = (2022, 5, 27, 19, 55, 00);
+    rtc.timer_set(y, mn, d, h, m, s);
+
+    let (hour, min, sec) = rtc.read_time();
+    let (year, mon, day) = rtc.read_date();
+
+    //? date&time test
+    assert!(year == y && mon == mn && day == d && hour == h && min == m && sec == s);
+}
+
+fn test_alarm(rtc: &mut Rtc) {
+    rtc.set_alarm(2022, 5, 27, 19, 56, 00);
+    let (hour, min, sec) = rtc.read_alarm_time();
+    let (year, mon, day) = rtc.read_alarm_date();
+
+    //? date&time test
+    assert!(year == 2022 && mon == 5 && day == 27 && hour == 19 && min == 56 && sec == 0);
+}
+
 pub fn do_interrupt(rtc: &mut Rtc) {
-    rtc.tick_interrupt_enable(true);
-    println!("interrupt! time: {:?}", rtc.read_time());
+    rtc.tick_set_interrupt(true);
+    rtc.timer_update();
+    println!("\ninterrupt! time: {:?}", rtc.read_time());
 }
 
 pub fn do_open(rtc: &mut Rtc, message: Msg) {}

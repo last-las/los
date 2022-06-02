@@ -1,5 +1,4 @@
 pub mod sysctl_mod {
-    use core::arch::asm;
 
     const SYSCTL_ADDRESS: usize = 0x5044_0000;
     const SOFT_RESET: usize = 0x30;
@@ -130,6 +129,12 @@ pub mod rtc {
                 tm_yday: rtc_month_days(month - 1, year) + day,
                 tm_isdst: -1,
             }
+        }
+
+        pub fn update_time(&mut self, hour: usize, minute: usize, second: usize) {
+            self.tm_hour = hour;
+            self.tm_min = minute;
+            self.tm_sec = second;
         }
 
         pub fn default() -> Self {
@@ -582,6 +587,11 @@ pub mod interrupt_ctrl_mod {
         write_interrupt_ctrl_reg(v);
     }
 
+    pub fn read_tick_enable() -> u8 {
+        let v = read_interrupt_ctrl_reg();
+        (v & 0x01) as u8
+    }
+
     /// Enable or disable RTC alarm interrupt
     fn write_alarm_enable(value: bool) {
         let v = read_interrupt_ctrl_reg();
@@ -597,19 +607,22 @@ pub mod interrupt_ctrl_mod {
     RTC_INT_DAY,    /*!< 3: Interrupt every day */
     RTC_INT_MAX     /*!< Max count of this enum*/
     */
-    fn write_tick_interrupt_mode(value: u8) {
+    pub fn write_tick_interrupt_mode(value: u8) {
         let v = read_interrupt_ctrl_reg();
         let v = (v & !(0x03 << 2)) | (((value as u32) & 0x03) << 2);
         write_interrupt_ctrl_reg(v);
+    }
+
+    pub fn read_tick_interrupt_mode() -> u8 {
+        let v = read_interrupt_ctrl_reg();
+        (v >> 2 & 0x03) as u8
     }
 
     /// Register callback of tick interrupt
     /// `mode`    Tick interrupt mode           \
     ///  0:second 1:minute    2:hour 3:day \
     pub fn rtc_tick_irq_register(mode: u8) {
-        write_tick_enable(false);
         write_tick_interrupt_mode(mode);
-        write_tick_enable(true);
     }
 
     /// Register callback of alarm interrupt

@@ -22,7 +22,8 @@ else ifeq ($(BOARD), k210)
 endif
 
 # Run k210
-K210_SERIALPORT := /dev/tty.usbserial-1420
+# K210_SERIALPORT := /dev/tty.usbserial-1420
+K210_SERIALPORT := /dev/tty.usbserial-1410
 k210_BURNER := ./tools/kflash.py
 
 
