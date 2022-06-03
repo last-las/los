@@ -1,5 +1,3 @@
-use core::marker::PhantomData;
-
 use self::fpioa::Fpioa;
 
 pub struct FPIOA {
@@ -12,6 +10,7 @@ impl FPIOA {
             fpioa: Fpioa::new(),
         }
     }
+    
 }
 
 pub mod fpioa {
@@ -20,7 +19,7 @@ pub mod fpioa {
     const FPIOA_ADDRESS: usize = 0x502b_0000;
     pub struct Fpioa {
         #[doc = "0x00 - FPIOA GPIO multiplexer io array"]
-        pub io: [IO; 48],
+        pub io: IO,
         #[doc = "0xc0 - FPIOA GPIO multiplexer tie enable array"]
         pub tie_en: [TIE_EN; 8],
         #[doc = "0xe0 - FPIOA GPIO multiplexer tie value array"]
@@ -30,7 +29,7 @@ pub mod fpioa {
     impl Fpioa {
         pub fn new() -> Self {
             Self {
-                io: [IO::new(); 48],
+                io: IO {},
                 tie_en: [TIE_EN::new(); 8],
                 tie_val: [TIE_VAL::new(); 8],
             }
@@ -50,29 +49,31 @@ pub mod fpioa {
             pub fn new() -> Self {
                 Self {}
             }
-            fn read(&self) -> u32 {
-                dev_read_u32(ADDRESS).unwrap() as u32
+            // read io[n]
+            fn read(&self, n: usize) -> u32 {
+                dev_read_u32(ADDRESS + n * 4).unwrap() as u32
             }
-            pub fn write(&self, value: u32) -> &Self {
-                dev_write_u32(ADDRESS, value).unwrap();
+            // write io[n]
+            pub fn write(&self, n: usize, value: u32) -> &Self {
+                dev_write_u32(ADDRESS + n * 4, value).unwrap();
                 &self
             }
-            pub fn ch_sel(&self, value: u8) -> &Self {
-                let v = self.read();
+            pub fn ch_sel(&self, n: usize, value: u8) -> &Self {
+                let v = self.read(n);
                 let v = (v & !0xff) | ((value as u32) & 0xff);
-                self.write(v)
+                self.write(n, v)
             }
 
-            pub fn pu(&self, value: bool) -> &Self {
-                let v = self.read();
+            pub fn pu(&self, n: usize, value: bool) -> &Self {
+                let v = self.read(n);
                 let v = (v & !(0x01 << 16)) | (((value as u32) & 0x01) << 16);
-                self.write(v)
+                self.write(n, v)
             }
 
-            pub fn pd(&self, value: bool) -> &Self {
-                let v = self.read();
+            pub fn pd(&self, n: usize, value: bool) -> &Self {
+                let v = self.read(n);
                 let v = (v & !(0x01 << 17)) | (((value as u32) & 0x01) << 17);
-                self.write(v)
+                self.write(n, v)
             }
         }
     }

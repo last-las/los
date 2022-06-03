@@ -25,7 +25,7 @@ pub struct Dmac {
     pub cfg: CFG,
     #[doc = "0x18 - Channel Enable Register"]
     pub chen: CHEN,
-    _reserved4: [u8; 16usize],
+
     #[doc = "0x30 - Interrupt Status Register"]
     // pub intstatus: INTSTATUS,
     #[doc = "0x38 - Common Interrupt Clear Register"]
@@ -38,7 +38,7 @@ pub struct Dmac {
     // pub com_intstatus: COM_INTSTATUS,
     #[doc = "0x58 - Reset register"]
     pub reset: RESET,
-    _reserved10: [u8; 160usize],
+
     #[doc = "0x100 - Channel configuration"]
     pub channel: [CHANNEL; 6],
 }

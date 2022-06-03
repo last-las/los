@@ -1,5 +1,3 @@
-use core::ops::Deref;
-
 use self::{
     baudr::BAUDR, ctrlr0::CTRLR0, ctrlr1::CTRLR1, dmacr::DMACR, dmardlr::DMARDLR, dmatdlr::DMATDLR,
     dr::DR, endian::ENDIAN, imr::IMR, rxflr::RXFLR, ser::SER, spi_ctrlr0::SPI_CTRLR0, sr::SR,
@@ -33,7 +31,7 @@ pub struct SPI0 {
     #[doc = "0x54 - DMA Receive Data Level"]
     pub dmardlr: DMARDLR,
     #[doc = "0x60 - Data Register"]
-    pub dr: [DR; 36],
+    pub dr: DR,
     #[doc = "0xf4 - SPI Control Register"]
     pub spi_ctrlr0: SPI_CTRLR0,
     #[doc = "0x118 - ENDIAN"]
@@ -55,17 +53,10 @@ impl SPI0 {
             dmacr: DMACR {},
             dmatdlr: DMATDLR {},
             dmardlr: DMARDLR {},
-            dr: [DR {}; 36],
+            dr: DR {},
             spi_ctrlr0: SPI_CTRLR0 {},
             endian: ENDIAN {},
         }
-    }
-}
-
-impl Deref for SPI0 {
-    type Target = SPI0;
-    fn deref(&self) -> &Self::Target {
-        &self
     }
 }
 
@@ -388,11 +379,11 @@ pub mod dr {
     #[derive(Clone, Copy)]
     pub struct DR {}
     impl DR {
-        pub fn read(&self) -> u32 {
-            dev_read_u32(ADDRESS).unwrap() as u32
+        pub fn read(&self, n: usize) -> u32 {
+            dev_read_u32(ADDRESS + n * 4).unwrap() as u32
         }
-        pub fn write(&self, value: u32) -> &Self {
-            dev_write_u32(ADDRESS, value).unwrap();
+        pub fn write(&self, n: usize, value: u32) -> &Self {
+            dev_write_u32(ADDRESS + n * 4, value).unwrap();
             &self
         }
     }

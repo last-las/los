@@ -8,6 +8,7 @@ use core::any::Any;
 use core::assert;
 use core::convert::TryInto;
 use k210::clock;
+use k210::sysctl::{clock_enable, sysctl_clock_disable};
 
 use k210::sleep::usleep;
 use k210::spi::{aitm, frame_format, tmod, work_mode, SPI};
@@ -675,6 +676,10 @@ const SD_CS: u32 = 3;
 
 /** Connect pins to internal functions */
 pub fn io_init() {
+    // 使能fpioa和gpiohs
+    clock_enable(sysctl::clock::FPIOA);
+    clock_enable(sysctl::clock::GPIO);
+
     fpioa::set_function(fpioa::io::SPI0_SCLK, fpioa::function::SPI0_SCLK);
     fpioa::set_function(fpioa::io::SPI0_MOSI, fpioa::function::SPI0_D0);
     fpioa::set_function(fpioa::io::SPI0_MISO, fpioa::function::SPI0_D1);
@@ -700,6 +705,8 @@ fn init_sdcard() -> SDCard {
 
     io_init();
 
+    println!("[sd init] io init success.");
+
     // let spi = SPI0::new().constrain();
 
     let spi = SPI::new();
@@ -708,6 +715,8 @@ fn init_sdcard() -> SDCard {
 
     let num_sectors = info.CardCapacity / 512;
     assert!(num_sectors > 0);
+
+    println!("[sd init] sdcard init success.");
 
     sd
 }

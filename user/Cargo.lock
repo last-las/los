@@ -64,15 +64,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtc"
-version = "0.1.0"
-dependencies = [
- "k210",
- "share",
- "user_lib",
-]
-
-[[package]]
 name = "sdcard"
 version = "0.1.0"
 dependencies = [

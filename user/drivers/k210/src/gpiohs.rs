@@ -1,15 +1,12 @@
 #![allow(unused)]
 
 //! GPIOHS peripheral
-//use k210_hal::pac;
-// use k210_pac as pac;
 
 use user_lib::syscall::{dev_read_u32, dev_write_u32};
 
 use super::gpio;
 use super::utils::{get_bit, set_bit};
 
-// TODO embedded-hal::digital::v2::{InputPin, OutputPin}
 const GPIOHS_ADDRESS: usize = 0x3800_1000;
 
 const INPUT_VAL: usize = 0x00;
@@ -48,17 +45,11 @@ fn write_output_val(value: u32) {
 /** Set input/output direction for a GPIOHS pin */
 pub fn set_direction(pin: u8, direction: gpio::direction) {
     unsafe {
-        write_output_en(set_bit(
-            read_output_en(),
-            pin,
-            direction == gpio::direction::OUTPUT,
-        ));
+        let v = read_output_en();
+        write_output_en(set_bit(v, pin, direction == gpio::direction::OUTPUT));
 
-        write_input_en(set_bit(
-            read_input_en(),
-            pin,
-            direction == gpio::direction::INPUT,
-        ));
+        let v = read_input_en();
+        write_input_en(set_bit(v, pin, direction == gpio::direction::INPUT));
 
         // let ptr = pac::GPIOHS::ptr();
         // (*ptr)
@@ -77,7 +68,8 @@ pub fn set_pin(pin: u8, value: bool) {
         // (*ptr)
         //     .output_val
         //     .modify(|r, w| w.bits(set_bit(r.bits(), pin, value)));
-        write_output_val(set_bit(read_output_val(), pin, value));
+        let v = read_output_val();
+        write_output_val(set_bit(v, pin, value));
     }
 }
 
@@ -86,7 +78,7 @@ pub fn get_pin(pin: u8) -> bool {
     unsafe {
         // let ptr = pac::GPIOHS::ptr();
         // get_bit((*ptr).input_val.read().bits(), pin)
-
-        get_bit(read_input_val(), pin)
+        let v = read_input_val();
+        get_bit(v, pin)
     }
 }

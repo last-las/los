@@ -7,7 +7,7 @@ apps.append("shell.rs")
 apps.append("init.rs")
 apps.append("terminal.rs")
 apps.append("virtio-blk.rs")
-apps.append("rtc.rs")
+# apps.append("rtc.rs")
 apps.append("sdcard.rs")
 apps.sort()
 

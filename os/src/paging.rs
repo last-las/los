@@ -1,7 +1,7 @@
 use crate::config::{
-    DMAC_ADDRESS, FPIOA_ADDRESS, FRAME_SIZE, GPIOHS_ADDRESS, KERNEL_MAPPING_OFFSET,
+    DMAC_ADDRESS, FPIOA_ADDRESS, FRAME_SIZE, GPIOHS_ADDRESS, GPIO_BASE_ADDR, KERNEL_MAPPING_OFFSET,
     RAM_MAPPING_OFFSET, RAM_SIZE, RAM_START_ADDRESS, RTC_BASE_ADDRESS, SPI0_ADDRESS,
-    SYSCTL_ADDRESS, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
+    SPI1_BASE_ADDR, SYSCTL_ADDRESS, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
 };
 use crate::kmain;
 use crate::mm::address::PhysicalAddress;
@@ -127,6 +127,15 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
+            //gpio mapping
+            root_table
+                .map_with_offset(
+                    GPIO_BASE_ADDR,
+                    GPIO_BASE_ADDR + 0x10000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
             // gpiohs mapping
             root_table
                 .map_with_offset(
@@ -149,7 +158,15 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
             root_table
                 .map_with_offset(
                     SPI0_ADDRESS,
-                    SPI0_ADDRESS + FRAME_SIZE,
+                    SPI0_ADDRESS + 0x1000000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            root_table
+                .map_with_offset(
+                    SPI1_BASE_ADDR,
+                    SPI1_BASE_ADDR + 0x1000000,
                     RAM_MAPPING_OFFSET,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )

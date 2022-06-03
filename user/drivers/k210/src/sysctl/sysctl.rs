@@ -17,7 +17,7 @@ pub struct sysctl {
     pub pll1: PLL1,
     #[doc = "0x10 - PLL2 controller"]
     pub pll2: PLL2,
-    _reserved5: [u8; 4usize],
+
     #[doc = "0x18 - PLL lock tester"]
     pub pll_lock: PLL_LOCK,
     #[doc = "0x1c - AXI ROM detector"]

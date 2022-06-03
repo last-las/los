@@ -3,7 +3,7 @@
     .section .data
     .global _num_app
 _num_app:
-    .quad 25
+    .quad 24
  .quad app_0_start
  .quad app_1_start
  .quad app_2_start
@@ -28,8 +28,7 @@ _num_app:
  .quad app_21_start
  .quad app_22_start
  .quad app_23_start
- .quad app_24_start
- .quad app_24_end
+ .quad app_23_end
 
     .global _app_names
 _app_names:
@@ -51,7 +50,6 @@ _app_names:
      .string "13speed"
      .string "idle"
      .string "init"
-     .string "rtc"
      .string "sdcard"
      .string "shell"
      .string "terminal"
@@ -208,7 +206,7 @@ _app_names:
         .global app_18_start
         .global app_18_end
     app_18_start:
-        .incbin "./user/target/riscv64gc-unknown-none-elf/release/rtc"
+        .incbin "./user/target/riscv64gc-unknown-none-elf/release/sdcard"
     app_18_end:
 
         .align 3
@@ -216,7 +214,7 @@ _app_names:
         .global app_19_start
         .global app_19_end
     app_19_start:
-        .incbin "./user/target/riscv64gc-unknown-none-elf/release/sdcard"
+        .incbin "./user/target/riscv64gc-unknown-none-elf/release/shell"
     app_19_end:
 
         .align 3
@@ -224,7 +222,7 @@ _app_names:
         .global app_20_start
         .global app_20_end
     app_20_start:
-        .incbin "./user/target/riscv64gc-unknown-none-elf/release/shell"
+        .incbin "./user/target/riscv64gc-unknown-none-elf/release/terminal"
     app_20_end:
 
         .align 3
@@ -232,7 +230,7 @@ _app_names:
         .global app_21_start
         .global app_21_end
     app_21_start:
-        .incbin "./user/target/riscv64gc-unknown-none-elf/release/terminal"
+        .incbin "./user/target/riscv64gc-unknown-none-elf/release/test_terminal"
     app_21_end:
 
         .align 3
@@ -240,7 +238,7 @@ _app_names:
         .global app_22_start
         .global app_22_end
     app_22_start:
-        .incbin "./user/target/riscv64gc-unknown-none-elf/release/test_terminal"
+        .incbin "./user/target/riscv64gc-unknown-none-elf/release/test_virtio"
     app_22_end:
 
         .align 3
@@ -248,13 +246,5 @@ _app_names:
         .global app_23_start
         .global app_23_end
     app_23_start:
-        .incbin "./user/target/riscv64gc-unknown-none-elf/release/test_virtio"
-    app_23_end:
-
-        .align 3
-        .section .data
-        .global app_24_start
-        .global app_24_end
-    app_24_start:
         .incbin "./user/target/riscv64gc-unknown-none-elf/release/virtio-blk"
-    app_24_end:
+    app_23_end:

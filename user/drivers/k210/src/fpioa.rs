@@ -362,23 +362,27 @@ static FUNCTION_DEFAULTS: &[u32] = &[
 pub fn set_function<N: Into<usize>>(number: N, function: function) {
     // TODO: check for overlapping assignments and assign to RESV0 as the Kendryte SDK does?
     unsafe {
-        FPIOA::new().fpioa.io[number.into()].write(FUNCTION_DEFAULTS[function as usize]);
+        FPIOA::new()
+            .fpioa
+            .io
+            .write(number.into(), FUNCTION_DEFAULTS[function as usize]);
         // (*ptr).io[number.into()].write(|w| w.bits(FUNCTION_DEFAULTS[function as usize]));
     }
 }
 
 pub fn set_io_pull<N: Into<usize>>(number: N, pull: pull) {
     unsafe {
-        let io = FPIOA::new().fpioa.io[number.into()];
+        let io = FPIOA::new().fpioa.io;
+        let n = number.into();
         // (*pac::FPIOA::ptr()).io[number.into()].modify(|_, w| match pull {
         //     pull::NONE => w.pu().bit(false).pd().bit(false),
         //     pull::DOWN => w.pu().bit(false).pd().bit(true),
         //     pull::UP => w.pu().bit(true).pd().bit(false),
         // });
         match pull {
-            pull::NONE => io.pu(false).pd(false),
-            pull::DOWN => io.pu(false).pd(true),
-            pull::UP => io.pu(true).pd(false),
+            pull::NONE => io.pu(n, false).pd(n, false),
+            pull::DOWN => io.pu(n, false).pd(n, true),
+            pull::UP => io.pu(n, true).pd(n, false),
         };
     }
 }

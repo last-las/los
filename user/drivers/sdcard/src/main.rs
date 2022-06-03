@@ -12,8 +12,8 @@ mod sdcard;
 #[no_mangle]
 fn main() {
     let sdcard = SDCardWrapper::new();
-    println!("init sdcard");
-    block_device_test();
+
+    // block_device_test();
 }
 
 #[allow(unused)]

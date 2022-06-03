@@ -22,7 +22,8 @@ pub const RTC_BASE_ADDRESS: usize = 0x5046_0000;
 pub const SYSCTL_ADDRESS: usize = 0x5044_0000;
 
 pub const FPIOA_ADDRESS: usize = 0x502B_0000;
-
+pub const GPIO_BASE_ADDR: usize = 0x50200000;
 pub const GPIOHS_ADDRESS: usize = 0x3800_1000;
 pub const DMAC_ADDRESS: usize = 0x5000_0000;
 pub const SPI0_ADDRESS: usize = 0x5200_0000;
+pub const SPI1_BASE_ADDR: usize = 0x53000000;

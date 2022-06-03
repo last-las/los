@@ -1,5 +1,5 @@
 //! (TODO) Serial Peripheral Interface (SPI)
-use crate::dmac::{address_increment, burst_length, transfer_width, DMAC};
+use crate::dmac::DMAC;
 
 // use crate::pac::SPI0;
 use crate::sysctl::{self, dma_channel};
@@ -128,7 +128,7 @@ impl SPI {
 
         self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
         self.spi.ssienr.write(0x01);
-        self.spi.dr[0].write(0xffffffff);
+        self.spi.dr.write(0, 0xffffffff);
         self.spi.ser.write(1 << chip_select);
 
         let mut fifo_len = 0;
@@ -136,7 +136,7 @@ impl SPI {
             while fifo_len == 0 {
                 fifo_len = self.spi.rxflr.read();
             }
-            *val = X::trunc(self.spi.dr[0].read());
+            *val = X::trunc(self.spi.dr.read(0));
             fifo_len -= 1;
         }
 
@@ -164,17 +164,17 @@ impl SPI {
         self.spi.dmacr.write(0x3); /*enable dma receive */
 
         sysctl::dma_select(channel_num, DMA_RX);
-        dmac.set_single_mode(
-            channel_num,
-            self.spi.dr.as_ptr() as u64,
-            rx.as_ptr() as u64,
-            address_increment::NOCHANGE,
-            address_increment::INCREMENT,
-            burst_length::LENGTH_1,
-            transfer_width::WIDTH_32,
-            rx.len() as u32,
-        );
-        self.spi.dr[0].write(0xffffffff);
+        // dmac.set_single_mode(
+        //     channel_num,
+        //     self.spi.dr.as_ptr() as u64,
+        //     rx.as_ptr() as u64,
+        //     address_increment::NOCHANGE,
+        //     address_increment::INCREMENT,
+        //     burst_length::LENGTH_1,
+        //     transfer_width::WIDTH_32,
+        //     rx.len() as u32,
+        // );
+        self.spi.dr.write(0, 0xffffffff);
         self.spi.ser.write(1 << chip_select);
         dmac.wait_done(channel_num);
 
@@ -193,7 +193,7 @@ impl SPI {
                 // fifo_len = 32 - self.spi.txflr.read().bits();
                 fifo_len = 32 - self.spi.txflr.read();
             }
-            self.spi.dr[0].write(val.into());
+            self.spi.dr.write(0, val.into());
             fifo_len -= 1;
         }
 
@@ -220,16 +220,16 @@ impl SPI {
         self.spi.ssienr.write(0x01);
 
         sysctl::dma_select(channel_num, DMA_TX);
-        dmac.set_single_mode(
-            channel_num,
-            tx.as_ptr() as u64,
-            self.spi.dr.as_ptr() as u64,
-            address_increment::INCREMENT,
-            address_increment::NOCHANGE,
-            burst_length::LENGTH_4,
-            transfer_width::WIDTH_32,
-            tx.len() as u32,
-        );
+        // dmac.set_single_mode(
+        //     channel_num,
+        //     tx.as_ptr() as u64,
+        //     self.spi.dr.as_ptr() as u64,
+        //     address_increment::INCREMENT,
+        //     address_increment::NOCHANGE,
+        //     burst_length::LENGTH_4,
+        //     transfer_width::WIDTH_32,
+        //     tx.len() as u32,
+        // );
         self.spi.ser.write(1 << chip_select);
         dmac.wait_done(channel_num);
 
@@ -249,7 +249,7 @@ impl SPI {
             let fifo_len = (32 - self.spi.txflr.read()) as usize;
             let fifo_len = cmp::min(fifo_len, tx_len);
             for _ in 0..fifo_len {
-                self.spi.dr[0].write(value);
+                self.spi.dr.write(0, value);
             }
             tx_len -= fifo_len;
         }
@@ -276,16 +276,16 @@ impl SPI {
         sysctl::dma_select(channel_num, DMA_TX);
         let val = [value];
         // simple trick to repeating a value: don't increment the source address
-        dmac.set_single_mode(
-            channel_num,
-            val.as_ptr() as u64,
-            self.spi.dr.as_ptr() as u64,
-            address_increment::NOCHANGE,
-            address_increment::NOCHANGE,
-            burst_length::LENGTH_4,
-            transfer_width::WIDTH_32,
-            tx_len.try_into().unwrap(),
-        );
+        // dmac.set_single_mode(
+        //     channel_num,
+        //     val.as_ptr() as u64,
+        //     self.spi.dr.as_ptr() as u64,
+        //     address_increment::NOCHANGE,
+        //     address_increment::NOCHANGE,
+        //     burst_length::LENGTH_4,
+        //     transfer_width::WIDTH_32,
+        //     tx_len.try_into().unwrap(),
+        // );
         self.spi.ser.write(1 << chip_select);
         dmac.wait_done(channel_num);
 
