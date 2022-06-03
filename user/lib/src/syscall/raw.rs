@@ -91,6 +91,23 @@ fn syscall5(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5:
     ret
 }
 
+#[inline(always)]
+fn syscall6(id: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5: usize, arg6: usize) -> isize {
+    let ret;
+    unsafe {
+        asm!(
+        "ecall",
+        inout("a0") arg1 => ret,
+        in("a1") arg2,
+        in("a2") arg3,
+        in("a3") arg4,
+        in("a4") arg5,
+        in("a5") arg6,
+        in("a7") id,
+        );
+    }
+    ret
+}
 
 pub fn sys_send(dst_pid: usize, msg: &Msg) -> isize {
     let msg_ptr = msg as *const _ as usize;
@@ -198,12 +215,20 @@ pub fn sys_brk(new_brk: usize) -> isize {
     syscall1(SYSCALL_BRK, new_brk)
 }
 
+pub fn sys_munmap(start: usize, len: usize) -> isize {
+    syscall2(SYSCALL_MUNMAP, start, len)
+}
+
 pub fn sys_fork(flags: u32, stack: usize, ptid_ptr: usize, tls_ptr: usize, ctid_ptr: usize) -> isize {
     syscall5(SYSCALL_FORK, flags as usize, stack, ptid_ptr, tls_ptr, ctid_ptr)
 }
 
 pub fn sys_exec(path_ptr: usize, argv_ptr: usize, envp_ptr: usize) -> isize {
     syscall3(SYSCALL_EXEC, path_ptr, argv_ptr, envp_ptr)
+}
+
+pub fn sys_mmap(start: usize, len: usize, prot: u32, flags: u32, fd: usize, offset: usize) -> isize {
+    syscall6(SYSCALL_MMAP, start, len, prot as usize, flags as usize, fd, offset)
 }
 
 pub fn sys_waitpid(pid: usize, status_ptr: usize, options: usize) -> isize {

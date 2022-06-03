@@ -31,7 +31,7 @@ pub fn do_brk(new_brk: usize) -> Result<usize, SysError> {
         }
         inner.mem_manager.add_area(
             brk, ceil(size),
-            RegionFlags::W | RegionFlags::R, RegionType::DEFAULT, None
+            RegionFlags::W | RegionFlags::R, RegionType::Default, None
         )?;
     } else { // dealloc
         let brk_start = inner.mem_manager.brk_start;
@@ -44,4 +44,12 @@ pub fn do_brk(new_brk: usize) -> Result<usize, SysError> {
     }
     inner.mem_manager.brk = new_brk;
     Ok(new_brk.0)
+}
+
+pub fn do_mmap(start: usize, len: usize, prot: u32, flags: u32, fd: usize, offset: usize) -> Result<usize, SysError> {
+    todo!()
+}
+
+pub fn do_munmap(start: usize, len: usize) -> Result<usize, SysError> {
+    todo!()
 }

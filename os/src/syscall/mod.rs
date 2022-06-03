@@ -5,7 +5,7 @@ mod time;
 mod proc;
 mod kcall;
 
-use crate::syscall::mm::do_brk;
+use crate::syscall::mm::{do_brk, do_mmap, do_munmap};
 use crate::syscall::file::*;
 use crate::syscall::time::do_get_time;
 use crate::syscall::ipc::{kcall_receive, kcall_send};
@@ -19,7 +19,7 @@ pub use ipc::notify;
 pub use proc::{MIN_PRIORITY, MAX_PRIORITY};
 
 
-pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
+pub fn syscall(syscall_id: usize, args: [usize; 6]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {
         KCALL_SEND => kcall_send(args[0], args[1]),
         KCALL_RECEIVE => kcall_receive(args[0] as isize, args[1]),
@@ -59,8 +59,10 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_GETPID => do_get_pid(),
         SYSCALL_GETPPID => do_get_ppid(),
         SYSCALL_BRK => do_brk(args[0]),
+        SYSCALL_MUNMAP => do_munmap(args[0], args[1]),
         SYSCALL_FORK => do_fork(args[0] as u32, args[1], args[2], args[3], args[4]),
         SYSCALL_EXEC => do_exec(args[0], args[1] as *const *const u8, args[2] as *const *const u8),
+        SYSCALL_MMAP => do_mmap(args[0], args[1], args[2] as u32, args[3] as u32, args[4], args[5]),
         SYSCALL_WAITPID => do_waitpid(args[0] as isize, args[1], args[2]),
 
         SYSCALL_TEST =>  do_test(),

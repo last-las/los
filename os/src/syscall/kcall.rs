@@ -80,7 +80,7 @@ pub fn kcall_continuous_alloc(size: usize) -> Result<usize, SysError> {
     let mut inner = task.acquire_inner_lock();
     let size = (size + FRAME_SIZE) & !(FRAME_SIZE - 1);
     let start = inner.mem_manager.alloc_area(
-        size, RegionFlags::W | RegionFlags::R, RegionType::CONTINUOUS
+        size, RegionFlags::W | RegionFlags::R, RegionType::Continuous
     )?;
 
     Ok(start.0)

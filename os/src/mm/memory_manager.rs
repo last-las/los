@@ -54,7 +54,7 @@ impl MemoryManager {
             let segment_data: &[u8] =
                 &elf.input[ph.offset() as usize..(ph.offset() as usize + ph.file_size() as usize)];
             mem_manager.add_area(start, address::ceil(size),
-                                 flags, RegionType::DEFAULT, Some(segment_data)
+                                 flags, RegionType::Default, Some(segment_data)
             )?;
         }
 
@@ -62,7 +62,7 @@ impl MemoryManager {
         let stack_size = FRAME_SIZE * 2;
         mem_manager.add_area(
             VirtualAddress::new(stack_top - stack_size), stack_size,
-            RegionFlags::R | RegionFlags::W, RegionType::DEFAULT, None,
+            RegionFlags::R | RegionFlags::W, RegionType::Default, None,
         )?;
 
         let brk = mem_manager.region_list.find_unused_region_and_return_start_addr(1, None).unwrap();
@@ -435,8 +435,15 @@ pub struct MemoryRegion {
 
 #[derive(Copy, Clone)]
 pub enum RegionType {
-    DEFAULT,
-    CONTINUOUS,
+    Default,
+    Continuous,
+    MemoryMapping(MmapInfo),
+}
+
+#[derive(Copy, Clone)]
+pub struct MmapInfo {
+    fd: usize,
+    offset: usize,
 }
 
 impl Debug for MemoryRegion {
@@ -452,12 +459,12 @@ impl MemoryRegion {
 
         let mut frames = Vec::new();
         match region_type {
-            RegionType::DEFAULT => {
+            RegionType::Default | RegionType::MemoryMapping(_) => {
                 for _ in (0..region_size).step_by(FRAME_SIZE) {
                     frames.push(alloc_frame()?);
                 }
             }
-            RegionType::CONTINUOUS => {
+            RegionType::Continuous => {
                 frames = alloc_continuous_frames(region_size / FRAME_SIZE)?;
             }
         }
@@ -550,7 +557,7 @@ impl MemoryRegion {
             deleted_frames = self.frames.drain(start_index..);
 
             let mut next_region =
-                MemoryRegion::new(del_region_end, new_region_size, self.flags, RegionType::DEFAULT).unwrap();
+                MemoryRegion::new(del_region_end, new_region_size, self.flags, RegionType::Default).unwrap();
             next_region.frames = remained_frames;
             next_region.next = self.next.take();
 
@@ -606,7 +613,7 @@ mod test {
         let size = FRAME_SIZE * 5;
         let mut memory_region =
             MemoryRegion::new(start, size,
-                              RegionFlags::R, RegionType::DEFAULT)
+                              RegionFlags::R, RegionType::Default)
                 .unwrap();
         memory_region.fill(&[]).unwrap();
         memory_region.mapped_by(&mut page_table).unwrap();
@@ -633,7 +640,7 @@ mod test {
         let size = FRAME_SIZE * 5;
         let mut memory_region =
             MemoryRegion::new(start, size,
-                              RegionFlags::R, RegionType::DEFAULT)
+                              RegionFlags::R, RegionType::Default)
                 .unwrap();
         memory_region.fill(&[]).unwrap();
         memory_region.mapped_by(&mut page_table).unwrap();
@@ -672,7 +679,7 @@ mod test {
         let size = FRAME_SIZE * 5;
         let mut memory_region =
             MemoryRegion::new(start, size,
-                              RegionFlags::R, RegionType::DEFAULT)
+                              RegionFlags::R, RegionType::Default)
                 .unwrap();
         memory_region.fill(&[]).unwrap();
         memory_region.mapped_by(&mut page_table).unwrap();
@@ -695,23 +702,23 @@ mod test {
         let start = VirtualAddress::new(0x80200000);
         let region1 = MemoryRegion::new(
             start.add(FRAME_SIZE * 0), FRAME_SIZE,
-            RegionFlags::R, RegionType::DEFAULT,
+            RegionFlags::R, RegionType::Default,
         ).unwrap();
         let region2 = MemoryRegion::new(
             start.add(FRAME_SIZE * 1), FRAME_SIZE,
-            RegionFlags::R, RegionType::DEFAULT,
+            RegionFlags::R, RegionType::Default,
         ).unwrap();
         let region3 = MemoryRegion::new(
             start.add(FRAME_SIZE * 2), FRAME_SIZE,
-            RegionFlags::R, RegionType::DEFAULT,
+            RegionFlags::R, RegionType::Default,
         ).unwrap();
         let region4 = MemoryRegion::new(
             start.add(FRAME_SIZE * 3), FRAME_SIZE,
-            RegionFlags::R, RegionType::DEFAULT,
+            RegionFlags::R, RegionType::Default,
         ).unwrap();
         let region5 = MemoryRegion::new(
             start.add(FRAME_SIZE * 4), FRAME_SIZE,
-            RegionFlags::R, RegionType::DEFAULT,
+            RegionFlags::R, RegionType::Default,
         ).unwrap();
 
         let mut region_list = RegionList::empty();
@@ -867,7 +874,7 @@ mod test {
         let mut va = VirtualAddress::new(0);
         let size = 2 * FRAME_SIZE;
         let mut region =
-            MemoryRegion::new(va, size, RegionFlags::R | RegionFlags::W, RegionType::DEFAULT)?;
+            MemoryRegion::new(va, size, RegionFlags::R | RegionFlags::W, RegionType::Default)?;
         region.fill(&[])?;
         region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
@@ -875,7 +882,7 @@ mod test {
 
         let size = 3 * FRAME_SIZE;
         let mut region =
-            MemoryRegion::new(va, size, RegionFlags::W, RegionType::DEFAULT)?;
+            MemoryRegion::new(va, size, RegionFlags::W, RegionType::Default)?;
         region.fill(&[])?;
         region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
@@ -883,7 +890,7 @@ mod test {
 
         let size = 2 * FRAME_SIZE;
         let mut region =
-            MemoryRegion::new(va, size, RegionFlags::X, RegionType::DEFAULT)?;
+            MemoryRegion::new(va, size, RegionFlags::X, RegionType::Default)?;
         region.fill(&[])?;
         region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));
@@ -891,7 +898,7 @@ mod test {
 
         let size = 2 * FRAME_SIZE;
         let mut region =
-            MemoryRegion::new(va, size, RegionFlags::R, RegionType::DEFAULT)?;
+            MemoryRegion::new(va, size, RegionFlags::R, RegionType::Default)?;
         region.fill(&[])?;
         region.mapped_by(page_table)?;
         region_list.insert(Box::new(region));

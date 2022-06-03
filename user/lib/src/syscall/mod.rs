@@ -8,6 +8,7 @@ use crate::env::{get_envp_copy, getenv};
 use share::ipc::Msg;
 use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag, Stat, AT_FD_CWD};
 use share::ffi::{CString, CStr};
+use share::mmap::{Prot, MMAPFlags};
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -165,6 +166,10 @@ pub fn brk(new_brk: Option<usize>) -> Result<usize, SysError> {
     isize2result(sys_brk(new_brk))
 }
 
+pub fn munmap(start: usize, len: usize) -> Result<usize, SysError> {
+    isize2result(sys_munmap(start, len))
+}
+
 pub fn fork() -> Result<usize, SysError> {
     isize2result(sys_fork(0, 0, 0, 0, 0))
 }
@@ -205,6 +210,11 @@ pub fn exec(path: &str, args: Vec<&str>) -> Result<usize, SysError> {
     }
 
     return Err(SysError::new(ENFILE));
+}
+
+pub fn mmap(start: Option<usize>, len: usize, prot: Prot, flags: MMAPFlags, fd: usize, offset: usize) -> Result<usize, SysError> {
+    let start = start.unwrap_or(0);
+    isize2result(sys_mmap(start, len, prot.bits(), flags.bits(), fd, offset))
 }
 
 pub fn waitpid(pid: isize, status: Option<&mut usize>, options: usize) -> Result<usize, SysError> {
