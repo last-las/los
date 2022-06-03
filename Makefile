@@ -7,7 +7,7 @@ export CPU_NUMS = 2
 export LOG = ERROR
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 FS_IMG := ./fs.img
-SDCARD := /dev/disk1s2s1
+SDCARD := /dev/disk2s1
 
 # board and bootloader
 BOARD ?= qemu

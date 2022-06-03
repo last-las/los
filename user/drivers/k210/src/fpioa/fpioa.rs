@@ -45,40 +45,10 @@ pub mod fpioa {
         const REG: usize = 0x00;
         const ADDRESS: usize = FPIOA_ADDRESS + REG;
         #[derive(Clone, Copy)]
-        pub struct IO {
-            ch_sel: u8,
-            ds: u8,
-            oe_en: bool,
-            oe_inv: bool,
-            do_sel: bool,
-            do_inv: bool,
-            pu: bool,
-            pd: bool,
-            sl: bool,
-            ie_en: bool,
-            ie_inv: bool,
-            di_inv: bool,
-            st: bool,
-            pad_di: bool,
-        }
+        pub struct IO {}
         impl IO {
             pub fn new() -> Self {
-                Self {
-                    ch_sel: 0,
-                    ds: 0,
-                    oe_en: false,
-                    oe_inv: false,
-                    do_sel: false,
-                    do_inv: false,
-                    pu: false,
-                    pd: false,
-                    sl: false,
-                    ie_en: false,
-                    ie_inv: false,
-                    di_inv: false,
-                    st: false,
-                    pad_di: false,
-                }
+                Self {}
             }
             fn read(&self) -> u32 {
                 dev_read_u32(ADDRESS).unwrap() as u32

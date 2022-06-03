@@ -149,7 +149,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
             root_table
                 .map_with_offset(
                     SPI0_ADDRESS,
-                    SPI0_ADDRESS + 0x10000,
+                    SPI0_ADDRESS + FRAME_SIZE,
                     RAM_MAPPING_OFFSET,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
@@ -158,7 +158,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
             root_table
                 .map_with_offset(
                     DMAC_ADDRESS,
-                    DMAC_ADDRESS + 0x10000,
+                    DMAC_ADDRESS + FRAME_SIZE,
                     RAM_MAPPING_OFFSET,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )

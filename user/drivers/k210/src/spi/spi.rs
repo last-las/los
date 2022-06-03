@@ -18,7 +18,7 @@ pub struct SPI0 {
     pub ser: SER,
     #[doc = "0x14 - Baud Rate Select"]
     pub baudr: BAUDR,
-    #[doc = "0x18 - Transmit FIFO Threshold Level"]
+    #[doc = "0x20 - Transmit FIFO Level Register"]
     pub txflr: TXFLR,
     #[doc = "0x24 - Receive FIFO Level Register"]
     pub rxflr: RXFLR,
@@ -258,7 +258,7 @@ pub mod txflr {
         pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
-        pub fn write(&self, value: u32) -> &Self {
+        fn write(&self, value: u32) -> &Self {
             dev_write_u32(ADDRESS, value).unwrap();
             &self
         }

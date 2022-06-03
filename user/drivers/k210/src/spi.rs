@@ -86,40 +86,22 @@ impl SPI {
         self.spi.dmardlr.write(0x00);
         self.spi.ser.write(0x00);
         self.spi.ssienr.write(0x00);
+
         self.spi
             .ctrlr0
             .write_work_mode(work_mode)
             .write_tmod(tmod)
             .write_frame_format(frame_format)
             .write_data_length(data_bit_length - 1);
-        // self.spi.ctrlr0.write(|w| {
-        //     w.work_mode()
-        //         .variant(work_mode)
-        //         .tmod()
-        //         .variant(tmod)
-        //         .frame_format()
-        //         .variant(frame_format)
-        //         .data_length()
-        //         .bits(data_bit_length - 1)
-        // });
+
         self.spi
             .spi_ctrlr0
             .write_aitm(instruction_address_trans_mode)
             .write_addr_length(addr_l)
             .write_inst_length(inst_l)
             .write_wait_cycle(wait_cycles);
-        // self.spi.spi_ctrlr0.write(|w| {
-        //     w.aitm()
-        //         .variant(instruction_address_trans_mode)
-        //         .addr_length()
-        //         .bits(addr_l)
-        //         .inst_length()
-        //         .bits(inst_l)
-        //         .wait_cycles()
-        //         .bits(wait_cycles)
-        // });
+
         self.spi.endian.write(endian);
-        // self.spi.endian.write(|w| w.bits(endian));
     }
 
     /// Set SPI clock rate
@@ -143,19 +125,15 @@ impl SPI {
         if rx.len() == 0 {
             return;
         }
-        // self.spi
-        //     .ctrlr1
-        //     .write(|w| w.bits((rx.len() - 1).try_into().unwrap()));
+
         self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
         self.spi.ssienr.write(0x01);
-        // self.spi.dr[0].write(|w| w.bits(0xffffffff));
         self.spi.dr[0].write(0xffffffff);
         self.spi.ser.write(1 << chip_select);
 
         let mut fifo_len = 0;
         for val in rx.iter_mut() {
             while fifo_len == 0 {
-                // fifo_len = self.spi.rxflr.read().bits();
                 fifo_len = self.spi.rxflr.read();
             }
             *val = X::trunc(self.spi.dr[0].read());

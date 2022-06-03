@@ -362,8 +362,6 @@ static FUNCTION_DEFAULTS: &[u32] = &[
 pub fn set_function<N: Into<usize>>(number: N, function: function) {
     // TODO: check for overlapping assignments and assign to RESV0 as the Kendryte SDK does?
     unsafe {
-        // let fpioa = FPIOA::new().fpioa;
-        // let io = fpioa.io;
         FPIOA::new().fpioa.io[number.into()].write(FUNCTION_DEFAULTS[function as usize]);
         // (*ptr).io[number.into()].write(|w| w.bits(FUNCTION_DEFAULTS[function as usize]));
     }

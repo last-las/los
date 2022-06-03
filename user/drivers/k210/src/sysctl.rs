@@ -891,6 +891,7 @@ fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32,
                     // });
                 }
                 PLL2 => {
+                    sysctl::pll2::write_ckin_sel(pll2_source_to_cksel(source));
                     sysctl::pll2::write_clkr(found.clkr);
                     sysctl::pll2::write_clkf(found.clkf);
                     sysctl::pll2::write_clkod(found.clkod);

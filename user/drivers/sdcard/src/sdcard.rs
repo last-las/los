@@ -492,8 +492,9 @@ impl SDCard {
         self.send_cmd(CMD::CMD0, 0, 0x95);
         let result = self.get_response();
         self.end_cmd();
+
         if result != 0x01 {
-            return Err(InitError::CMDFailed(CMD::CMD0, result));
+            return Err(InitError::CMDFailed(CMD::CMD0, 0));
         }
 
         /* Check voltage range */
@@ -673,7 +674,7 @@ const SD_CS_GPIONUM: u8 = 7;
 const SD_CS: u32 = 3;
 
 /** Connect pins to internal functions */
-fn io_init() {
+pub fn io_init() {
     fpioa::set_function(fpioa::io::SPI0_SCLK, fpioa::function::SPI0_SCLK);
     fpioa::set_function(fpioa::io::SPI0_MOSI, fpioa::function::SPI0_D0);
     fpioa::set_function(fpioa::io::SPI0_MISO, fpioa::function::SPI0_D1);
@@ -687,28 +688,27 @@ fn io_init() {
 
 fn init_sdcard() -> SDCard {
     // wait previous output
-    // usleep(100000);
-    // let peripherals = unsafe { Peripherals::steal() };
-    sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
+    usleep(10000);
+
+    // sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL1, 300_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL2, 45_158_400).unwrap();
     let clocks = clock::Clocks::new();
 
-    // peripherals.UARTHS.configure(115_200.bps(), &clocks);
     // UART_mod::configure(115_200.bps(), &clocks);
     uarth::configure(Bps::new(115_200), &clocks);
 
     io_init();
 
     // let spi = SPI0::new().constrain();
-    // let spi = SPI0::new();
+
     let spi = SPI::new();
     let sd = SDCard::new(spi, SD_CS, SD_CS_GPIONUM);
     let info = sd.init().unwrap();
+
     let num_sectors = info.CardCapacity / 512;
     assert!(num_sectors > 0);
 
-    println!("init sdcard!");
     sd
 }
 
