@@ -17,6 +17,8 @@ fn main() {
     //let sdcard = SDCardWrapper::new();
 
     println!("block test");
+    write_test();
+
     read_test();
     //block_device_test();
     // let mut message = Msg::empty();
@@ -42,18 +44,18 @@ pub fn read_test() {
     let mut buf = [0u8; 512];
      block_device.read_block(0, &mut buf);
 
-    println!("read block success");
+    println!("read block success {:?}", buf);
 }
 
 pub fn write_test() {
     let block_device = BLOCK_DEVICE.clone();
     let mut buf = [0u8; 512];
     for val in buf.iter_mut() {
-        *val = 1;
+        *val = 2;
     }
     block_device.write_block(0, &buf);
 
-    println!("read block success");
+    println!("write block success");
 }
 
 pub fn do_read(message: Msg) {

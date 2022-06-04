@@ -573,6 +573,7 @@ impl SDCard {
     pub fn read_sector(&self, data_buf: &mut [u8], sector: u32) -> Result<(), ()> {
         assert!(data_buf.len() >= SEC_LEN && (data_buf.len() % SEC_LEN) == 0);
         /* Send CMD17 to read one block, or CMD18 for multiple */
+
         let flag = if data_buf.len() == SEC_LEN {
             self.send_cmd(CMD::CMD17, sector, 0);
             false
@@ -585,20 +586,23 @@ impl SDCard {
             self.end_cmd();
             return Err(());
         }
-        println!("read chunk");
+        println!("start read sector");
+        //self.write_data(&[0xff; 10]);
         let mut error = false;
         //let mut dma_chunk = [0u32; SEC_LEN];
         //let mut tmp_chunk= [0u8; SEC_LEN];
+        while self.get_response() != SD_START_DATA_MULTIPLE_BLOCK_READ {
+
+        }
         for chunk in data_buf.chunks_mut(SEC_LEN) {
-            if self.get_response() != SD_START_DATA_SINGLE_BLOCK_READ {
-                error = true;
-                break;
-            }
+            // if self.get_response() != SD_START_DATA_SINGLE_BLOCK_READ {
+            //     error = true;
+            //     break;
+            // }
             /* Read the SD block data : read NumByteToRead data */
             //self.read_data_dma(&mut dma_chunk);
             //*可优化
             self.read_data(chunk);
-            println!("read data chunk");
             /* Place the data received as u32 units from DMA into the u8 target buffer */
             //for (a, b) in chunk.iter_mut().zip(/*dma_chunk*/tmp_chunk.iter()) {
             //    //*a = (b & 0xff) as u8;
@@ -609,15 +613,14 @@ impl SDCard {
             self.read_data(&mut frame);
 
         }
+        println!("success read sector");
         self.end_cmd();
-        println!("end read chunk {}", data_buf[0]);
         if flag {
             self.send_cmd(CMD::CMD12, 0, 0);
             self.get_response();
             self.end_cmd();
             self.end_cmd();
         }
-        println!("end read sector");
         /* It is an error if not everything requested was read */
         if error {
             Err(())
@@ -709,7 +712,7 @@ fn init_sdcard() -> SDCard {
     // wait previous output
     usleep(1000);
 
-    // sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
+    sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL1, 300_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL2, 45_158_400).unwrap();
     let clocks = clock::Clocks::new();

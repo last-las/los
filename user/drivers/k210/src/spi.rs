@@ -28,6 +28,8 @@ use core::convert::Into;
 use core::marker::Copy;
 use core::{assert, cmp};
 
+use user_lib::*;
+
 pub use ctrlr0::FRAME_FORMAT_A as frame_format;
 pub use ctrlr0::TMOD_A as tmod;
 pub use ctrlr0::WORK_MODE_A as work_mode;
@@ -81,15 +83,10 @@ impl SPI {
         let addr_l: u8 = address_length / 4;
 
         self.spi.imr.write(0x00);
-
-        self.spi.dmacr.write(0x00);
-
-        self.spi.dmatdlr.write(0x10);
-
-        self.spi.dmardlr.write(0x00);
-
+        // self.spi.dmacr.write(0x00);
+        // self.spi.dmatdlr.write(0x10);
+        // self.spi.dmardlr.write(0x00);
         self.spi.ser.write(0x00);
-
         self.spi.ssienr.write(0x00);
 
 
@@ -133,27 +130,26 @@ impl SPI {
         if rx.len() == 0 {
             return;
         }
-
-        self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
-
-        self.spi.ssienr.write(0x01);
-
-        self.spi.dr.write(0xffffffff);
-
-        self.spi.ser.write(1 << chip_select);
+        unsafe {
+            self.spi.ctrlr1.write((rx.len() - 1) as u32);
+            self.spi.ssienr.write(0x01);
+            self.spi.dr.write(0xffffffff);
+            self.spi.ser.write(1 << chip_select);
 
 
-        let mut fifo_len = 0;
-        for val in rx.iter_mut() {
-            while fifo_len == 0 {
-                fifo_len = self.spi.rxflr.read();
+            let mut fifo_len = 0;
+            for val in rx.iter_mut() {
+                while fifo_len == 0 {
+                    fifo_len = self.spi.rxflr.read();
+                    //println!("{}", self.spi.rxflr.read());
+                }
+                *val = X::trunc(self.spi.dr.read());
+                fifo_len -= 1;
             }
-            *val = X::trunc(self.spi.dr.read());
-            fifo_len -= 1;
-        }
 
-        self.spi.ser.write(0x00);
-        self.spi.ssienr.write(0x00);
+            self.spi.ser.write(0x00);
+            self.spi.ssienr.write(0x00);
+        }
     }
 
     /// Receive 32-bit data using DMA.
@@ -204,6 +200,7 @@ impl SPI {
             while fifo_len == 0 {
                 // fifo_len = 32 - self.spi.txflr.read().bits();
                 fifo_len = 32 - self.spi.txflr.read();
+                println!("{}",self.spi.txflr.read());
             }
             let x = val.into();
             self.spi.dr.write(x);

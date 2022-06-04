@@ -140,13 +140,13 @@ pub mod ctrlr0 {
         pub fn write_work_mode(&self, variant: WORK_MODE_A) -> &Self {
             let v = self.read();
             let variant: u8 = variant.into();
-            let v = (v & !(0x03 << 6)) | (((variant as u32) & 0x03) << 6);
+            let v =(v & !(0x03 << 6)) | (((variant as u32) & 0x03) << 6);
             self.write(v)
         }
         pub fn write_tmod(&self, variant: TMOD_A) -> &Self {
             let v = self.read();
             let variant: u8 = variant.into();
-            let v = (v & !(0x03 << 8)) | (((variant as u32) & 0x03) << 8);
+            let v =(v & !(0x03 << 8)) | (((variant as u32) & 0x03) << 8);
             self.write(v)
         }
         pub fn write_frame_format(&self, variant: FRAME_FORMAT_A) -> &Self {
