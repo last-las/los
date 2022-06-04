@@ -224,6 +224,7 @@ impl SDCard {
             tmod::RECV,
         );
         self.spi.recv_data(self.spi_cs, data);
+        println!("end read data");
     }
 
     /*
@@ -584,6 +585,7 @@ impl SDCard {
             self.end_cmd();
             return Err(());
         }
+        println!("read chunk");
         let mut error = false;
         //let mut dma_chunk = [0u32; SEC_LEN];
         //let mut tmp_chunk= [0u8; SEC_LEN];
@@ -596,6 +598,7 @@ impl SDCard {
             //self.read_data_dma(&mut dma_chunk);
             //*可优化
             self.read_data(chunk);
+            println!("read data chunk");
             /* Place the data received as u32 units from DMA into the u8 target buffer */
             //for (a, b) in chunk.iter_mut().zip(/*dma_chunk*/tmp_chunk.iter()) {
             //    //*a = (b & 0xff) as u8;
@@ -604,14 +607,17 @@ impl SDCard {
             /* Get CRC bytes (not really needed by us, but required by SD) */
             let mut frame = [0u8; 2];
             self.read_data(&mut frame);
+
         }
         self.end_cmd();
+        println!("end read chunk {}", data_buf[0]);
         if flag {
             self.send_cmd(CMD::CMD12, 0, 0);
             self.get_response();
             self.end_cmd();
             self.end_cmd();
         }
+        println!("end read sector");
         /* It is an error if not everything requested was read */
         if error {
             Err(())
@@ -686,11 +692,12 @@ const SD_CS: u32 = 3;
 pub fn io_init() {
     clock_enable(sysctl::clock::FPIOA);
     clock_enable(sysctl::clock::GPIO);
-
-    fpioa::set_function(fpioa::io::SPI0_SCLK, fpioa::function::SPI0_SCLK);
-    fpioa::set_function(fpioa::io::SPI0_MOSI, fpioa::function::SPI0_D0);
-    fpioa::set_function(fpioa::io::SPI0_MISO, fpioa::function::SPI0_D1);
-    fpioa::set_function(fpioa::io::SPI0_CS0, fpioa::function::gpiohs(SD_CS_GPIONUM));
+    // 27          28          29
+    // 11 1f 00 00 04 3f b0 00 1f 1f 90 00
+    fpioa::set_function(fpioa::io::SPI0_SCLK, fpioa::function::SPI0_SCLK); //27 0x00001f11
+    fpioa::set_function(fpioa::io::SPI0_MOSI, fpioa::function::SPI0_D0); // 28 0x00b03f04
+    fpioa::set_function(fpioa::io::SPI0_MISO, fpioa::function::SPI0_D1); // 26 0x00b03f05
+    fpioa::set_function(fpioa::io::SPI0_CS0, fpioa::function::gpiohs(SD_CS_GPIONUM)); // 29 0x00901f1f
     fpioa::set_io_pull(fpioa::io::SPI0_CS0, fpioa::pull::DOWN); // GPIO output=pull down
 }
 

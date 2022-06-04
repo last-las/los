@@ -363,7 +363,9 @@ static FUNCTION_DEFAULTS: &[u32] = &[
 pub fn set_function<N: Into<usize>>(number: N, function: function) {
     let n = number.into();
     let io = FPIOA::new().fpioa.io;
-    io.reset(n).write(n, FUNCTION_DEFAULTS[function as usize]);
+    io.write(n, FUNCTION_DEFAULTS[function as usize]);
+
+    println!("fpioa write: {:08X} read: {:08X}", FUNCTION_DEFAULTS[function as usize], io.read(n));
 }
 
 pub fn read_function<N: Into<usize>>(number: N) -> usize {

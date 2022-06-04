@@ -74,24 +74,24 @@ impl SPI {
             4 => 1,
             8 => 2,
             16 => 3,
-            _ => panic!("unhandled intruction length"),
+            _ => panic!("unhandled instruction length"),
         };
 
         assert!(address_length % 4 == 0 && address_length <= 60);
         let addr_l: u8 = address_length / 4;
 
         self.spi.imr.write(0x00);
-        assert_eq!(self.spi.imr.read(), 0);
+
         self.spi.dmacr.write(0x00);
-        assert_eq!(self.spi.dmacr.read(), 0);
+
         self.spi.dmatdlr.write(0x10);
-        assert_eq!(self.spi.dmatdlr.read(), 0x10);
+
         self.spi.dmardlr.write(0x00);
-        assert_eq!(self.spi.dmardlr.read(), 0);
+
         self.spi.ser.write(0x00);
-        assert_eq!(self.spi.ser.read(), 0);
+
         self.spi.ssienr.write(0x00);
-        assert_eq!(self.spi.ssienr.read(), 0);
+
 
         self.spi
             .ctrlr0
@@ -124,8 +124,6 @@ impl SPI {
         let spi_baudr = cmp::min(cmp::max(spi_baudr, 2), 65534);
 
         self.spi.baudr.write(spi_baudr);
-        assert_eq!(self.spi.baudr.read(), spi_baudr);
-
         clock_freq / spi_baudr
     }
 
@@ -139,13 +137,11 @@ impl SPI {
         self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
 
         self.spi.ssienr.write(0x01);
-        assert_eq!(self.spi.ssienr.read(), 0x01);
 
         self.spi.dr.write(0xffffffff);
-        assert_eq!(self.spi.dr.read(), 0xffffffff);
 
         self.spi.ser.write(1 << chip_select);
-        assert_eq!(self.spi.ser.read(), 1 << chip_select);
+
 
         let mut fifo_len = 0;
         for val in rx.iter_mut() {
@@ -201,9 +197,7 @@ impl SPI {
     /// Send arbitrary data
     pub fn send_data<X: Into<u32> + Copy>(&self, chip_select: u32, tx: &[X]) {
         self.spi.ser.write(1 << chip_select);
-        assert_eq!(self.spi.ser.read(), 1 << chip_select);
         self.spi.ssienr.write(0x01);
-        assert_eq!(self.spi.ssienr.read(), 0x01);
 
         let mut fifo_len = 0;
         for &val in tx {
@@ -213,7 +207,7 @@ impl SPI {
             }
             let x = val.into();
             self.spi.dr.write(x);
-            assert_eq!(self.spi.dr.read(), x);
+
             fifo_len -= 1;
         }
 
@@ -221,10 +215,9 @@ impl SPI {
             // IDLE
         }
         self.spi.ser.write(0x00);
-        assert_eq!(self.spi.ser.read(), 0);
 
         self.spi.ssienr.write(0x00);
-        assert_eq!(self.spi.ssienr.read(), 0);
+
     }
 
     /// Send 32-bit data using DMA.

@@ -48,9 +48,6 @@ pub mod fpioa {
             pub fn new() -> Self {
                 Self {}
             }
-            pub fn reset(&self, n: usize) -> &Self {
-                self.write(n, 0)
-            }
             // read io[n] 0: 0-3 1:4-7 2:8-11
             pub fn read(&self, n: usize) -> u32 {
                 dev_read_u32(ADDRESS + n * 4).unwrap() as u32
