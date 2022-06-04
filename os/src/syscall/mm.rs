@@ -88,6 +88,10 @@ pub fn do_mmap(start: usize, len: usize, prot: u32, flags: u32, fd: usize, offse
     Ok(return_addr.0)
 }
 
+// munmap won't write content back to disk in any situation now!
 pub fn do_munmap(start: usize, len: usize) -> Result<usize, SysError> {
+    let cur_task = get_cur_task_in_this_hart();
+    let mut inner = cur_task.acquire_inner_lock();
+    inner.mem_manager.delete_area(VirtualAddress::new(start), ceil(len));
     Ok(0)
 }
