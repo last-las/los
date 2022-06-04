@@ -1,6 +1,6 @@
 mod ipc;
 mod mm;
-mod file;
+pub(crate) mod file;
 mod time;
 mod proc;
 mod kcall;

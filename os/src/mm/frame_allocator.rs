@@ -61,6 +61,16 @@ impl FrameTracker {
         left.copy_from_slice(data);
         right.fill(0);
     }
+
+    pub fn read_into(&self, data: &mut [u8]) {
+        assert!(data.len() <= FRAME_SIZE);
+
+        let pa: PhysicalAddress = self.0.into();
+        let byte_arr: &[u8;FRAME_SIZE] = pa.as_ref();
+        let len = data.len();
+        let (left, _) = byte_arr.split_at(len);
+        data.copy_from_slice(left);
+    }
 }
 
 #[cfg(not(test))]

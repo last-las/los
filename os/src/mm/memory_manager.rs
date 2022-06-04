@@ -8,6 +8,8 @@ use core::fmt::{Debug, Formatter};
 use crate::mm::{alloc_frame, address, alloc_continuous_frames};
 use core::arch::asm;
 use share::syscall::error::{SysError, EACCES, ENOMEM};
+use alloc::vec;
+use crate::syscall::file::do_write;
 
 pub struct MemoryManager {
     pub page_table: PageTable,
@@ -109,7 +111,7 @@ impl MemoryManager {
     }
 
     /// alloc start from `MMAP_START_ADDRESS`
-    pub fn alloc_area(&mut self, size: usize, flags: RegionFlags, region_type: RegionType)
+    pub fn alloc_area(&mut self, size: usize, flags: RegionFlags, region_type: RegionType, data: Option<&[u8]>)
         -> Result<VirtualAddress, SysError>  {
         let alloc_start = VirtualAddress::new(MMAP_START_ADDRESS);
         let region_start =
@@ -118,8 +120,8 @@ impl MemoryManager {
                 .ok_or(SysError::new(ENOMEM))?;
 
         let mut memory_region = MemoryRegion::new(region_start, size, flags, region_type)?;
-        let empty_data = [];
-        memory_region.fill(&empty_data)?;
+        let data = data.unwrap_or(&[]);
+        memory_region.fill(data)?;
         memory_region.mapped_by(&mut self.page_table)?;
 
         self.region_list.insert(Box::new(memory_region));
@@ -134,6 +136,12 @@ impl MemoryManager {
             true
         } else {
             false
+        }
+    }
+
+    pub fn sync(&self) {
+        for region in self.region_list.iter() {
+            region.sync();
         }
     }
 
@@ -437,13 +445,7 @@ pub struct MemoryRegion {
 pub enum RegionType {
     Default,
     Continuous,
-    MemoryMapping(MmapInfo),
-}
-
-#[derive(Copy, Clone)]
-pub struct MmapInfo {
-    fd: usize,
-    offset: usize,
+    Shared(usize, usize, usize), // fd, offset, len
 }
 
 impl Debug for MemoryRegion {
@@ -459,7 +461,7 @@ impl MemoryRegion {
 
         let mut frames = Vec::new();
         match region_type {
-            RegionType::Default | RegionType::MemoryMapping(_) => {
+            RegionType::Default | RegionType::Shared(_, _, _) => {
                 for _ in (0..region_size).step_by(FRAME_SIZE) {
                     frames.push(alloc_frame()?);
                 }
@@ -581,6 +583,26 @@ impl MemoryRegion {
 
     pub fn contain(&self, va: VirtualAddress) -> bool {
         va >= self.start && va < self.end()
+    }
+
+    pub fn sync(&self) {
+        match self.region_type {
+            RegionType::Shared(fd, offset, len) => {
+                let mut data: Vec<u8> = vec![0; len];
+                let mut current_start = 0;
+                let mut total = len;
+
+                for i in 0..((len - 1)/ FRAME_SIZE + 1) {
+                    let size = usize::min(FRAME_SIZE, total);
+                    self.frames[i].read_into(&mut data.as_mut_slice()[current_start..size]);
+                    current_start += size;
+                    total -= size;
+                }
+
+                do_write(fd, data.as_ptr() as usize, len).unwrap();
+            },
+            _ => {}
+        }
     }
 }
 
