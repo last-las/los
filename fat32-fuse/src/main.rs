@@ -69,7 +69,7 @@ fn fat32_pack() -> std::io::Result<()> {
     let target_path = matches.value_of("target").unwrap();
     println!("src_path = {}\ntarget_path = {}", src_path, target_path);
     
-    // 打开U盘
+    // 打开文件系统镜像
     let block_file = Arc::new(BlockFile(Mutex::new({
         let f = OpenOptions::new()
             .read(true)
@@ -80,15 +80,6 @@ fn fat32_pack() -> std::io::Result<()> {
         f.set_len(16*1024*512).unwrap();
         f
     })));
-    /*let block_file = Arc::new(BlockFile(Mutex::new({
-        let f = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(format!("{}{}", target_path, "fs.img"))?;
-        f.set_len(16 * 2048 * 512).unwrap();
-        f
-    })));*/
     let fs_manager = FAT32Manager::open(block_file.clone());
     let fs_reader = fs_manager.read();
     //println!("{:X}",fs_reader.get_fat().read().get_next_cluster(2, block_file.clone()));
@@ -149,12 +140,6 @@ fn ufs_test() -> std::io::Result<()> {
             .write(true)
             .create(true)
             .open("./fs.img")?;    
-        //dev/sdb1
-        //f.set_len(102400*512);
-        //let mut f = File::open("src/fat32c.img")?;
-        //let mut buffer= [0u8;50];
-        //f.read(&mut buffer)?;
-        //println!("test buf {:?}",buffer);
         f
     })));
 

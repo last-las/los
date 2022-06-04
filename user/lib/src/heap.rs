@@ -1,5 +1,6 @@
+#[allow(unused_imports)]
 use core::alloc::Layout;
-use buddy_allocator::{Heap, LockedHeap};
+use buddy_allocator::{LockedHeap};
 use crate::syscall::{brk, getpid};
 
 // 20220527 change from 0x80_000 to 0x2000

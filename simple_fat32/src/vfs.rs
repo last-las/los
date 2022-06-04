@@ -8,6 +8,7 @@ use super::{
     //print
 };
 use alloc::sync::Arc;
+#[allow(unused_imports)]
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use spin::RwLock;
@@ -19,9 +20,7 @@ pub struct VFile {
     pub short_sector: usize, 
     pub short_offset: usize, //文件短目录项所在扇区和偏移
     long_pos_vec: Vec<(usize, usize)>, // 长目录项的位置<sector, offset>
-    //first_cluster: u32,
     attribute:u8,
-    //size:u32,
     fs: Arc<RwLock<FAT32Manager>>,
     block_device: Arc<dyn BlockDevice>,
 }
@@ -38,10 +37,7 @@ impl VFile{
         short_sector: usize, 
         short_offset: usize,
         long_pos_vec:Vec<(usize, usize)>, 
-        //first_cluster: u32,
         attribute:u8,
-        #[allow(unused_variables)]
-        size:u32,
         fs: Arc<RwLock<FAT32Manager>>,
         block_device: Arc<dyn BlockDevice>
     )->Self{
@@ -227,7 +223,6 @@ impl VFile{
                                 long_pos_vec,
                                 //short_ent.first_cluster(),
                                 short_ent.attribute(),
-                                short_ent.get_size(),
                                 self.fs.clone(),
                                 self.block_device.clone(),
                             )
@@ -275,7 +270,6 @@ impl VFile{
                             short_offset, 
                             long_pos_vec,
                             short_ent.attribute(),
-                            short_ent.get_size(),
                             self.fs.clone(),
                             self.block_device.clone(),
                         )

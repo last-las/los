@@ -20,7 +20,7 @@ use spin::RwLock;
 //use console;
 
 pub struct FAT32Manager {
-    block_device: Arc<dyn BlockDevice>,
+    pub block_device: Arc<dyn BlockDevice>,
     fsinfo: Arc<FSInfo>,
     sectors_per_cluster: u32,
     bytes_per_sector: u32,
@@ -161,7 +161,6 @@ impl FAT32Manager {
             0,
             long_pos_vec,
             ATTRIBUTE_DIRECTORY,
-            0,
             Arc::clone(fs_manager),
             self.block_device.clone()
         )

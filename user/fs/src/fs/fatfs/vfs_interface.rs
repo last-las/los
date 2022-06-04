@@ -5,15 +5,15 @@ use crate::vfs::inode::{InodeOperations, VfsInode, Rdev};
 use crate::vfs::dentry::VfsDentry;
 use share::file::FileTypeFlag;
 use crate::vfs::file::{FileOperations, File};
-use crate::fs::fatfs::{get_fatfs_root_inode, add_fatfs_instance};
+use crate::fs::fatfs::{get_fatfs_root_inode, add_fatfs_instance,get_fatfs_instance_by};
 use alloc::vec::Vec;
+use alloc::string::String;
 use simple_fat32::{FAT32Manager,VFile,ATTRIBUTE_DIRECTORY};
 //use easy_fs::DiskInodeType;
 use alloc::sync::Arc;
 use crate::device::block::Block;
 use share::syscall::error::{SysError, EEXIST, EPERM, ENOENT};
 use user_lib::syscall::{virt_copy, getpid};
-
 
 pub fn create_fatfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     // create a new easy filesystem instance.
@@ -33,12 +33,11 @@ pub fn create_fatfs_super_block(rdev: Rdev) -> Option<Rc<RefCell<SuperBlock>>> {
     Some(sp)
 }
 
-//pub create_root_dentry()->Rc<RefCell<VfsDentry>>
-
 pub struct FATFsInodeOperations;
 pub struct FATFsFileOperations;
 
 impl InodeOperations for FATFsInodeOperations {
+    //unmatch
     fn lookup(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         let rdev = parent.borrow().super_block.borrow().rdev.into();
         let root_inode = get_fatfs_root_inode(rdev).unwrap();
@@ -52,6 +51,7 @@ impl InodeOperations for FATFsInodeOperations {
         Ok(create_dentry_from_fatfs_inode(name, Arc::new(fat_inode), sp))
     }
 
+    //unmatch
     fn create(&self, name: &str, parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
         let rdev = parent.borrow().super_block.borrow().rdev.into();
         let root_inode = get_fatfs_root_inode(rdev).unwrap();
@@ -65,8 +65,24 @@ impl InodeOperations for FATFsInodeOperations {
         Ok(create_dentry_from_fatfs_inode(name, fatfs_inode, sp))
     }
 
+    //match
     fn mkdir(&self, _name: &str, _parent: Rc<RefCell<VfsInode>>) -> Result<Rc<RefCell<VfsDentry>>, SysError> {
-        return Err(SysError::new(EPERM));
+        let sp = _parent.borrow().super_block.clone();
+        let rdev = sp.borrow().rdev.into();
+        let s_sector=_parent.borrow().ino >> 32;
+        let s_offset=_parent.borrow().ino & (0x00000000ffffffff as usize);
+        let fat=get_fatfs_instance_by(rdev).unwrap();
+        let block = fat.try_read().unwrap().block_device.clone();
+        let vfile=VFile::new(
+            String::from(""),
+            s_sector,
+            s_offset,
+            vec![],
+            ATTRIBUTE_DIRECTORY,
+            Arc::clone(fat),
+            block);
+        let new_dir = vfile.create(_name,ATTRIBUTE_DIRECTORY);
+        Ok(create_dentry_from_fatfs_inode(_name, new_dir.unwrap(),sp))
     }
 
     fn mknod(&self, _name: &str, _file_type: FileTypeFlag, _rdev: Rdev, _parent: Rc<RefCell<VfsInode>>)
@@ -87,11 +103,9 @@ impl FileOperations for FATFsFileOperations {
     fn read(&self, file: Rc<RefCell<File>>, buf_ptr: usize, cnt: usize, proc_nr: usize) -> Result<usize, SysError> {
         let rdev = file.borrow().dentry.borrow().inode.borrow().super_block.borrow().rdev.into();
         let root_inode = get_fatfs_root_inode(rdev).unwrap();
-
         let name = file.borrow().dentry.borrow().name.clone();
         let ino = file.borrow().dentry.borrow().inode.borrow().ino;
         let pos = file.borrow().pos;
-
         let fatfs_inode = root_inode.find_vfile_byname(name.as_str()).unwrap();
         let write_ino = get_inode_id_from(Arc::new(fatfs_inode.clone()));
         assert_eq!(ino, write_ino);
@@ -124,22 +138,36 @@ impl FileOperations for FATFsFileOperations {
         Ok(())
     }
 
-    //now only "ls" the mount points
     fn readdir(&self, file: Rc<RefCell<File>>) -> Vec<Rc<RefCell<VfsDentry>>> {
         let sp = file.borrow().dentry.borrow().inode.borrow().super_block.clone();
         let rdev = sp.borrow().rdev.into();
-        let root_inode = get_fatfs_root_inode(rdev).unwrap();
+        let inode = file.borrow().dentry.borrow().inode.clone();
 
-        let names = root_inode.ls().unwrap();
+        let dentry_name=file.borrow().dentry.borrow().name.clone();
+        let s_sector=inode.borrow().ino >> 32;
+        let s_offset=inode.borrow().ino & (0x00000000ffffffff as usize);
+        let fat=get_fatfs_instance_by(rdev).unwrap();
+        let block = fat.try_read().unwrap().block_device.clone();
+        let vfile=VFile::new(
+            dentry_name,
+            s_sector,
+            s_offset,
+            vec![],
+            ATTRIBUTE_DIRECTORY,
+            Arc::clone(fat),
+            block
+            );      
+        //下一步，shell根据目录/文件不同显示不同的颜色
+        let names = vfile.ls().unwrap();
         let mut results = Vec::new();
         for name in names {
-            let fatfs_inode = root_inode.find_vfile_byname(name.0.as_str()).unwrap();
+            //根目录ls会出错
+            let fatfs_inode = vfile.find_vfile_byname(name.0.as_str()).unwrap();
             let dentry = create_dentry_from_fatfs_inode(name.0.as_str(), 
             Arc::new(fatfs_inode), sp.clone());
             results.push(dentry);
         }
-
-        results
+        results 
     }
 }
 

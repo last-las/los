@@ -7,7 +7,7 @@ export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 FS_IMG := $(USER_PATH)fs.img
-OTHER_PATH := /home/las/workstation/testsuits-for-oskernel-main/riscv-syscalls-testing/user/build/riscv64/
+OTHER_PATH := /home/oslab/Desktop/los/los/fat32-fuse/riscv64
 
 all: user fs-img
 	@cd ./os && cargo build --release
@@ -26,7 +26,7 @@ fs-img:
 	@dd if=/dev/zero of=$(USER_PATH)fs.img bs=512KB count=256 #k210 128MB
 	@mkfs.vfat -F 32 $(USER_PATH)fs.img
 	@cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
-	#cd ./fat32-fuse && sh qemu_fs.sh
+	@
 
 run:
 	@qemu-system-riscv64 \
