@@ -34,7 +34,7 @@ fn read_input_val() -> u32 {
     dev_read_u32(GPIOHS_ADDRESS + INPUT_VAL).unwrap() as u32
 }
 
-fn read_output_val() -> u32 {
+pub fn read_output_val() -> u32 {
     dev_read_u32(GPIOHS_ADDRESS + OUTPUT_VAL).unwrap() as u32
 }
 
@@ -48,8 +48,18 @@ pub fn set_direction(pin: u8, direction: gpio::direction) {
         let v = read_output_en();
         write_output_en(set_bit(v, pin, direction == gpio::direction::OUTPUT));
 
+        assert_eq!(
+            read_output_en(),
+            set_bit(v, pin, direction == gpio::direction::OUTPUT)
+        );
+
         let v = read_input_en();
         write_input_en(set_bit(v, pin, direction == gpio::direction::INPUT));
+
+        assert_eq!(
+            read_input_en(),
+            set_bit(v, pin, direction == gpio::direction::INPUT)
+        );
 
         // let ptr = pac::GPIOHS::ptr();
         // (*ptr)
@@ -70,6 +80,8 @@ pub fn set_pin(pin: u8, value: bool) {
         //     .modify(|r, w| w.bits(set_bit(r.bits(), pin, value)));
         let v = read_output_val();
         write_output_val(set_bit(v, pin, value));
+
+        assert_eq!(read_output_val(), set_bit(v, pin, value));
     }
 }
 

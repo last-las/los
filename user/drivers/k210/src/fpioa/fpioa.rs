@@ -10,7 +10,6 @@ impl FPIOA {
             fpioa: Fpioa::new(),
         }
     }
-    
 }
 
 pub mod fpioa {
@@ -18,7 +17,7 @@ pub mod fpioa {
 
     const FPIOA_ADDRESS: usize = 0x502b_0000;
     pub struct Fpioa {
-        #[doc = "0x00 - FPIOA GPIO multiplexer io array"]
+        #[doc = "0x00 - FPIOA GPIO multiplexer io array IO[48]"]
         pub io: IO,
         #[doc = "0xc0 - FPIOA GPIO multiplexer tie enable array"]
         pub tie_en: [TIE_EN; 8],
@@ -49,8 +48,11 @@ pub mod fpioa {
             pub fn new() -> Self {
                 Self {}
             }
-            // read io[n]
-            fn read(&self, n: usize) -> u32 {
+            pub fn reset(&self, n: usize) -> &Self {
+                self.write(n, 0)
+            }
+            // read io[n] 0: 0-3 1:4-7 2:8-11
+            pub fn read(&self, n: usize) -> u32 {
                 dev_read_u32(ADDRESS + n * 4).unwrap() as u32
             }
             // write io[n]

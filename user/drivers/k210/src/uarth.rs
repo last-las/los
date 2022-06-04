@@ -37,7 +37,7 @@ pub mod uarths {
         use super::UARTHS_ADDRESS;
         use user_lib::syscall::{dev_read_u32, dev_write_u32};
 
-        const REG: usize = 0x08;
+        const REG: usize = 0x18;
         const ADDRESS: usize = UARTHS_ADDRESS + REG;
         pub struct DIV {}
         impl DIV {
@@ -55,7 +55,7 @@ pub mod uarths {
         use super::UARTHS_ADDRESS;
         use user_lib::syscall::{dev_read_u32, dev_write_u32};
 
-        const REG: usize = 0x0c;
+        const REG: usize = 0x08;
         const ADDRESS: usize = UARTHS_ADDRESS + REG;
         pub struct TXCTRL {}
         impl TXCTRL {
@@ -79,7 +79,7 @@ pub mod uarths {
 
         use super::UARTHS_ADDRESS;
 
-        const REG: usize = 0x18;
+        const REG: usize = 0x0c;
         const ADDRESS: usize = UARTHS_ADDRESS + REG;
         pub struct RXCTRL {}
         impl RXCTRL {

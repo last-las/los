@@ -7,6 +7,7 @@
 // use k210_pac as pac;
 
 mod fpioa;
+use user_lib::println;
 
 #[derive(Copy, Clone)]
 pub enum function {
@@ -360,14 +361,13 @@ static FUNCTION_DEFAULTS: &[u32] = &[
 ];
 
 pub fn set_function<N: Into<usize>>(number: N, function: function) {
-    // TODO: check for overlapping assignments and assign to RESV0 as the Kendryte SDK does?
-    unsafe {
-        FPIOA::new()
-            .fpioa
-            .io
-            .write(number.into(), FUNCTION_DEFAULTS[function as usize]);
-        // (*ptr).io[number.into()].write(|w| w.bits(FUNCTION_DEFAULTS[function as usize]));
-    }
+    let n = number.into();
+    let io = FPIOA::new().fpioa.io;
+    io.reset(n).write(n, FUNCTION_DEFAULTS[function as usize]);
+}
+
+pub fn read_function<N: Into<usize>>(number: N) -> usize {
+    FPIOA::new().fpioa.io.read(number.into()) as usize
 }
 
 pub fn set_io_pull<N: Into<usize>>(number: N, pull: pull) {

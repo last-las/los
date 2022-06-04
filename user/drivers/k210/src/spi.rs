@@ -81,11 +81,17 @@ impl SPI {
         let addr_l: u8 = address_length / 4;
 
         self.spi.imr.write(0x00);
+        assert_eq!(self.spi.imr.read(), 0);
         self.spi.dmacr.write(0x00);
+        assert_eq!(self.spi.dmacr.read(), 0);
         self.spi.dmatdlr.write(0x10);
+        assert_eq!(self.spi.dmatdlr.read(), 0x10);
         self.spi.dmardlr.write(0x00);
+        assert_eq!(self.spi.dmardlr.read(), 0);
         self.spi.ser.write(0x00);
+        assert_eq!(self.spi.ser.read(), 0);
         self.spi.ssienr.write(0x00);
+        assert_eq!(self.spi.ssienr.read(), 0);
 
         self.spi
             .ctrlr0
@@ -101,10 +107,13 @@ impl SPI {
             .write_inst_length(inst_l)
             .write_wait_cycle(wait_cycles);
 
+        assert_eq!(self.spi.spi_ctrlr0.read(), 0);
+
         self.spi.endian.write(endian);
+        assert_eq!(self.spi.endian.read(), endian);
     }
 
-    /// Set SPI clock rate
+    /// Set SPI clock rate  
     pub fn set_clk_rate(&self, spi_clk: u32) -> u32 {
         sysctl::clock_enable(CLK);
         sysctl::clock_set_threshold(DIV, 0);
@@ -115,6 +124,7 @@ impl SPI {
         let spi_baudr = cmp::min(cmp::max(spi_baudr, 2), 65534);
 
         self.spi.baudr.write(spi_baudr);
+        assert_eq!(self.spi.baudr.read(), spi_baudr);
 
         clock_freq / spi_baudr
     }
@@ -127,16 +137,22 @@ impl SPI {
         }
 
         self.spi.ctrlr1.write((rx.len() - 1).try_into().unwrap());
+
         self.spi.ssienr.write(0x01);
-        self.spi.dr.write(0, 0xffffffff);
+        assert_eq!(self.spi.ssienr.read(), 0x01);
+
+        self.spi.dr.write(0xffffffff);
+        assert_eq!(self.spi.dr.read(), 0xffffffff);
+
         self.spi.ser.write(1 << chip_select);
+        assert_eq!(self.spi.ser.read(), 1 << chip_select);
 
         let mut fifo_len = 0;
         for val in rx.iter_mut() {
             while fifo_len == 0 {
                 fifo_len = self.spi.rxflr.read();
             }
-            *val = X::trunc(self.spi.dr.read(0));
+            *val = X::trunc(self.spi.dr.read());
             fifo_len -= 1;
         }
 
@@ -174,7 +190,7 @@ impl SPI {
         //     transfer_width::WIDTH_32,
         //     rx.len() as u32,
         // );
-        self.spi.dr.write(0, 0xffffffff);
+        self.spi.dr.write(0xffffffff);
         self.spi.ser.write(1 << chip_select);
         dmac.wait_done(channel_num);
 
@@ -185,7 +201,9 @@ impl SPI {
     /// Send arbitrary data
     pub fn send_data<X: Into<u32> + Copy>(&self, chip_select: u32, tx: &[X]) {
         self.spi.ser.write(1 << chip_select);
+        assert_eq!(self.spi.ser.read(), 1 << chip_select);
         self.spi.ssienr.write(0x01);
+        assert_eq!(self.spi.ssienr.read(), 0x01);
 
         let mut fifo_len = 0;
         for &val in tx {
@@ -193,7 +211,9 @@ impl SPI {
                 // fifo_len = 32 - self.spi.txflr.read().bits();
                 fifo_len = 32 - self.spi.txflr.read();
             }
-            self.spi.dr.write(0, val.into());
+            let x = val.into();
+            self.spi.dr.write(x);
+            assert_eq!(self.spi.dr.read(), x);
             fifo_len -= 1;
         }
 
@@ -201,7 +221,10 @@ impl SPI {
             // IDLE
         }
         self.spi.ser.write(0x00);
+        assert_eq!(self.spi.ser.read(), 0);
+
         self.spi.ssienr.write(0x00);
+        assert_eq!(self.spi.ssienr.read(), 0);
     }
 
     /// Send 32-bit data using DMA.
@@ -249,7 +272,7 @@ impl SPI {
             let fifo_len = (32 - self.spi.txflr.read()) as usize;
             let fifo_len = cmp::min(fifo_len, tx_len);
             for _ in 0..fifo_len {
-                self.spi.dr.write(0, value);
+                self.spi.dr.write(value);
             }
             tx_len -= fifo_len;
         }

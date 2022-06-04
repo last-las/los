@@ -21,7 +21,7 @@ use k210::*;
 
 type BlockDeviceImpl = crate::SDCardWrapper;
 
-// todo
+// todo 替换成文件系统定义的BlockDevice
 pub trait BlockDevice: Send + Sync + Any {
     fn read_block(&self, block_id: usize, buf: &mut [u8]);
     fn write_block(&self, block_id: usize, buf: &[u8]);
@@ -490,12 +490,20 @@ impl SDCard {
         /* SD initialized and set to SPI mode properly */
 
         /* Send software reset */
-        self.send_cmd(CMD::CMD0, 0, 0x95);
-        let result = self.get_response();
-        self.end_cmd();
-
-        if result != 0x01 {
-            return Err(InitError::CMDFailed(CMD::CMD0, 0));
+        let times = 30;
+        let mut f = false;
+        let mut result = 0;
+        for _ in 0..times {
+            self.send_cmd(CMD::CMD0, 0, 0x95);
+            result = self.get_response();
+            self.end_cmd();
+            if result == 0x01 {
+                f = true;
+                break;
+            }
+        }
+        if !f {
+            return Err(InitError::CMDFailed(CMD::CMD0, result));
         }
 
         /* Check voltage range */
@@ -676,7 +684,6 @@ const SD_CS: u32 = 3;
 
 /** Connect pins to internal functions */
 pub fn io_init() {
-    // 使能fpioa和gpiohs
     clock_enable(sysctl::clock::FPIOA);
     clock_enable(sysctl::clock::GPIO);
 
@@ -693,7 +700,7 @@ pub fn io_init() {
 
 fn init_sdcard() -> SDCard {
     // wait previous output
-    usleep(10000);
+    usleep(1000);
 
     // sysctl::pll_set_freq(sysctl::pll::PLL0, 800_000_000).unwrap();
     sysctl::pll_set_freq(sysctl::pll::PLL1, 300_000_000).unwrap();
@@ -711,6 +718,7 @@ fn init_sdcard() -> SDCard {
 
     let spi = SPI::new();
     let sd = SDCard::new(spi, SD_CS, SD_CS_GPIONUM);
+
     let info = sd.init().unwrap();
 
     let num_sectors = info.CardCapacity / 512;

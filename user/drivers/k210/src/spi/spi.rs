@@ -192,7 +192,7 @@ pub mod ssienr {
     use super::SPI0_ADDRESS;
     pub struct SSIENR {}
     impl SSIENR {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -210,7 +210,7 @@ pub mod ser {
     use super::SPI0_ADDRESS;
     pub struct SER {}
     impl SER {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -228,7 +228,7 @@ pub mod baudr {
     use super::SPI0_ADDRESS;
     pub struct BAUDR {}
     impl BAUDR {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -303,7 +303,7 @@ pub mod imr {
     pub struct IMR {}
 
     impl IMR {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -323,7 +323,7 @@ pub mod dmacr {
     pub struct DMACR {}
 
     impl DMACR {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -342,7 +342,7 @@ pub mod dmatdlr {
 
     pub struct DMATDLR {}
     impl DMATDLR {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -360,7 +360,7 @@ pub mod dmardlr {
     use super::SPI0_ADDRESS;
     pub struct DMARDLR {}
     impl DMARDLR {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
@@ -379,11 +379,13 @@ pub mod dr {
     #[derive(Clone, Copy)]
     pub struct DR {}
     impl DR {
-        pub fn read(&self, n: usize) -> u32 {
-            dev_read_u32(ADDRESS + n * 4).unwrap() as u32
+        // read dr[n]
+        pub fn read(&self) -> u32 {
+            dev_read_u32(ADDRESS).unwrap() as u32
         }
-        pub fn write(&self, n: usize, value: u32) -> &Self {
-            dev_write_u32(ADDRESS + n * 4, value).unwrap();
+        // write dr[n]
+        pub fn write(&self, value: u32) -> &Self {
+            dev_write_u32(ADDRESS, value).unwrap();
             &self
         }
     }
@@ -415,7 +417,7 @@ pub mod spi_ctrlr0 {
 
     pub struct SPI_CTRLR0 {}
     impl SPI_CTRLR0 {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         fn write(&self, value: u32) -> &Self {
@@ -457,7 +459,7 @@ pub mod endian {
 
     pub struct ENDIAN {}
     impl ENDIAN {
-        fn read(&self) -> u32 {
+        pub fn read(&self) -> u32 {
             dev_read_u32(ADDRESS).unwrap() as u32
         }
         pub fn write(&self, value: u32) -> &Self {
