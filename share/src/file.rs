@@ -94,16 +94,16 @@ bitflags! {
 // TODO-FUTURE: update field size.
 #[repr(C)]
 pub struct Stat {
-    pub dev: usize,
-    pub ino: usize,
-    pub mode: usize,
-    pub nlink: usize,
-    pub uid: usize,
-    pub gid: usize,
-    pub rdev: usize,
-    // __pad
-    pub size: usize,
-    pub blksize: usize,
+    pub dev: u64,
+    pub ino: u64,
+    pub mode: u32,
+    pub nlink: u32,
+    pub uid: u32,
+    pub gid: u32,
+    pub rdev: u64,
+    __pad: u32,
+    pub size: u32,
+    pub blksize: u32,
     // sec stuff...
 }
 
@@ -117,6 +117,7 @@ impl Stat {
             uid: 0,
             gid: 0,
             rdev: 0,
+            __pad: 0,
             size: 0,
             blksize: 0,
         }

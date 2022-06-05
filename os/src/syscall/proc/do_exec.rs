@@ -18,8 +18,8 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
     let fd = do_open( AT_FD_CWD as usize,path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
     let stat = Stat::empty();
     do_fstat(fd, &stat as *const _ as usize)?;
-    let data_buffer = vec![0; stat.size];
-    do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
+    let data_buffer = vec![0; stat.size as usize];
+    do_read(fd, data_buffer.as_ptr() as usize, stat.size as usize)?;
     do_close(fd)?;
     let data = data_buffer.as_slice();
 

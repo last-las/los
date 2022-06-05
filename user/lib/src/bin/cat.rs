@@ -25,9 +25,9 @@ fn main() {
         for i in 1..args.len() {
             let fd = open(args[i].as_str(), OpenFlag::RDONLY, 0).unwrap();
             let stat = fstat(fd).unwrap();
-            let mut content = vec![0; stat.size];
+            let mut content = vec![0; stat.size as usize];
             let size = read(fd, content.as_mut_slice()).unwrap();
-            assert_eq!(size, stat.size);
+            assert_eq!(size, stat.size as usize);
             let content = unsafe { core::str::from_utf8_unchecked(&content[..size]) };
             println!("{}", content);
         }

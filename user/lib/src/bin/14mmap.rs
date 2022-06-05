@@ -16,15 +16,15 @@ fn main() {
     write(fd, STR.as_bytes()).unwrap();
     let stat = fstat(fd).unwrap();
     let ptr =
-        mmap(None, stat.size, Prot::WRITE | Prot::READ, MMAPFlags::SHARED, fd, 0).unwrap();
+        mmap(None, stat.size as usize, Prot::WRITE | Prot::READ, MMAPFlags::SHARED, fd, 0).unwrap();
 
     let mmap_bytes = unsafe {
-        core::slice::from_raw_parts(ptr as *const u8, stat.size)
+        core::slice::from_raw_parts(ptr as *const u8, stat.size as usize)
     };
     let mmap_str = core::str::from_utf8(mmap_bytes).unwrap();
 
     println!("mmap content: {}", mmap_str);
-    munmap(ptr, stat.size).unwrap();
+    munmap(ptr, stat.size as usize).unwrap();
     println!("should trigger load page fault");
     println!("mmap content: {}", mmap_str);
 }
