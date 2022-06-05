@@ -16,6 +16,7 @@ fn main() {
     sleep(1); // wait for fs server init.
     open_standard_fd();
     mount_fatfs_on("/bin");
+    mkdir_at(0,"/bin/mnt",0).unwrap();
     fork_and_exec("/bin/idle");
     fork_and_exec("/bin/shell");
 
@@ -38,7 +39,8 @@ fn open_standard_fd() {
 
 fn mount_fatfs_on(path: &str) {
     mkdir_at(0, path, 0).unwrap();
-    mount("/dev/sda2", path, "fat32", 0, 0).unwrap();
+    //mkdir_at(0,"/bin/contest",0).unwrap();
+    mount("/dev/sda2", path, "vfat", 0, 0).unwrap();
 }
 
 fn fork_and_exec(path: &str) {

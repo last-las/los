@@ -12,38 +12,38 @@ use alloc::vec::Vec;
 #[no_mangle]
 fn main() {
     let mut files = Vec::new();
-    files.push("brk\0");
-    files.push("chdir\0");
-    //test.push("clone\0");
-    files.push("close\0");
-    files.push("dup\0");
-    files.push("dup2\0");
-    files.push("execve\0");
-    files.push("exit\0");
-    files.push("fork\0");
-    //files.push("fstat\0");
-    files.push("getcwd\0");
-    files.push("getdents\0");
-    files.push("getpid\0");
-    files.push("getppid\0");
-    files.push("gettimeofday\0");
-    files.push("mkdir_\0");
-    //test.push("mmap\0");
-    files.push("mount\0");
-    //test.push("munmap\0");
-    files.push("open\0");
-    files.push("openat\0");
-    //files.push("pipe\0");
-    files.push("read\0");
-    files.push("sleep\0");
-    //files.push("times\0");
-    files.push("umount\0");
-    files.push("uname\0");
-    //files.push("unlink\0");
-    files.push("wait\0");
-    files.push("waitpid\0");
-    files.push("write\0");
-    files.push("yield\0");
+    files.push("/bin/contest/brk");
+    files.push("/bin/contest/chdir");
+    files.push("/bin/contest/clone");
+    files.push("/bin/contest/close");
+    files.push("/bin/contest/dup");
+    files.push("/bin/contest/dup2");
+    files.push("/bin/contest/execve");
+    files.push("/bin/contest/exit");
+    files.push("/bin/contest/fork");
+    files.push("/bin/contest/fstat");
+    files.push("/bin/contest/getcwd");
+    files.push("/bin/contest/getdents");
+    files.push("/bin/contest/getpid");
+    files.push("/bin/contest/getppid");
+    files.push("/bin/contest/gettimeofday");
+    files.push("/bin/contest/mkdir_");
+    //test.push("/bin/contest/mmap");
+    files.push("/bin/contest/mount");
+    //test.push("/bin/contest/munmap");
+    files.push("/bin/contest/open");
+    files.push("/bin/contest/openat");
+    //files.push("/bin/contest/pipe");
+    files.push("/bin/contest/read");
+    files.push("/bin/contest/sleep");
+    //files.push("/bin/contest/times");
+    files.push("/bin/contest/umount");
+    files.push("/bin/contest/uname");
+    //files.push("/bin/contest/unlink");
+    files.push("/bin/contest/wait");
+    files.push("/bin/contest/waitpid");
+    files.push("/bin/contest/write");
+    files.push("/bin/contest/yield");
     println!("-- Test mode,Start test --");
     for file in files {
         let pid = fork().unwrap();
@@ -54,7 +54,7 @@ fn main() {
                 }
                 exit(0);
             } else {
-                waitpid(pid as isize, None,0);
+                waitpid(pid as isize, None,0).unwrap();
             }
     }
 }

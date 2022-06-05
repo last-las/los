@@ -23,7 +23,7 @@ user:
 
 fs-img:
 	# @cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
-	@dd if=/dev/zero of=$(USER_PATH)fs.img bs=512KB count=256 #k210 128MB
+	@dd if=/dev/zero of=$(USER_PATH)fs.img bs=512 count=204800 #k210 128MB
 	@mkfs.vfat -F 32 $(USER_PATH)fs.img
 	@cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 	@

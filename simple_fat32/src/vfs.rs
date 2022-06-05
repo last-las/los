@@ -719,6 +719,7 @@ impl VFile{
     }   
 
     pub fn write_at(& self, offset: usize, buf: & [u8])->usize{
+        //扩容后的大小offset+buf.len()
         self.increase_size((offset + buf.len()) as u32  );
         self.modify_short_dirent(|short_ent: &mut ShortDirEntry|{
             short_ent.write_at(

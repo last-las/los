@@ -104,23 +104,48 @@ fn fat32_pack() -> std::io::Result<()> {
         let mut host_file = File::open(format!("{}{}", target_path, app)).unwrap();
         let mut all_data: Vec<u8> = Vec::new();
         host_file.read_to_end(&mut all_data).unwrap();
-        // create a file in easy-fs
-        //println!("before create");
         let o_vfile = root_vfile.create(app.as_str(), ATTRIBUTE_ARCHIVE);
         if o_vfile.is_none(){
             continue;
         }
         let vfile = o_vfile.unwrap();
-        //println!("after create");
-        println!("file_len = {}", all_data.len());
         vfile.write_at(0, all_data.as_slice());
         fs_manager.read().cache_write_back();
     }
-    // list apps
+    
+    /*test files */
+    /*let apps:Vec<_>=read_dir("./riscv64/")
+        .unwrap()
+        .into_iter()
+        .map(|dir_entry|{
+            let name_with_ext = dir_entry.unwrap().file_name().into_string().unwrap();
+            name_with_ext
+        })
+        .collect();
+    //let contest_vfile = root_vfile.create("contest",ATTRIBUTE_DIRECTORY).unwrap();
+    for app in apps{
+        let mut host_file = File::open(format!("{}{}", "./riscv64/", app)).unwrap();
+        let mut all_data: Vec<u8> = Vec::new();
+        host_file.read_to_end(&mut all_data).unwrap();
+        let o_vfile = root_vfile.create(app.as_str(), ATTRIBUTE_ARCHIVE);
+        if o_vfile.is_none(){
+            continue;
+        }
+        
+        let vfile = o_vfile.unwrap();
+        vfile.write_at(0, all_data.as_slice());
+        fs_manager.read().cache_write_back();
+    }
+    for app in contest_vfile.ls_lite().unwrap() {
+        println!("{}", app.0);
+    }*/
+    /*test end */
 
     for app in root_vfile.ls_lite().unwrap() {
         println!("{}", app.0);
     }
+    
+    
     Ok(())
 }
 
