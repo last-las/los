@@ -3,20 +3,20 @@
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 
-use crate::syscall::exit;
 use crate::heap::init_heap;
+use crate::syscall::exit;
 use core::arch::global_asm;
 use core::ptr;
 
 extern crate alloc;
 #[macro_use]
 pub mod console;
-pub mod syscall;
 pub mod env;
-pub mod io;
-pub mod termios;
-mod panic;
 mod heap;
+pub mod io;
+mod panic;
+pub mod syscall;
+pub mod termios;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -39,7 +39,7 @@ fn clear_bss() {
     }
     unsafe {
         let count = ebss as usize - sbss as usize;
-        ptr::write_bytes( sbss as usize as *mut u8, 0, count);
+        ptr::write_bytes(sbss as usize as *mut u8, 0, count);
     }
 }
 

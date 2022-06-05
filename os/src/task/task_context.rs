@@ -1,7 +1,7 @@
 use crate::trap:: __enter_user_mode;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct TaskContext {
     pub ra: usize,
     pub sp: usize,

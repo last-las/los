@@ -10,6 +10,7 @@ mod proc;
 mod syscall;
 mod device;
 
+#[macro_use]
 extern crate user_lib;
 #[macro_use]
 extern crate alloc;
@@ -136,7 +137,7 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
             do_open(message.args[FS_SYSCALL_ARG0], path.as_str(), message.args[FS_SYSCALL_ARG2] as u32, message.args[FS_SYSCALL_ARG3] as u32, cur_fs)
         },
         SYSCALL_CLOSE => do_close(message.args[FS_SYSCALL_ARG0], cur_fs),
-        SYSCALL_GETDENTS => do_get_dents(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
+        SYSCALL_GETDENTS => unsafe {do_get_dents(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs) },
         SYSCALL_READ => do_read(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
         SYSCALL_WRITE => do_write(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
         SYSCALL_MKDIRAT => {

@@ -1,13 +1,17 @@
-use crate::config::{FRAME_SIZE, RAM_SIZE, RAM_START_ADDRESS, KERNEL_MAPPING_OFFSET, RAM_MAPPING_OFFSET, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS};
-use crate::mm::alloc_frame;
-use crate::mm::FRAME_ALLOCATOR;
-use crate::mm::page_table::{PageTable, PTEFlags};
-use crate::mm::address::PhysicalAddress;
+use crate::config::{
+    DMAC_ADDRESS, FPIOA_ADDRESS, FRAME_SIZE, GPIOHS_ADDRESS, GPIO_BASE_ADDR, KERNEL_MAPPING_OFFSET,
+    RAM_MAPPING_OFFSET, RAM_SIZE, RAM_START_ADDRESS, RTC_BASE_ADDRESS, SPI0_ADDRESS,
+    SPI1_BASE_ADDR, SYSCTL_ADDRESS, UART_BASE_ADDRESS, VIRTIO0_START_ADDRESS,
+};
 use crate::kmain;
-use crate::processor::suspend_current_hart;
+use crate::mm::address::PhysicalAddress;
+use crate::mm::alloc_frame;
 use crate::mm::heap::stupid_allocator::StupidAllocator;
-use core::arch::asm;
+use crate::mm::page_table::{PTEFlags, PageTable};
+use crate::mm::FRAME_ALLOCATOR;
 use crate::plic::PLIC_START_ADDRESS;
+use crate::processor::suspend_current_hart;
+use core::arch::asm;
 
 extern "C" {
     pub fn __kernel_start();
@@ -31,42 +35,180 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
     if hart_id != 0 {
         suspend_current_hart();
     } else {
-        let start = PhysicalAddress::new(__kernel_end as usize) ;
+        let start = PhysicalAddress::new(__kernel_end as usize);
         let end = PhysicalAddress::new(RAM_START_ADDRESS + RAM_SIZE);
         let mut frame_allocator = FRAME_ALLOCATOR.lock();
         frame_allocator.init(start, end);
         drop(frame_allocator);
 
         let tmp_heap_frame = alloc_frame().unwrap();
-        let tmp_heap_allocator = StupidAllocator::new(tmp_heap_frame.0.0 << 12, FRAME_SIZE);
+        tmp_heap_frame.fill_with(&[]);
+        let tmp_heap_allocator = StupidAllocator::new(tmp_heap_frame.0 .0 << 12, FRAME_SIZE);
         let mut root_table = PageTable::new_kernel_table(tmp_heap_allocator).unwrap();
 
         unsafe {
             // higher half kernel
-            root_table.map_with_offset(__text_start as usize, __text_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::X).unwrap();
-            root_table.map_with_offset(__rodata_start as usize, __rodata_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R).unwrap();
-            root_table.map_with_offset(__data_start as usize, __data_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
-            root_table.map_with_offset(__bss_start as usize, __bss_end as usize, KERNEL_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
+            root_table
+                .map_with_offset(
+                    __text_start as usize,
+                    __text_end as usize,
+                    KERNEL_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::X,
+                )
+                .unwrap();
+            root_table
+                .map_with_offset(
+                    __rodata_start as usize,
+                    __rodata_end as usize,
+                    KERNEL_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R,
+                )
+                .unwrap();
+            root_table
+                .map_with_offset(
+                    __data_start as usize,
+                    __data_end as usize,
+                    KERNEL_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            root_table
+                .map_with_offset(
+                    __bss_start as usize,
+                    __bss_end as usize,
+                    KERNEL_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
 
             // ram mapping
-            root_table.map_with_offset(RAM_START_ADDRESS, RAM_START_ADDRESS + RAM_SIZE, RAM_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
+            root_table
+                .map_with_offset(
+                    RAM_START_ADDRESS,
+                    RAM_START_ADDRESS + RAM_SIZE,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
             // uart mapping
-            root_table.map_with_offset(UART_BASE_ADDRESS, UART_BASE_ADDRESS + FRAME_SIZE, RAM_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
+            root_table
+                .map_with_offset(
+                    UART_BASE_ADDRESS,
+                    UART_BASE_ADDRESS + FRAME_SIZE,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                ).unwrap();
+            root_table
+                .map_with_offset(
+                    UART_BASE_ADDRESS,
+                    UART_BASE_ADDRESS + FRAME_SIZE,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
             // plic mapping
-            root_table.map_with_offset(PLIC_START_ADDRESS, PLIC_START_ADDRESS + 0x100_0000, RAM_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
+            root_table
+                .map_with_offset(
+                    PLIC_START_ADDRESS,
+                    PLIC_START_ADDRESS + 0x100_0000,
+                    RAM_MAPPING_OFFSET,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            root_table
+                .map_with_offset(
+                    PLIC_START_ADDRESS,
+                    PLIC_START_ADDRESS + 0x100_0000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            //sysctl mapping
+            root_table
+                .map_with_offset(
+                    SYSCTL_ADDRESS,
+                    SYSCTL_ADDRESS + 0x10000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // fpioa mapping
+            root_table
+                .map_with_offset(
+                    FPIOA_ADDRESS,
+                    FPIOA_ADDRESS + 0x10000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            //gpio mapping
+            root_table
+                .map_with_offset(
+                    GPIO_BASE_ADDR,
+                    GPIO_BASE_ADDR + 0x10000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // gpiohs mapping
+            root_table
+                .map_with_offset(
+                    GPIOHS_ADDRESS,
+                    GPIOHS_ADDRESS + 0x1000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // rtc mapping
+            root_table
+                .map_with_offset(
+                    RTC_BASE_ADDRESS,
+                    RTC_BASE_ADDRESS + 0x10000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // spi0 mapping
+            root_table
+                .map_with_offset(
+                    SPI0_ADDRESS,
+                    SPI0_ADDRESS + 0x1000000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            root_table
+                .map_with_offset(
+                    SPI1_BASE_ADDR,
+                    SPI1_BASE_ADDR + 0x1000000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
+            // dmac mapping
+            root_table
+                .map_with_offset(
+                    DMAC_ADDRESS,
+                    DMAC_ADDRESS + FRAME_SIZE,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
             // virtio mapping
-            root_table.map_with_offset(VIRTIO0_START_ADDRESS, VIRTIO0_START_ADDRESS + FRAME_SIZE, RAM_MAPPING_OFFSET,
-                                       PTEFlags::V | PTEFlags::R | PTEFlags::W).unwrap();
+            #[cfg(feature = "board_qemu")]
+                {
+                    root_table
+                        .map_with_offset(
+                            VIRTIO0_START_ADDRESS,
+                            VIRTIO0_START_ADDRESS + FRAME_SIZE,
+                            RAM_MAPPING_OFFSET,
+                            PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                        )
+                        .unwrap();
+                }
 
             // set global satp for all harts
-            KERNEL_SATP =root_table.satp();
+            KERNEL_SATP = root_table.satp();
         }
 
         core::mem::forget(root_table);
@@ -77,8 +219,8 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
         asm! {
         "csrw stvec, {stvec}",
         "add sp, sp, {k_offset}",
-        "sfence.vma",
         "csrw satp, {satp}",
+        "sfence.vma",
         "call kmain", // When pc runs here, load fault occurs and stvec will be set to pc,
                       // so this instruction will never be executed.
         stvec = in(reg) kmain as usize + KERNEL_MAPPING_OFFSET,

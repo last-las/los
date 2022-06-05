@@ -1,7 +1,11 @@
 use riscv::register::{time, sie};
 use crate::sbi::sbi_legacy_set_timer;
 
+#[cfg(feature = "board_qemu")]
 const CLOCK_FREQUENCY: usize = 12500000;
+#[cfg(feature = "board_k210")]
+const CLOCK_FREQUENCY: usize = 403000000 / 62;
+
 const MSEC_PER_SEC: usize = 1000;
 
 pub fn enable_time_interrupt() {

@@ -11,8 +11,10 @@ use share::file::{OpenFlag, Stat, AT_FD_CWD};
 use alloc::vec;
 
 pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) -> Result<usize, SysError> {
+    info!("before do_exec");
     // read file data from fs server.
     let path_cstr = CStr::from_ptr(path_ptr as *const _);
+    println!("read path:{}", path_cstr.as_str());
     let path_cstring = CString::from(path_cstr);
     let open_flag = OpenFlag::RDONLY;
     let fd = do_open( AT_FD_CWD as usize,path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
@@ -21,6 +23,7 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
     let data_buffer = vec![0; stat.size];
     do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
     do_close(fd)?;
+    info!("after do_close");
     let data = data_buffer.as_slice();
 
     // create new address space.
@@ -31,6 +34,7 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
 
     modify_current_task_struct(mem_manager, pc, user_sp);
 
+    clear_i_cache();
     Ok(0)
 }
 
@@ -75,6 +79,12 @@ fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usi
     inner.mem_manager = mem_manager;
 }
 
+fn clear_i_cache() {
+    unsafe {
+        asm!{"fence.i"}
+    }
+}
+
 fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const u8) -> Vec<CString> {
     let mut vec = Vec::new();
     for cstr_ptr in CStrArray::copy_from_ptr(str_array_ptr).iter() {
@@ -103,6 +113,7 @@ unsafe fn push_str_vector_onto_stack_in_c_style(vec: Vec<CString>, sp: &mut usiz
 }
 
 unsafe fn push_usize_vector_onto_stack_in_c_style(vec: Vec<usize>, sp: &mut usize) {
+    *sp -= *sp & 0b111;
     *sp -= core::mem::size_of::<usize>();
     (*sp as *mut usize).write(0);
 

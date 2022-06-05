@@ -44,3 +44,6 @@ pub const KCALL_SBI_READ: usize = KCALL_MASK | 9;
 pub const KCALL_TERMINAL_READ: usize = KCALL_MASK | 10;
 pub const KCALL_SBI_WRITE: usize = KCALL_MASK | 11;
 pub const KCALL_TERMINAL_WRITE: usize = KCALL_MASK | 12;
+
+pub const KCALL_SDCARD_READ: usize = KCALL_MASK | 20;
+pub const KCALL_SDCARD_WRITE: usize = KCALL_MASK | 21;

@@ -89,7 +89,10 @@ impl Processor{
 
                 riscv::register::satp::write(satp);
                 unsafe {
-                    asm!{"sfence.vma"}
+                    asm!{
+                    "sfence.vma",
+                    "fence.i"
+                    }
                     __switch(hart_context_ptr,
                              next_task_context_ptr);
                 }
