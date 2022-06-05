@@ -24,8 +24,10 @@ pub const SYSCALL_GET_TIME: usize = 169;
 pub const SYSCALL_GETPID: usize = 172;
 pub const SYSCALL_GETPPID: usize = 173;
 pub const SYSCALL_BRK: usize = 214;
+pub const SYSCALL_MUNMAP: usize = 215;
 pub const SYSCALL_FORK: usize = 220;
 pub const SYSCALL_EXEC: usize = 221;
+pub const SYSCALL_MMAP: usize = 222;
 pub const SYSCALL_WAITPID: usize = 260;
 pub const SYSCALL_TEST: usize = 1234;
 

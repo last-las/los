@@ -34,8 +34,8 @@ pub fn trap_handler() {
             context.sepc += 4;
             context.x[10] =
                 syscall(context.x[17],
-                        [context.x[10], context.x[11], context.x[12], context.x[13], context.x[14]]);
-        }
+                        [context.x[10], context.x[11], context.x[12], context.x[13], context.x[14], context.x[15]]);
+        },
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             schedule(RuntimeFlags::READY);
         },
