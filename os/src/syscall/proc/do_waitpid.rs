@@ -42,7 +42,7 @@ fn wait_on_all_children(status_ptr: usize, _: usize) -> Result<usize, SysError> 
 
         let (index,_) = result.unwrap();
         if status_ptr != 0 {
-            write_exist_status(status_ptr, exit_code);
+            write_exist_status(status_ptr, exit_code as i32);
         }
         inner.children.remove(index);
 
@@ -67,7 +67,7 @@ fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize
         match child_inner.flag {
             RuntimeFlags::ZOMBIE(exit_code) => {
                 if status_ptr != 0 {
-                    write_exist_status(status_ptr, exit_code);
+                    write_exist_status(status_ptr, exit_code as i32);
                 }
                 drop(child_inner);
                 inner.children.remove(index);
@@ -82,8 +82,8 @@ fn wait_on_target_child(pid: usize, status_ptr: usize, _: usize) -> Result<usize
     }
 }
 
-fn write_exist_status(status_ptr : usize, exit_code: isize) {
+fn write_exist_status(status_ptr : usize, exit_code: i32) {
     unsafe {
-        (status_ptr as *mut isize).write_volatile((exit_code & 0xff) << 8);
+        (status_ptr as *mut i32).write_volatile((exit_code & 0xff) << 8);
     }
 }
