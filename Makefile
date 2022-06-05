@@ -33,7 +33,7 @@ k210_BURNER := ./tools/kflash.py
 all: switch-check fs-img
 	@echo Platform: $(BOARD)
 	@cp os/link-$(BOARD).ld os/link.ld
-	@cd ./os && cargo build --release --features "board_$(BOARD)"
+	@cd ./os && cargo build --offline --release --features "board_$(BOARD)"
 	@rm os/link.ld
 	@rust-objcopy --binary-architecture=riscv64 $(KERNEL_ELF) \
 		--strip-all \
@@ -61,7 +61,7 @@ else ifeq ($(BOARD), k210)
 endif
 
 user:
-	@cd ./user && cargo build --release --features "board_$(BOARD)"
+	@cd ./user && cargo build --offline --release --features "board_$(BOARD)"
 
 fs-img: user
 	# @cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)

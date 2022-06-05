@@ -63,9 +63,9 @@ fn test_all() {
     files.push("getppid");
     files.push("gettimeofday");
     files.push("mkdir_");
-    //test.push("/bin/mmap");
+    files.push("mmap");
     files.push("mount");
-    //test.push("/bin/munmap");
+    files.push("munmap");
     files.push("open");
     files.push("openat");
     //files.push("/bin/pipe");
