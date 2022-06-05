@@ -42,7 +42,7 @@ impl File {
     pub fn fstat(&self) -> Stat {
         let mut stat = Stat::empty();
         let size = self.dentry.borrow().inode.borrow().size;
-        stat.size = size as u32;
+        stat.size = size as u64;
 
         stat
     }

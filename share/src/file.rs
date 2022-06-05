@@ -101,9 +101,19 @@ pub struct Stat {
     pub uid: u32,
     pub gid: u32,
     pub rdev: u64,
-    __pad: u32,
-    pub size: u32,
+    __pad: u64,
+    pub size: u64,
     pub blksize: u32,
+    __pad2: u32,
+    st_blocks: u64,
+    st_atime_sec: u32,
+    st_atime_nsec: u32,
+    st_mtime_sec: u32,
+    st_mtime_nsec: u32,
+    st_ctime_sec: u32,
+    st_ctime_nsec: u32,
+    __unused1: u32,
+    __unused2: u32,
     // sec stuff...
 }
 
@@ -120,6 +130,16 @@ impl Stat {
             __pad: 0,
             size: 0,
             blksize: 0,
+            __pad2: 0,
+            st_blocks: 0,
+            st_atime_sec: 0,
+            st_atime_nsec: 0,
+            st_mtime_sec: 0,
+            st_mtime_nsec: 0,
+            st_ctime_sec: 0,
+            st_ctime_nsec: 0,
+            __unused1: 0,
+            __unused2: 0
         }
     }
 }
