@@ -83,7 +83,7 @@ fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMo
     // create sda inode.
     let rdev = Rdev::new(0, VIRT_BLK_MAJOR);
     let file_type = FileTypeFlag::DT_BLK;
-    attach_device_to(dev_dentry.clone(), "sda2", file_type, rdev);
+    attach_device_to(dev_dentry.clone(), "vda2", file_type, rdev);
 
     // create console inode.
     let rdev = Rdev::new(0, CONSOLE_MAJOR);

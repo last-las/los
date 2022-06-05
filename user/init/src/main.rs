@@ -43,7 +43,7 @@ fn open_standard_fd() {
 fn mount_fatfs_on(path: &str) {
     mkdir_at(0, path, 0).unwrap();
     //mkdir_at(0,"/bin/contest",0).unwrap();
-    mount("/dev/sda2", path, "vfat", 0, 0).unwrap();
+    mount("/dev/vda2", path, "vfat", 0, 0).unwrap();
 }
 fn test_all() {
     let mut files = Vec::new();
