@@ -32,12 +32,12 @@ use share::syscall::error::SysError;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
 use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR, RAM_MAJOR};
 use crate::vfs::inode::Rdev;
-use crate::fs::ezfs::register_ezfs;
+use crate::fs::fatfs::register_fatfs;
 use crate::fs::devfs::register_devfs;
 
 #[no_mangle]
 fn main() {
-    register_ezfs();
+    register_fatfs();
     register_ramfs();
     register_devfs();
     let rdev = Rdev::new(0, RAM_MAJOR);
@@ -98,6 +98,7 @@ fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMo
     }
 }
 
+//add device file
 fn attach_device_to(dev_dentry: Rc<RefCell<VfsDentry>>, name: &str, file_type: FileTypeFlag, rdev: Rdev) {
     let dev_inode = dev_dentry.borrow().inode.clone();
     let device_dentry = dev_inode.borrow().iop.mknod(name, file_type, rdev, dev_inode.clone()).unwrap();

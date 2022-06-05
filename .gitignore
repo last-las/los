@@ -1,6 +1,7 @@
 .idea
 Cargo.lock
+.DS_Store
+.vscode/
 target/
 venv/
-**/.vscode
-**/.DS_Store
+.gdbinit

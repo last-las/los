@@ -6,7 +6,8 @@ BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
-FS_IMG := $(USER_PATH)/fs.img
+FS_IMG := $(USER_PATH)fs.img
+# OTHER_PATH := /home/oslab/Desktop/los/los/fat32-fuse/riscv64
 OTHER_PATH := /home/las/workstation/testsuits-for-oskernel-main/riscv-syscalls-testing/user/build/riscv64/
 SDCARD := /dev/sdb
 
@@ -57,8 +58,10 @@ user:
 	@cd ./user && python build.py && cargo build --release --features "board_$(BOARD)"
 
 fs-img: user
-	# @cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
-	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
+	# @cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
+	@dd if=/dev/zero of=$(FS_IMG) bs=512 count=204800 #k210 128MB
+	@mkfs.vfat -F 32 $(FS_IMG)
+	@cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 
 run: fs-img
 ifeq ($(BOARD),qemu)
