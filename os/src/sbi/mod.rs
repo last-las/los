@@ -106,22 +106,3 @@ pub mod hart {
                  [suspend_type, resume_addr, opaque])
     }
 }
-
-#[cfg(feature = "board_k210")]
-pub mod interrupt {
-    use crate::sbi::{SbiRet, sbi_call};
-
-    const EID_EMULATE_SBI_SEXT: usize = 0x0A000004;
-    #[allow(unused)]
-    const FID_EMULATE_ON_K210: usize = 0x210;
-    const FID_ENABLE_MEXT: usize = 0x211;
-
-    #[allow(unused)]
-    pub fn emulate_sext(ext_handle_func: usize) -> SbiRet {
-        sbi_call(EID_EMULATE_SBI_SEXT, FID_EMULATE_ON_K210, [ext_handle_func, 0, 0])
-    }
-
-    pub fn enable_mext() -> SbiRet {
-        sbi_call(EID_EMULATE_SBI_SEXT, FID_ENABLE_MEXT, [0, 0, 0])
-    }
-}

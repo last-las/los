@@ -2,10 +2,12 @@ mod do_fork;
 mod do_exec;
 mod do_waitpid;
 mod priority;
+mod do_uname;
 
 use crate::task::{schedule, RuntimeFlags};
 pub use do_fork::do_fork;
 pub use do_exec::do_exec;
+pub use do_uname::do_uname;
 pub use do_waitpid::do_waitpid;
 pub use priority::*;
 use share::syscall::error::SysError;

@@ -9,7 +9,3 @@ edition = "2018"
 user_lib = { path = "../../lib" }
 share = { path = "../../../share" }
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-
-[features]
-board_qemu = []
-board_k210 = []

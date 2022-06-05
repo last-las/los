@@ -2,5 +2,3 @@
 Cargo.lock
 target/
 venv/
-**/.vscode
-**/.DS_Store

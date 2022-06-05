@@ -34,10 +34,6 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         KCALL_SBI_WRITE => kcall_sbi_write(args[0], args[1] as *const u8, args[2]),
         KCALL_TERMINAL_READ => kcall_terminal_read(args[0], args[1], args[2]),
         KCALL_TERMINAL_WRITE => kcall_terminal_write(args[0], args[1], args[2]),
-        #[cfg(feature = "board_k210")]
-        KCALL_SDCARD_READ => kcall_sdcard_read(args[0], args[1], args[2]),
-        #[cfg(feature = "board_k210")]
-        KCALL_SDCARD_WRITE => kcall_sdcard_write(args[0], args[1], args[2]),
 
         SYSCALL_LSEEK => do_lseek(args[0], args[1], args[2]),
         SYSCALL_GETCWD => do_getcwd(args[0], args[1]),
@@ -59,6 +55,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 5]) -> usize {
         SYSCALL_YIELD => do_yield(),
         SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),
         SYSCALL_SET_PRIORITY => do_set_priority(args[0], args[1], args[2] as isize),
+        SYSCALL_UNAME => do_uname(args[0]),
         SYSCALL_GET_TIME => do_get_time(),
         SYSCALL_GETPID => do_get_pid(),
         SYSCALL_GETPPID => do_get_ppid(),

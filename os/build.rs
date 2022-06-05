@@ -39,7 +39,6 @@ _app_names:"#)?;
     for (idx, app) in apps.iter().enumerate() {
         println!("app_{}: {}", idx, app);
         writeln!(f, r#"
-        .align 3
         .section .data
         .global app_{0}_start
         .global app_{0}_end
