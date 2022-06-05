@@ -212,7 +212,7 @@ pub unsafe fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize,
         let reclen = dirent_size + cstring_name.as_bytes_with_nul().len();
 
         if DIRENT_BUFFER.len() - offset < reclen {
-            return Err(SysError::new(EINVAL));
+            break;
         }
 
         let dirent = Dirent {
