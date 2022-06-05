@@ -49,13 +49,13 @@ fn test_all() {
     let mut files = Vec::new();
     files.push("brk");
     files.push("chdir");
-    // files.push("/bin/clone"); misaligned
+    files.push("clone");
     files.push("close");
     files.push("dup");
     files.push("dup2");
     files.push("execve");
-    // files.push("/bin/exit");
-    // files.push("/bin/fork"); misaligned
+    files.push("exit");
+    files.push("fork");
     files.push("fstat");
     files.push("getcwd");
     // files.push("getdents"); file system panic
@@ -75,8 +75,8 @@ fn test_all() {
     files.push("umount");
     files.push("uname");
     //files.push("unlink");
-    // files.push("wait"); misaligned
-    // files.push("waitpid"); misaligned
+    files.push("wait");
+    files.push("waitpid");
     files.push("write");
     files.push("yield");
     println!("-- Test mode,Start test --");
