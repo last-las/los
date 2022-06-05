@@ -25,3 +25,6 @@ pub const KCALL_WRITE_DEV: usize = KCALL_MASK | 4;
 pub const KCALL_VIRT_COPY: usize = KCALL_MASK | 5;
 pub const KCALL_CONTINUOUS_ALLOC: usize = KCALL_MASK | 6;
 pub const KCALL_VIRT_TO_PHYS: usize = KCALL_MASK | 7;
+
+pub const KCALL_SDCARD_READ: usize = KCALL_MASK | 20;
+pub const KCALL_SDCARD_WRITE: usize = KCALL_MASK | 21;

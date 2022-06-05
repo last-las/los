@@ -98,6 +98,13 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                     UART_BASE_ADDRESS + FRAME_SIZE,
                     RAM_MAPPING_OFFSET,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                ).unwrap();
+            root_table
+                .map_with_offset(
+                    UART_BASE_ADDRESS,
+                    UART_BASE_ADDRESS + FRAME_SIZE,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
             // plic mapping
@@ -109,12 +116,20 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
+            root_table
+                .map_with_offset(
+                    PLIC_START_ADDRESS,
+                    PLIC_START_ADDRESS + 0x100_0000,
+                    0,
+                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                )
+                .unwrap();
             //sysctl mapping
             root_table
                 .map_with_offset(
                     SYSCTL_ADDRESS,
                     SYSCTL_ADDRESS + 0x10000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -123,7 +138,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     FPIOA_ADDRESS,
                     FPIOA_ADDRESS + 0x10000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -132,7 +147,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     GPIO_BASE_ADDR,
                     GPIO_BASE_ADDR + 0x10000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -141,7 +156,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     GPIOHS_ADDRESS,
                     GPIOHS_ADDRESS + 0x1000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -150,7 +165,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     RTC_BASE_ADDRESS,
                     RTC_BASE_ADDRESS + 0x10000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -159,7 +174,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     SPI0_ADDRESS,
                     SPI0_ADDRESS + 0x1000000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -167,7 +182,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     SPI1_BASE_ADDR,
                     SPI1_BASE_ADDR + 0x1000000,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -176,7 +191,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     DMAC_ADDRESS,
                     DMAC_ADDRESS + FRAME_SIZE,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();
@@ -185,7 +200,7 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 .map_with_offset(
                     VIRTIO0_START_ADDRESS,
                     VIRTIO0_START_ADDRESS + FRAME_SIZE,
-                    RAM_MAPPING_OFFSET,
+                    0,
                     PTEFlags::V | PTEFlags::R | PTEFlags::W,
                 )
                 .unwrap();

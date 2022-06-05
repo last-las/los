@@ -10,10 +10,14 @@ buddy_system_allocator = "0.6"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 # lazy_static = { version = "1.4.0"}
 spin = "0.7.0"
-riscv = { git = "https://github.com/rust-embedded/riscv" }
+# riscv = { git = "https://github.com/rust-embedded/riscv" }
+riscv = {git = "https://github.com/rcore-os/riscv", features = ["inline-asm"]}
 bitflags = "1.2.1"
 share = {path = "../share"}
 xmas-elf = "0.7.0"
+k210-pac = { git = "https://github.com/wyfcyx/k210-pac" }
+k210-hal = { git = "https://github.com/wyfcyx/k210-hal" }
+k210-soc = { git = "https://github.com/wyfcyx/k210-soc" }
 
 [features]
 board_qemu = []

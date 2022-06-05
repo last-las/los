@@ -155,3 +155,10 @@ pub fn continuous_alloc(size: usize) -> Result<usize, SysError> {
 pub fn virt_to_phys(virt_addr: usize) -> Result<usize, SysError> {
     isize2result(k_virt_to_phys(virt_addr))
 }
+
+pub fn sdcard_read(block_id: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(k_sdcard_read(block_id, buf.as_mut_ptr() as usize, buf.len()))
+}
+pub fn sdcard_write(block_id: usize, buf: &[u8]) -> Result<usize, SysError> {
+    isize2result(k_sdcard_write(block_id, buf.as_ptr() as usize, buf.len()))
+}

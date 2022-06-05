@@ -4,7 +4,7 @@ KERNEL_ELF := ./target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
 BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
-export LOG = ERROR
+export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
 FS_IMG := ./fs.img
 SDCARD := /dev/disk2s1
@@ -23,7 +23,7 @@ else ifeq ($(BOARD), k210)
 endif
 
 # Run k210
-K210_SERIALPORT := /dev/tty.usbserial-1410
+K210_SERIALPORT := /dev/ttyUSB0
 k210_BURNER := ./tools/kflash.py
 
 

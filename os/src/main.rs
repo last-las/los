@@ -42,6 +42,8 @@ mod config;
 mod mm;
 mod paging;
 mod plic;
+#[cfg(feature = "board_k210")]
+pub mod sdcard;
 
 
 #[cfg(not(test))]

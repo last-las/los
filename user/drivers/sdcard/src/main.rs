@@ -4,97 +4,56 @@
 use sdcard::SDCardWrapper;
 
 use crate::sdcard::BLOCK_DEVICE;
-use share::ipc::{Msg, DEVICE, REPLY_PROC_NR, REPLY_STATUS, REPLY, PROC_NR, BUFFER, LENGTH, POSITION};
-use user_lib::syscall::{receive, send, virt_copy, getpid};
+use share::ipc::{Msg, READ, WRITE, DEVICE, REPLY_PROC_NR, REPLY_STATUS, REPLY, PROC_NR, BUFFER, LENGTH, POSITION};
+use user_lib::syscall::{receive, send, virt_copy, getpid, sdcard_read, sdcard_write};
 
 #[macro_use]
 extern crate user_lib;
 
 mod sdcard;
 
+const BLOCK_SZ: usize = 512;
+
 #[no_mangle]
 fn main() {
-    //let sdcard = SDCardWrapper::new();
+     let mut message = Msg::empty();
 
-    println!("block test");
-    write_test();
+     loop {
+         receive(-1, &mut message).unwrap();
 
-    read_test();
-    //block_device_test();
-    // let mut message = Msg::empty();
-    //
-    // loop {
-    //     receive(-1, &mut message).unwrap();
-    //
-    //     let nr = message.args[DEVICE];
-    //     assert_eq!(nr, 0);
-    //
-    //     match message.mtype {
-    //         READ => do_read(message),
-    //         WRITE => do_write(message),
-    //         _ => {
-    //             panic!("Unknown message type:{}", message.mtype);
-    //         }
-    //     }
-    // }
-}
+         let nr = message.args[DEVICE];
+         assert_eq!(nr, 0);
 
-pub fn read_test() {
-    let block_device = BLOCK_DEVICE.clone();
-    let mut buf = [0u8; 512];
-     block_device.read_block(0, &mut buf);
-
-    println!("read block success {:?}", buf);
-}
-
-pub fn write_test() {
-    let block_device = BLOCK_DEVICE.clone();
-    let mut buf = [0u8; 512];
-    for val in buf.iter_mut() {
-        *val = 2;
-    }
-    block_device.write_block(0, &buf);
-
-    println!("write block success");
+         match message.mtype {
+             READ => do_read(message),
+             WRITE => do_write(message),
+             _ => {
+                 panic!("Unknown message type:{}", message.mtype);
+             }
+         }
+     }
 }
 
 pub fn do_read(message: Msg) {
-    let block_device = BLOCK_DEVICE.clone();
     let proc_nr = message.args[PROC_NR];
     let dst_ptr = message.args[BUFFER];
     let block_id = message.args[POSITION];
+    let mut buffer = [0u8; BLOCK_SZ];
 
-    let mut read_buffer = [0u8; 512];
-    block_device.read_block(block_id, &mut read_buffer);
-    // transfer to user
-    transfer_to_usr(&read_buffer, &message);
+    sdcard_read(block_id, buffer.as_mut_slice()).unwrap();
+    virt_copy(getpid(), buffer.as_ptr() as usize, proc_nr, dst_ptr, BLOCK_SZ).unwrap();
+    reply(message.src_pid, REPLY, proc_nr, BLOCK_SZ as isize);
 }
 
 pub fn do_write(message: Msg) {
-    let block_device = BLOCK_DEVICE.clone();
-    const BUFFER_SIZE: usize = 512;
-
     let proc_nr = message.args[PROC_NR];
     let src_ptr = message.args[BUFFER];
     let block_id = message.args[POSITION];
-    let mut buffer = [0; BUFFER_SIZE];
+    let mut buffer = [0; BLOCK_SZ];
 
-
-    virt_copy(proc_nr, src_ptr, getpid(), buffer.as_mut_ptr() as usize, BUFFER_SIZE).unwrap();
-
-    block_device.write_block(block_id as usize, &buffer);
-
-
-    reply(message.src_pid, REPLY, proc_nr, BUFFER_SIZE as isize);
-}
-
-fn transfer_to_usr(buf: &[u8], msg: &Msg) {
-    let buffer_ptr = buf.as_ptr() as usize;
-    let length = buf.len();
-
-    virt_copy(getpid(), buffer_ptr, msg.args[PROC_NR], msg.args[BUFFER], length).unwrap();
-
-    reply(msg.src_pid, REPLY, msg.args[PROC_NR], length as isize);
+    virt_copy(proc_nr, src_ptr, getpid(), buffer.as_mut_ptr() as usize, BLOCK_SZ).unwrap();
+    sdcard_write(block_id, buffer.as_slice()).unwrap();
+    reply(message.src_pid, REPLY, proc_nr, BLOCK_SZ as isize);
 }
 
 fn reply(caller: usize, mtype: usize, proc_nr: usize, status: isize) {
@@ -104,20 +63,4 @@ fn reply(caller: usize, mtype: usize, proc_nr: usize, status: isize) {
     message.args[REPLY_STATUS] = status as usize;
 
     send(caller, &message).unwrap();
-}
-
-#[allow(unused)]
-pub fn block_device_test() {
-    let block_device = BLOCK_DEVICE.clone();
-    let mut write_buffer = [0u8; 512];
-    let mut read_buffer = [0u8; 512];
-    for i in 0..512 {
-        for byte in write_buffer.iter_mut() {
-            *byte = i as u8;
-        }
-        block_device.write_block(i as usize, &write_buffer);
-        block_device.read_block(i as usize, &mut read_buffer);
-        assert_eq!(write_buffer, read_buffer);
-    }
-    println!("block device test passed!");
 }

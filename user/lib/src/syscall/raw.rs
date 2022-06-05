@@ -212,3 +212,10 @@ pub fn k_continuous_alloc(size: usize) -> isize {
 pub fn k_virt_to_phys(virt_addr: usize) -> isize {
     syscall1(KCALL_VIRT_TO_PHYS, virt_addr)
 }
+
+pub fn k_sdcard_read(block_id: usize, buf_ptr: usize, size: usize) -> isize {
+    syscall3(KCALL_SDCARD_READ, block_id, buf_ptr, size)
+}
+pub fn k_sdcard_write(block_id: usize, buf_ptr: usize, size: usize) -> isize {
+    syscall3(KCALL_SDCARD_WRITE, block_id, buf_ptr, size)
+}
