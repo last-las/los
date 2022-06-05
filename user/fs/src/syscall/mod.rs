@@ -12,6 +12,7 @@ use share::ffi::CString;
 use alloc::collections::VecDeque;
 use crate::vfs::filesystem::read_super_block;
 use crate::vfs::inode::Rdev;
+use core::mem::size_of;
 
 /// The return value of `path_lookup` function.
 #[derive(Clone)]
@@ -180,7 +181,8 @@ pub fn do_close(fd: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysEr
     Ok(0)
 }
 
-pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
+static mut DIRENT_BUFFER: [u8; DIRENT_BUFFER_SZ] = [0; DIRENT_BUFFER_SZ];
+pub unsafe fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs: Rc<RefCell<FsStruct>>) -> Result<usize, SysError> {
     let file = cur_fs.borrow().get_file(fd)?;
     if !file.borrow().is_directory() {
         return Err(SysError::new(ENOTDIR));
@@ -196,15 +198,20 @@ pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs
         dentry.borrow_mut().read_dir_flag = true;
     }
 
-    // construct dirent array buffer.
-    let mut buffer: [u8; DIRENT_BUFFER_SZ] = [0; DIRENT_BUFFER_SZ];
-    let mut offset = 0;
     let dirent_size = core::mem::size_of::<Dirent>();
+    let mut offset: usize = 0;
+    // construct dirent array buffer.
     for child_dentry in dentry.borrow().children.iter() {
         let child_dentry_ref = child_dentry.borrow();
         let cstring_name = CString::new(child_dentry_ref.name.clone());
+        // alignment
+        let start = DIRENT_BUFFER.as_mut_ptr() as usize + offset;
+        let aligned_start =(start + dirent_size - 1) & (!dirent_size + 1);
+        let align_bias = aligned_start - start;
+        offset += align_bias;
         let reclen = dirent_size + cstring_name.as_bytes_with_nul().len();
-        if buffer.len() - offset < reclen {
+
+        if DIRENT_BUFFER.len() - offset < reclen {
             return Err(SysError::new(EINVAL));
         }
 
@@ -215,11 +222,11 @@ pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs
             d_type: child_dentry_ref.inode.borrow().file_type,
             d_name: (buf + offset + dirent_size) as *const u8,
         };
-        unsafe {
-            ((buffer.as_mut_ptr() as usize + offset) as *mut Dirent).write(dirent);
-            let dst_slice: &mut [u8] = &mut buffer[offset + dirent_size..offset + reclen];
-            dst_slice.copy_from_slice(cstring_name.as_bytes_with_nul());
-        }
+
+
+        ((DIRENT_BUFFER.as_mut_ptr() as usize + offset) as *mut Dirent).write(dirent);
+        let dst_slice: &mut [u8] = &mut DIRENT_BUFFER[offset + dirent_size..offset + reclen];
+        dst_slice.copy_from_slice(cstring_name.as_bytes_with_nul());
 
         offset += reclen;
     }
@@ -229,7 +236,7 @@ pub fn do_get_dents(fd: usize, buf: usize, length: usize, proc_nr: usize, cur_fs
     }
 
     // Copy the buffer to destination
-    virt_copy(getpid(), buffer.as_ptr() as usize, proc_nr, buf, offset).unwrap();
+    virt_copy(getpid(), DIRENT_BUFFER.as_ptr() as usize, proc_nr, buf, offset).unwrap();
 
     Ok(offset)
 }

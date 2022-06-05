@@ -21,26 +21,32 @@ pub fn trap_handler() {
     let sepc = sepc::read();
 
     match scause.cause() {
+        #[cfg(feature = "board_k210")]
+        Trap::Interrupt(Interrupt::SupervisorSoft) => {
+            plic::handle_interrupt();
+        }
+        #[cfg(feature = "board_qemu")]
+        Trap::Interrupt(Interrupt::SupervisorExternal) => {
+            plic::handle_interrupt();
+        }
         Trap::Exception(Exception::UserEnvCall) => {
             let context = get_cur_task_context_in_this_hart();
             context.sepc += 4;
             context.x[10] =
                 syscall(context.x[17],
                         [context.x[10], context.x[11], context.x[12], context.x[13], context.x[14]]);
-        },
+        }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             schedule(RuntimeFlags::READY);
-        },
-        Trap::Interrupt(Interrupt::SupervisorExternal) => {
-            plic::handle_interrupt();
         },
         _ => {
             info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
             // sstatus ：其中的一些控制位标志发生异常时的处理器状态，如 sstatus.SPP 表示发生异常时处理器在哪个特权级
-            match sstatus::read().spp() {
+            schedule(RuntimeFlags::ZOMBIE(1));
+         /*   match sstatus::read().spp() {
                 sstatus::SPP::User => schedule(RuntimeFlags::ZOMBIE(1)),
                 sstatus::SPP::Supervisor => panic!("Supervisor trap!"),
-            };
+            };*/
         }
     }
 }

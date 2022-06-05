@@ -43,6 +43,8 @@ mod config;
 mod mm;
 mod paging;
 mod plic;
+#[cfg(feature = "board_k210")]
+pub mod sdcard;
 
 
 #[cfg(not(test))]
@@ -65,7 +67,6 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
         plic::enable_external_interrupt();
         plic::init();
         increase_alive_hart();
-
         task::print_app_names();
         task::load_init_tasks();
         // enable_other_harts();

@@ -41,7 +41,10 @@ pub fn print_app_names() {
 }
 
 pub fn load_init_tasks() {
+    #[cfg(feature = "board_qemu")]
     let tasks = vec!["init", "terminal", "virtio-blk", "fs"];
+    #[cfg(feature = "board_k210")]
+        let tasks = vec!["init", "terminal", "sdcard", "fs"];
     for task_name in tasks {
         let data = get_task_data_by_name(task_name).unwrap_or_else(|| {
             panic!("{} doesn't exist!", task_name);

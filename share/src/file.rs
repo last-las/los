@@ -30,6 +30,18 @@ pub struct Dirent {
     pub d_name: *const u8,
 }
 
+impl Dirent {
+    pub const  fn empty() -> Self {
+        Self {
+            d_ino: 0,
+            d_offset: 0,
+            d_reclen: 0,
+            d_type: FileTypeFlag::empty(),
+            d_name: 0usize as *const u8,
+        }
+    }
+}
+
 /// Rust version Dirent.
 pub struct RDirent {
     pub ino: u64,
@@ -113,7 +125,7 @@ impl Stat {
 
 pub const MAX_PATH_LENGTH: usize = 64;
 pub const AT_FD_CWD: isize = -100;
-pub const DIRENT_BUFFER_SZ: usize = 2048;
+pub const DIRENT_BUFFER_SZ: usize = 4096;
 
 // for device driver
 pub const RAM_MAJOR: u32 = 0;

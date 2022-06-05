@@ -3,4 +3,4 @@ members = [
     "os",
 ]
 
-exclude = [ "user", "share", "easy-fs", "easy-fs-fuse"]
+exclude = [ "user", "simple-fat32", "fat32-fuse", "share",  ]

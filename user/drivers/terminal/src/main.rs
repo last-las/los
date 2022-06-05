@@ -1,17 +1,20 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 
-mod uart_16550;
+mod standard;
+mod uart;
 
 extern crate user_lib;
 extern crate alloc;
 
-use crate::uart_16550::*;
-use share::ipc::Msg;
-use user_lib::syscall::{receive, virt_copy, send, getpid};
-use share::ipc::*;
-use share::terminal::{Clflag, TC_GET_ATTR, TC_SET_ATTR, TC_GET_PGRP, TC_SET_PGRP, Termios, Ciflag};
+use crate::uart::Uart;
 use core::mem::size_of;
+use share::ipc::Msg;
+use share::ipc::*;
+use share::terminal::{
+    Ciflag, Clflag, Termios, TC_GET_ATTR, TC_GET_PGRP, TC_SET_ATTR, TC_SET_PGRP,
+};
+use user_lib::syscall::{dev_write_u8, getpid, receive, send, virt_copy};
 
 const BS: u8 = 0x08;
 const LF: u8 = 0x0a;
@@ -22,7 +25,6 @@ const CTRL_C: u8 = 0x3;
 
 #[no_mangle]
 fn main() {
-    uart_16550::init();
     let mut uart = Uart::new();
     let mut message = Msg::empty();
 
@@ -49,7 +51,7 @@ fn main() {
 
 pub fn do_interrupt(uart: &mut Uart) {
     let mut byte = uart.dev_read();
-    write_reg(REG_IER_OFFSET, 0x01);
+    uart.enable_recv_intr();
 
     /* Map CR to LF, ignore CR, or map LF to CR. */
     if byte == CR {
@@ -119,19 +121,19 @@ pub fn do_ioctl(uart: &mut Uart, message: Msg) {
             let size = size_of::<Termios>();
             let dst_ptr = message.args[ADDRESS];
             virt_copy(getpid(), src_ptr, proc_nr, dst_ptr, size).unwrap();
-        },
+        }
         TC_SET_ATTR => {
             let termios_ptr = message.args[ADDRESS];
             let size = size_of::<Termios>();
             let dst_ptr = &mut uart.termios as *mut _ as usize;
             virt_copy(proc_nr, termios_ptr, getpid(), dst_ptr, size).unwrap();
-        },
+        }
         TC_GET_PGRP => {
             unimplemented!();
-        },
+        }
         TC_SET_PGRP => {
             unimplemented!();
-        },
+        }
         _ => {
             panic!("Unknown IOCTL message: {}", message.args[IOCTL_TYPE]);
         }
@@ -150,7 +152,7 @@ fn echo(uart: &mut Uart, byte: u8) {
             uart.dev_write(BS);
             uart.dev_write(' ' as u8);
             uart.dev_write(BS);
-        },
+        }
         _ => {
             uart.dev_write(byte);
         }

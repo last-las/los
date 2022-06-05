@@ -20,8 +20,6 @@ pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;
 pub const SYSCALL_GET_PRIORITY: usize = 140;
 pub const SYSCALL_SET_PRIORITY: usize = 141;
-// 2022.6.5 add SYS_UNAME
-pub const SYSCALL_UNAME: usize = 160;
 pub const SYSCALL_GET_TIME: usize = 169;
 pub const SYSCALL_GETPID: usize = 172;
 pub const SYSCALL_GETPPID: usize = 173;
@@ -46,3 +44,6 @@ pub const KCALL_SBI_READ: usize = KCALL_MASK | 9;
 pub const KCALL_TERMINAL_READ: usize = KCALL_MASK | 10;
 pub const KCALL_SBI_WRITE: usize = KCALL_MASK | 11;
 pub const KCALL_TERMINAL_WRITE: usize = KCALL_MASK | 12;
+
+pub const KCALL_SDCARD_READ: usize = KCALL_MASK | 20;
+pub const KCALL_SDCARD_WRITE: usize = KCALL_MASK | 21;

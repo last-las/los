@@ -19,7 +19,8 @@ lazy_static!{
 }
 
 pub fn print(args: fmt::Arguments) {
-     STDOUT.lock().write_fmt(args).unwrap();
+     // STDOUT.lock().write_fmt(args).unwrap();
+    Stdout.write_fmt(args);
 }
 
 #[macro_export]

@@ -6,7 +6,6 @@ pub mod ffi;
 pub mod terminal;
 pub mod file;
 pub mod device;
-pub mod system;
 
 extern crate alloc;
 #[macro_use]
