@@ -1,5 +1,5 @@
-use crate::task::{get_task_by_pid, RuntimeFlags, TaskStruct, block_current_and_run_next_task, return_task_to_manager, TaskStructInner};
-use crate::processor::clone_cur_task_in_this_hart;
+use crate::task::{get_task_by_pid, RuntimeFlags, TaskStruct, return_task_to_manager, TaskStructInner, schedule};
+use crate::processor::get_cur_task_in_this_hart;
 use alloc::sync::Arc;
 use share::ipc::Msg;
 use share::syscall::error::{EINVAL, SysError, EDLOCK};
@@ -7,15 +7,15 @@ use spin::MutexGuard;
 
 // TODO-FUTURE: using registers to pass the message could improve performance. L4 stuff.
 
-/// Send a message, which `msg_ptr` points to, from current task to `dst_pid` task.
+/// Send a message which `msg_ptr` points to, from current task to `dst_pid` task.
 ///
 /// Before any real work, caller task checks whether there is a deadlock situation.
 /// Caller task reads the message from `msg_ptr`, and If `dst_pid` task is receiving,
 /// it moves the message to dst task's [`TaskStruct`] and wakes it up. Otherwise it stores the message
 /// inside caller task's [`TaskStruct`] and blocks itself.
-pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
+pub fn kcall_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
     let dst_task = get_dst_task_or_err(dst_pid)?;
-    let caller_task = clone_cur_task_in_this_hart();
+    let caller_task = get_cur_task_in_this_hart();
     check_deadlock(caller_task.clone(), dst_task.clone())?;
 
     let mut message = unsafe { (msg_ptr as *const Msg).read() };
@@ -32,26 +32,25 @@ pub fn sys_send(dst_pid: usize, msg_ptr: usize) -> Result<usize, SysError> {
         return_task_to_manager(dst_task.clone());
     } else {
         let mut src_task_inner = caller_task.acquire_inner_lock();
-        src_task_inner.flag = RuntimeFlags::SENDING(dst_pid);
         src_task_inner.message_holder = Some(message);
         dst_task_inner.wait_queue.push(caller_task.clone());
         drop(src_task_inner);
         drop(dst_task_inner);
 
-        block_current_and_run_next_task();
+        schedule(RuntimeFlags::SENDING(dst_pid));
     }
 
     Ok(0)
 }
 
-/// Receive a [`Msg`] `dst_pid` task, and save it to `msg_ptr` address.
+/// Receive a [`Msg`] from `dst_pid` task, and save it to `msg_ptr` address.
 ///
 /// If `interrupt_flag` is set for caller task, it return with an interrupt message immediately.
 /// Caller task finds out possible sending tasks, if there is someone sending, it moves the [`Msg`]
 /// from sending task to address where `msg_ptr` points to and wakes the sending task up. Otherwise
 /// it blocks itself, and after it is waked up, it moves message to that address.
-pub fn sys_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
-    let src_task = clone_cur_task_in_this_hart();
+pub fn kcall_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
+    let src_task = get_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     if dst_pid == -1 && src_task_inner.interrupt_flag {
         src_task_inner.interrupt_flag = false;
@@ -77,13 +76,12 @@ pub fn sys_receive(dst_pid: isize, msg_ptr: usize) -> Result<usize, SysError>{
         return Ok(0);
     }
 
-    src_task_inner.flag = RuntimeFlags::RECEIVING(dst_pid);
     drop(src_task_inner);
     drop(src_task);
-    block_current_and_run_next_task();
+    schedule(RuntimeFlags::RECEIVING(dst_pid));
 
     // After the task is waked up the message has been received.
-    let src_task = clone_cur_task_in_this_hart();
+    let src_task = get_cur_task_in_this_hart();
     let mut src_task_inner = src_task.acquire_inner_lock();
     unsafe {
         (msg_ptr as *mut Msg).write(src_task_inner.message_holder.take().unwrap());

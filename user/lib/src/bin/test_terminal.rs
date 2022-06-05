@@ -1,10 +1,9 @@
 #![no_std]
 #![no_main]
 
-#[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{_read, fork, _write};
+use user_lib::syscall::{terminal_read, terminal_write};
 use user_lib::termios::{tc_get_attr, tc_set_attr};
 use share::terminal::Clflag;
 
@@ -23,6 +22,6 @@ fn read_write() {
     const LENGTH: usize = 50;
 
     let mut buf = [0; LENGTH];
-    let cnt = _read(0, &mut buf).unwrap();
-    _write(1, &buf[..cnt]).unwrap();
+    let cnt = terminal_read(0, &mut buf).unwrap();
+    terminal_write(1, &buf[..cnt]).unwrap();
 }

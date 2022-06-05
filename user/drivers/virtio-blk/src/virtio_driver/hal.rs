@@ -1,9 +1,6 @@
 use super::*;
 use user_lib::syscall::{virt_to_phys, continuous_alloc};
 
-type VirtAddr = usize;
-type PhysAddr = usize;
-
 pub struct DMA {
     paddr: u32,
     pages: u32,
@@ -11,7 +8,7 @@ pub struct DMA {
 
 impl DMA {
     pub fn new(pages: usize) -> Result<Self> {
-        let paddr = unsafe { virtio_dma_alloc(pages) };
+        let paddr = virtio_dma_alloc(pages);
         if paddr == 0 {
             return Err(Error::DmaError);
         }
@@ -37,6 +34,7 @@ impl DMA {
     }
 
     /// Convert to a buffer
+    #[allow(unused)]
     pub unsafe fn as_buf(&self) -> &'static mut [u8] {
         core::slice::from_raw_parts_mut(self.vaddr() as _, PAGE_SIZE * self.pages as usize)
     }
@@ -44,7 +42,7 @@ impl DMA {
 
 impl Drop for DMA {
     fn drop(&mut self) {
-        let err = unsafe { virtio_dma_dealloc(self.paddr as usize, self.pages as usize) };
+        let err = virtio_dma_dealloc(self.paddr as usize, self.pages as usize);
         assert_eq!(err, 0, "failed to deallocate DMA");
     }
 }

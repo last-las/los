@@ -2,12 +2,10 @@ mod trap;
 
 use riscv::register::{scause::{self, Trap, Exception, Interrupt}, stval, stvec, sepc, sstatus};
 use crate::syscall::syscall;
-use crate::task::{stop_current_and_run_next_task, exit_current_and_run_next_task};
+use crate::task::{RuntimeFlags, schedule};
 
 pub use trap::{__enter_user_mode, __from_user_mode};
 use crate::processor::{get_cur_task_context_in_this_hart};
-use crate::sbi::sbi_shutdown;
-use crate::syscall::notify;
 use crate::plic;
 
 pub fn init_stvec() {
@@ -39,15 +37,16 @@ pub fn trap_handler() {
                         [context.x[10], context.x[11], context.x[12], context.x[13], context.x[14]]);
         }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            stop_current_and_run_next_task();
-        }
-
+            schedule(RuntimeFlags::READY);
+        },
         _ => {
             info!("Unsupported trap {:?}, stval = {:#x}, sepc = {:#x}",scause.cause(), stval, sepc);
-            match sstatus::read().spp() {
-                sstatus::SPP::User => exit_current_and_run_next_task(1),
+            // sstatus ：其中的一些控制位标志发生异常时的处理器状态，如 sstatus.SPP 表示发生异常时处理器在哪个特权级
+            schedule(RuntimeFlags::ZOMBIE(1));
+         /*   match sstatus::read().spp() {
+                sstatus::SPP::User => schedule(RuntimeFlags::ZOMBIE(1)),
                 sstatus::SPP::Supervisor => panic!("Supervisor trap!"),
-            };
+            };*/
         }
     }
 }

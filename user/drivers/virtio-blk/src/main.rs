@@ -3,16 +3,13 @@
 
 mod virtio_driver;
 
-#[macro_use]
 extern crate user_lib;
-#[macro_use]
 extern crate alloc;
-#[macro_use]
 extern crate bitflags;
 extern crate log;
 extern crate volatile;
 
-use user_lib::syscall::{continuous_alloc, virt_to_phys, receive, virt_copy, getppid, getpid, send};
+use user_lib::syscall::{receive, virt_copy, getpid, send};
 use crate::virtio_driver::{VirtIOBlk, VirtIOHeader};
 use share::ipc::{Msg, READ, WRITE, POSITION, PROC_NR, BUFFER, REPLY_PROC_NR, REPLY_STATUS, REPLY};
 use share::syscall::error::EINVAL;
@@ -21,11 +18,12 @@ use share::syscall::error::EINVAL;
     Module virtio_driver is an userspace version of https://github.com/rcore-os/virtio-drivers,
     so it's also non-blocking.
 
-    How does it work in userspace:
-        [`VirtIOHeader`] uses virtio_driver::volatile instead of the external crate volatile, while
-        others in virtio_driver still use the external one.
+    The difference between module virtio_driver and the github repository:
+        There are two "volatile" in this module:
+            virtio_driver::volatile, and the external crate volatile.
 
-        [`virtio_driver::volatile::Volatile`] uses `dev_write` and `dev_read` to write and read a register.
+            [`virtio_driver::volatile::Volatile`] uses `dev_write` and `dev_read` to write and read a register.
+             virtio_driver::volatile is only used in [`virtio_driver::header::VirtIOHeader`].
 
         The kernel provides `continuous_alloc` and `virt_to_phys` for [`virtio_driver::hal::DMA`]
         to alloc continuous physical memory and convert virtual address to physical address.
@@ -57,7 +55,7 @@ fn main() {
     }
 }
 
-pub fn do_read(virtio_blk: &mut VirtIOBlk, message: Msg) -> isize{
+pub fn do_read(virtio_blk: &mut VirtIOBlk, message: Msg) -> isize {
     let proc_nr = message.args[PROC_NR];
     let dst_ptr = message.args[BUFFER];
     let block_id = message.args[POSITION];

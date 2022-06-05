@@ -1,9 +1,6 @@
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloc::string::String;
 use core::fmt::{Debug, Formatter};
-
-pub type c_char = u8;
 
 /// a simplified version of the std::ffi::CString which is not available for no_std right now.
 pub struct CString {
@@ -18,7 +15,7 @@ impl CString {
         }
     }
 
-    pub fn as_ptr(&self) -> * const c_char {
+    pub fn as_ptr(&self) -> * const u8 {
         self.inner.as_ptr()
     }
 
@@ -29,6 +26,13 @@ impl CString {
 
     pub fn as_bytes_with_nul(&self) -> &[u8] {
         self.inner.as_bytes()
+    }
+}
+
+impl From<&str> for CString {
+    fn from(s: &str) -> Self {
+        let string = String::from(s);
+        Self::new(string)
     }
 }
 
@@ -53,7 +57,7 @@ pub struct CStr<'a> {
 }
 
 impl<'a> CStr<'a> {
-    pub fn from_ptr(ptr: *const c_char) -> Self {
+    pub fn from_ptr(ptr: *const u8) -> Self {
         let len = unsafe { strlen(ptr) };
         let inner = unsafe {
             core::slice::from_raw_parts(ptr, len + 1) // include '\0'
@@ -62,6 +66,19 @@ impl<'a> CStr<'a> {
         Self {
             inner,
         }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        let len = self.inner.len();
+        &self.inner[0..len-1]
+    }
+
+    pub fn as_bytes_with_nul(&self) -> &[u8] {
+        self.inner
+    }
+
+    pub fn as_str(&self) -> &str {
+        core::str::from_utf8(self.as_bytes()).unwrap()
     }
 }
 
@@ -73,13 +90,19 @@ impl<'a> Into<String> for CStr<'a> {
     }
 }
 
+impl<'a> Debug for CStr<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!("{}", self.as_str()))
+    }
+}
+
 /// `CStrArray` is used to describe structure like `char*` in C.
 pub struct CStrArray {
     inner: Vec<*const u8>
 }
 
 impl CStrArray {
-    pub fn copy_from_ptr(ptr: *const *const c_char) -> CStrArray {
+    pub fn copy_from_ptr(ptr: *const *const u8) -> CStrArray {
         let count = unsafe { strlen(ptr) };
         let c_str_array_slice = unsafe {
             core::slice::from_raw_parts(ptr, count + 1)
@@ -90,14 +113,14 @@ impl CStrArray {
         }
     }
 
-    pub fn from_vec(mut v: Vec<*const c_char>) -> CStrArray {
-        v.push(0 as *const c_char);
+    pub fn from_vec(mut v: Vec<*const u8>) -> CStrArray {
+        v.push(0 as *const u8);
         Self {
             inner: v,
         }
     }
 
-    pub fn as_ptr(&self) -> *const *const c_char {
+    pub fn as_ptr(&self) -> *const *const u8 {
         self.inner.as_ptr()
     }
 
@@ -107,12 +130,12 @@ impl CStrArray {
 }
 
 pub struct CStrArrayIter<'a> {
-    inner_ref: &'a [*const c_char],
+    inner_ref: &'a [*const u8],
     current: usize,
 }
 
 impl <'a> CStrArrayIter<'a> {
-    pub fn new(inner_ref: &'a [*const c_char]) -> Self {
+    pub fn new(inner_ref: &'a [*const u8]) -> Self {
         Self {
             inner_ref,
             current: 0,
@@ -121,7 +144,7 @@ impl <'a> CStrArrayIter<'a> {
 }
 
 impl <'a> Iterator for CStrArrayIter<'a> {
-    type Item = *const c_char;
+    type Item = *const u8;
 
     fn next(&mut self) -> Option<Self::Item> {
         let cur = self.current;

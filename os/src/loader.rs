@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use core::arch::global_asm;
-use share::util::cvt_c_like_str_ptr_to_rust;
+use share::ffi::CStr;
 
 #[cfg(not(test))]
 global_asm!(include_str!("link_app.asm"));
@@ -10,17 +10,17 @@ extern "C" {
     fn _app_names();
 }
 
-pub fn get_app_names() -> Vec<&'static str> {
+pub fn get_app_names() -> Vec<CStr<'static>> {
     let num = get_app_num();
     let mut start = _app_names as usize;
-    let mut v = Vec::new();
+    let mut app_names = Vec::new();
     for _ in 0..num {
-        let str = cvt_c_like_str_ptr_to_rust(start);
-        v.push(str);
-        start += str.len() + 1;
+        let app_name = CStr::from_ptr(start as *const u8);
+        start += app_name.as_bytes_with_nul().len();
+        app_names.push(app_name);
     }
 
-    v
+    app_names
 }
 
 pub unsafe fn get_app_ref_data() -> Vec<&'static [u8]> {

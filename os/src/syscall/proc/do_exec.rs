@@ -1,34 +1,42 @@
-use share::syscall::error::{SysError, ENOENT};
-use crate::task::{get_task_data_by_name, TrapContext};
-use crate::processor::clone_cur_task_in_this_hart;
+use share::syscall::error::SysError;
+use crate::task::TrapContext;
+use crate::processor::get_cur_task_in_this_hart;
 use crate::mm::memory_manager::MemoryManager;
 use core::arch::asm;
-use share::util::{cvt_c_like_str_ptr_to_rust, cvt_c_like_str_array_ptr_to_rust};
 use alloc::vec::Vec;
-use alloc::string::String;
 use crate::mm::page_table::PageTable;
-use share::ffi::{CString, CStrArray, c_char, CStr};
+use share::ffi::{CString, CStrArray, CStr};
+use crate::syscall::file::{do_open, do_read, do_fstat, do_close};
+use share::file::{OpenFlag, Stat, AT_FD_CWD};
+use alloc::vec;
 
-pub fn do_exec(path_ptr: usize, argv: *const *const c_char, envp: *const *const c_char) -> Result<usize, SysError> {
-    let data = get_target_elf_data_by(path_ptr)?;
+pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) -> Result<usize, SysError> {
+    // read file data from fs server.
+    let path_cstr = CStr::from_ptr(path_ptr as *const _);
+    let path_cstring = CString::from(path_cstr);
+    let open_flag = OpenFlag::RDONLY;
+    let fd = do_open( AT_FD_CWD as usize,path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
+    let stat = Stat::empty();
+    do_fstat(fd, &stat as *const _ as usize)?;
+    let data_buffer = vec![0; stat.size];
+    do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
+    do_close(fd)?;
+    let data = data_buffer.as_slice();
+
+    // create new address space.
     let (mem_manager, pc, user_sp) = MemoryManager::new(data)?;
     let (arg_vec, env_vec) = read_arg_and_env_in_current_addr_space(argv, envp);
     switch_to_new_addr_space(&mem_manager.page_table);
-    let user_sp = unsafe { push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp) };
+    let user_sp = push_arg_and_env_onto_stack(arg_vec, env_vec, user_sp);
+
     modify_current_task_struct(mem_manager, pc, user_sp);
 
     clear_i_cache();
     Ok(0)
 }
 
-fn get_target_elf_data_by(path_ptr: usize) -> Result<&'static [u8], SysError> {
-    let path: &str = cvt_c_like_str_ptr_to_rust(path_ptr);
-    let result = get_task_data_by_name(path);
-    result.ok_or(SysError::new(ENOENT))
-}
-
-fn read_arg_and_env_in_current_addr_space(argv_ptr: *const *const c_char, envp_ptr: *const *const c_char)
-    -> (Vec<CString>, Vec<CString>) {
+fn read_arg_and_env_in_current_addr_space(argv_ptr: *const *const u8, envp_ptr: *const *const u8)
+                                          -> (Vec<CString>, Vec<CString>) {
     let arg_cstring_vec = get_cstring_vec_from_str_array_ptr(argv_ptr);
     let env_cstring_vec = get_cstring_vec_from_str_array_ptr(envp_ptr);
 
@@ -61,7 +69,7 @@ fn push_arg_and_env_onto_stack(arg_vec: Vec<CString>, env_vec: Vec<CString>, mut
 }
 
 fn modify_current_task_struct(mem_manager: MemoryManager,pc: usize, user_sp: usize) {
-    let cur_task = clone_cur_task_in_this_hart();
+    let cur_task = get_cur_task_in_this_hart();
     let mut inner = cur_task.acquire_inner_lock();
     let trap_context_ref = inner.trap_context_ref();
     *trap_context_ref = TrapContext::new(pc, user_sp);
@@ -74,12 +82,10 @@ fn clear_i_cache() {
     }
 }
 
-fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const c_char) -> Vec<CString> {
+fn get_cstring_vec_from_str_array_ptr(str_array_ptr: *const *const u8) -> Vec<CString> {
     let mut vec = Vec::new();
     for cstr_ptr in CStrArray::copy_from_ptr(str_array_ptr).iter() {
-        let cstr = unsafe {
-            CStr::from_ptr(cstr_ptr)
-        };
+        let cstr = CStr::from_ptr(cstr_ptr);
         vec.push(CString::from(cstr));
     }
 

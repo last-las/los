@@ -4,9 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::syscall::{fork, sleep};
-
-const LEN: usize = 100;
+use user_lib::syscall::fork;
 
 #[no_mangle]
 fn main() {

@@ -1,6 +1,7 @@
 use core::arch::asm;
 use share::ipc::Msg;
 use share::syscall::sys_const::*;
+use share::file::Stat;
 
 #[inline(always)]
 fn syscall0(id: usize) -> isize {
@@ -99,20 +100,68 @@ pub fn sys_receive(dst_pid: isize, msg: &mut Msg) -> isize {
     syscall2(KCALL_RECEIVE, dst_pid as usize, msg_ptr)
 }
 
-pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
-    syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
+pub fn sys_lseek(fd: usize, offset: usize, whence: usize) -> isize {
+    syscall3(SYSCALL_LSEEK, fd, offset, whence)
 }
 
-pub fn _sys_read(fd: usize, buf: &mut [u8]) -> isize {
-    syscall3(_SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
+pub fn sys_getcwd(buf: &mut [u8]) -> isize {
+    syscall2(SYSCALL_GETCWD, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn sys_dup(old_fd: usize) -> isize {
+    syscall1(SYSCALL_DUP, old_fd)
+}
+
+pub fn sys_dup3(old_fd: usize, new_fd: usize) -> isize {
+    syscall2(SYSCALL_DUP3, old_fd, new_fd)
+}
+
+pub fn sys_unmount(target: usize, flags: usize) -> isize {
+    syscall2(SYSCALL_UNMOUNT, target, flags)
+}
+
+pub fn sys_mount(source: usize, target: usize, fs_type: usize, flags: usize, data: usize) -> isize {
+    syscall5(SYSCALL_MOUNT, source, target, fs_type, flags, data)
+}
+
+pub fn sys_chdir(path_ptr: usize) -> isize {
+    syscall1(SYSCALL_CHDIR, path_ptr)
+}
+
+pub fn sys_open(fd: usize, path_ptr: usize, flags: u32, mode: u32) -> isize {
+    syscall4(SYSCALL_OPEN, fd, path_ptr, flags as usize, mode as usize)
+}
+
+pub fn sys_close(fd: usize) -> isize {
+    syscall1(SYSCALL_CLOSE, fd)
+}
+
+pub fn sys_get_dents(fd: usize, buf: usize, length: usize) -> isize {
+    syscall3(SYSCALL_GETDENTS, fd, buf, length)
+}
+
+pub fn sys_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(SYSCALL_READ, fd, buf.as_ptr() as usize, buf.len())
 }
 
 pub fn sys_write(fd: usize, buf: &[u8]) -> isize {
     syscall3(SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
 }
 
-pub fn _sys_write(fd: usize, buf: &[u8]) -> isize {
-    syscall3(_SYSCALL_WRITE, fd, buf.as_ptr() as usize, buf.len())
+pub fn sys_mkdir_at(dir_fd: usize, path_ptr: usize, mode: u32) -> isize {
+    syscall3(SYSCALL_MKDIRAT, dir_fd, path_ptr, mode as usize)
+}
+
+pub fn sys_fstat(fd: usize, stat: &mut Stat) -> isize {
+    syscall2(SYSCALL_FSTAT, fd, stat as *const _ as usize)
+}
+
+pub fn sys_unlink(path_ptr: usize) -> isize {
+    syscall1(SYSCALL_UNLINK, path_ptr)
+}
+
+pub fn sys_rmdir(path_ptr: usize) -> isize {
+    syscall1(SYSCALL_RMDIR, path_ptr)
 }
 
 pub fn sys_exit(exit_code: usize) -> isize {
@@ -213,9 +262,30 @@ pub fn k_virt_to_phys(virt_addr: usize) -> isize {
     syscall1(KCALL_VIRT_TO_PHYS, virt_addr)
 }
 
+pub fn k_copy_c_path(proc: usize, path_ptr: usize, buf_ptr: usize, size: usize) -> isize {
+    syscall4(KCALL_COPY_C_PATH, proc, path_ptr, buf_ptr, size)
+}
+
+pub fn k_sbi_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(KCALL_SBI_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn k_sbi_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(KCALL_SBI_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn k_terminal_read(fd: usize, buf: &mut [u8]) -> isize {
+    syscall3(KCALL_TERMINAL_READ, fd, buf.as_ptr() as usize, buf.len())
+}
+
+pub fn k_terminal_write(fd: usize, buf: &[u8]) -> isize {
+    syscall3(KCALL_TERMINAL_WRITE, fd, buf.as_ptr() as usize, buf.len())
+}
+
 pub fn k_sdcard_read(block_id: usize, buf_ptr: usize, size: usize) -> isize {
     syscall3(KCALL_SDCARD_READ, block_id, buf_ptr, size)
 }
+
 pub fn k_sdcard_write(block_id: usize, buf_ptr: usize, size: usize) -> isize {
     syscall3(KCALL_SDCARD_WRITE, block_id, buf_ptr, size)
 }

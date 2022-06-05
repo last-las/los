@@ -6,8 +6,9 @@ BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
 export LOG = INFO
 USER_PATH := ./user/target/$(TARGET)/$(MODE)/
-FS_IMG := ./fs.img
-SDCARD := /dev/disk2s1
+FS_IMG := $(USER_PATH)/fs.img
+OTHER_PATH := /home/las/workstation/testsuits-for-oskernel-main/riscv-syscalls-testing/user/build/riscv64/
+SDCARD := /dev/sdb
 
 # board and bootloader
 BOARD ?= qemu
@@ -27,7 +28,7 @@ K210_SERIALPORT := /dev/ttyUSB0
 k210_BURNER := ./tools/kflash.py
 
 
-all: switch-check user
+all: switch-check fs-img
 	@echo Platform: $(BOARD)
 	@cp os/link-$(BOARD).ld os/link.ld
 	@cd ./os && cargo build --release --features "board_$(BOARD)"
@@ -37,7 +38,7 @@ all: switch-check user
 		-O binary $(KERNEL_BIN)
 
 # dev/zero永远输出0
-sdcard: 
+sdcard: fs-img
 	@echo "Are you sure write to $(SDCARD) ? [y/N] " && read ans && [ $${ans:-N} = y ]
 	@sudo dd if=/dev/zero of=$(SDCARD) bs=1048576 count=16
 	@sudo dd if=$(FS_IMG) of=$(SDCARD)
@@ -55,8 +56,9 @@ endif
 user:
 	@cd ./user && python build.py && cargo build --release --features "board_$(BOARD)"
 
-fs-img:
-	@dd if=/dev/zero of=$(FS_IMG) bs=512 count=1024
+fs-img: user
+	# @cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
+	@cd ./easy-fs-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/
 
 run: fs-img
 ifeq ($(BOARD),qemu)

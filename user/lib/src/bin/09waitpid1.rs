@@ -7,8 +7,6 @@ extern crate user_lib;
 extern crate alloc;
 
 use user_lib::syscall::{exec, fork, waitpid};
-use alloc::vec::Vec;
-
 
 #[no_mangle]
 fn main() {

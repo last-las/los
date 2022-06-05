@@ -6,9 +6,9 @@ use alloc::sync::{Arc, Weak};
 use spin::{Mutex, MutexGuard};
 use crate::task::task_context::TaskContext;
 use crate::mm::memory_manager::MemoryManager;
-use share::syscall::error::{SysError, EAGAIN};
-use crate::mm::address::PhysicalAddress;
+use share::syscall::error::SysError;
 use share::ipc::Msg;
+use crate::syscall::{MAX_PRIORITY, MIN_PRIORITY};
 
 pub struct TaskStruct {
     pub pid_handle: PidHandle,
@@ -17,15 +17,17 @@ pub struct TaskStruct {
 
 pub struct TaskStructInner {
     pub kernel_stack: KernelStack,
-    pub wait_queue: Vec<Arc<TaskStruct>>,
     pub flag: RuntimeFlags,
     pub task_context: TaskContext,
     // ipc
     pub message_holder: Option<Msg>,
     pub interrupt_flag: bool,
+    pub wait_queue: Vec<Arc<TaskStruct>>,
 
     pub mem_manager: MemoryManager,
-    pub priority: usize,
+
+    pub priority: isize,
+    pub min_priority: isize,
 
     pub children:Vec<Arc<TaskStruct>>,
     pub parent: Option<Weak<TaskStruct>>,
@@ -37,7 +39,7 @@ impl TaskStruct {
         let pid_handle = alloc_pid().unwrap();
         user_sp -= core::mem::size_of::<usize>() * 3; // push argc, NULL and NULL onto stack.
 
-        let mut kernel_stack = KernelStack::new()?;
+        let kernel_stack = KernelStack::new()?;
         let task_context = TaskContext::new(kernel_stack.sp() - core::mem::size_of::<TrapContext>());
 
         let mut inner = TaskStructInner {
@@ -48,7 +50,8 @@ impl TaskStruct {
             message_holder: None,
             interrupt_flag: false,
             mem_manager,
-            priority: 7,
+            priority: 0,
+            min_priority: 0,
             children: Vec::new(),
             parent: None,
         };
@@ -69,6 +72,21 @@ impl TaskStruct {
 
     pub fn pid(&self) -> usize {
         self.pid_handle.0
+    }
+
+    pub fn increase_priority(&self) {
+        let mut inner = self.acquire_inner_lock();
+        if inner.priority < MAX_PRIORITY {
+            inner.priority += 1;
+        }
+    }
+
+    pub fn decrease_priority(&self) {
+        let mut inner = self.acquire_inner_lock();
+        let min_priority = isize::max(MIN_PRIORITY, inner.min_priority);
+        if inner.priority > min_priority {
+            inner.priority -= 1;
+        }
     }
 }
 
@@ -103,6 +121,6 @@ pub enum RuntimeFlags {
     RECEIVING(isize),
     SENDING(usize),
     READY,
-    ZOMBIE(usize),
+    ZOMBIE(isize),
     RUNNING,
 }

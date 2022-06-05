@@ -9,7 +9,6 @@ use alloc::vec::Vec;
 use alloc::boxed::Box;
 
 const FRAME_SIZE: usize = 0x1000;
-const USER_HEAP_SIZE: usize = 0x4000;
 
 #[no_mangle]
 fn main() {

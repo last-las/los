@@ -1,7 +1,21 @@
+// filesystem syscall.
+pub const SYSCALL_LSEEK: usize = 8;
+pub const SYSCALL_GETCWD: usize = 17;
+pub const SYSCALL_DUP: usize = 23;
+pub const SYSCALL_DUP3: usize = 24;
+pub const SYSCALL_MKDIRAT: usize = 34;
+pub const SYSCALL_UNMOUNT: usize = 39;
+pub const SYSCALL_MOUNT: usize = 40;
+pub const SYSCALL_CHDIR: usize = 49;
+pub const SYSCALL_OPEN: usize = 56;
+pub const SYSCALL_CLOSE: usize = 57;
+pub const SYSCALL_GETDENTS: usize = 61;
 pub const SYSCALL_READ: usize = 63;
-pub const _SYSCALL_READ: usize = KCALL_MASK | SYSCALL_READ;
 pub const SYSCALL_WRITE: usize = 64;
-pub const _SYSCALL_WRITE: usize = KCALL_MASK | SYSCALL_WRITE;
+pub const SYSCALL_FSTAT: usize = 80;
+pub const SYSCALL_UNLINK: usize = 83;
+pub const SYSCALL_RMDIR: usize = 84;
+
 pub const SYSCALL_EXIT: usize = 93;
 pub const SYSCALL_YIELD: usize = 124;
 pub const SYSCALL_GET_PRIORITY: usize = 140;
@@ -25,6 +39,11 @@ pub const KCALL_WRITE_DEV: usize = KCALL_MASK | 4;
 pub const KCALL_VIRT_COPY: usize = KCALL_MASK | 5;
 pub const KCALL_CONTINUOUS_ALLOC: usize = KCALL_MASK | 6;
 pub const KCALL_VIRT_TO_PHYS: usize = KCALL_MASK | 7;
+pub const KCALL_COPY_C_PATH: usize = KCALL_MASK | 8;
+pub const KCALL_SBI_READ: usize = KCALL_MASK | 9;
+pub const KCALL_TERMINAL_READ: usize = KCALL_MASK | 10;
+pub const KCALL_SBI_WRITE: usize = KCALL_MASK | 11;
+pub const KCALL_TERMINAL_WRITE: usize = KCALL_MASK | 12;
 
 pub const KCALL_SDCARD_READ: usize = KCALL_MASK | 20;
 pub const KCALL_SDCARD_WRITE: usize = KCALL_MASK | 21;

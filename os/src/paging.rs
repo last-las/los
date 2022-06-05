@@ -11,7 +11,6 @@ use crate::mm::page_table::{PTEFlags, PageTable};
 use crate::mm::FRAME_ALLOCATOR;
 use crate::plic::PLIC_START_ADDRESS;
 use crate::processor::suspend_current_hart;
-use crate::sbi::sbi_shutdown;
 use core::arch::asm;
 
 extern "C" {
@@ -196,14 +195,17 @@ pub extern "C" fn enable_paging(hart_id: usize, device_tree: usize) {
                 )
                 .unwrap();
             // virtio mapping
-            root_table
-                .map_with_offset(
-                    VIRTIO0_START_ADDRESS,
-                    VIRTIO0_START_ADDRESS + FRAME_SIZE,
-                    0,
-                    PTEFlags::V | PTEFlags::R | PTEFlags::W,
-                )
-                .unwrap();
+            #[cfg(feature = "board_qemu")]
+                {
+                    root_table
+                        .map_with_offset(
+                            VIRTIO0_START_ADDRESS,
+                            VIRTIO0_START_ADDRESS + FRAME_SIZE,
+                            RAM_MAPPING_OFFSET,
+                            PTEFlags::V | PTEFlags::R | PTEFlags::W,
+                        )
+                        .unwrap();
+                }
 
             // set global satp for all harts
             KERNEL_SATP = root_table.satp();

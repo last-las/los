@@ -1,6 +1,10 @@
 use core::fmt::{Debug, Formatter};
 use crate::syscall::error::SysError;
 
+pub const TERMINAL_PID: usize = 1;
+pub const VIRTIO_BLK_PID: usize = 2;
+pub const FS_PID: usize = 3;
+
 /* Message Type */
 pub const INTERRUPT: usize = 1;
 pub const OPEN: usize = 2;
@@ -9,6 +13,9 @@ pub const WRITE: usize = 4;
 pub const IOCTL: usize = 5;
 pub const CLOSE: usize = 6;
 pub const REPLY: usize = 7;
+pub const FORK: usize = 8;  // process to filesystem
+pub const EXIT: usize = 9; // process to filesystem
+pub const FSYSCALL: usize = 10; // process to filesystem, when process inovke filesystem syscall like 'open'
 
 /* Args position constant */
 pub const MSG_ARGS_0: usize = 0;
@@ -18,7 +25,8 @@ pub const MSG_ARGS_3: usize = 3;
 pub const MSG_ARGS_4: usize = 4;
 pub const MSG_ARGS_5: usize = 5;
 
-/* read write message FOR block and character device drivers */
+/* device drivers */
+/* read write message */
 pub const DEVICE: usize = MSG_ARGS_0;
 pub const PROC_NR: usize = MSG_ARGS_1;
 pub const BUFFER: usize = MSG_ARGS_2;
@@ -32,9 +40,24 @@ pub const REPLY_PROC_NR: usize = MSG_ARGS_0;
 pub const REPLY_STATUS: usize = MSG_ARGS_1;
 pub const STATUS_OK: usize = 0;
 
+/* filesystem server */
+/* fs syscall message */
+pub const SYSCALL_TYPE: usize = MSG_ARGS_0;
+pub const FS_SYSCALL_ARG0: usize = MSG_ARGS_1;
+pub const FS_SYSCALL_ARG1: usize = MSG_ARGS_2;
+pub const FS_SYSCALL_ARG2: usize = MSG_ARGS_3;
+pub const FS_SYSCALL_ARG3: usize = MSG_ARGS_4;
+pub const FS_SYSCALL_ARG4: usize = MSG_ARGS_5;
+/* fork message */
+pub const FORK_PARENT: usize = MSG_ARGS_0;
+pub const FORK_CHILD: usize = MSG_ARGS_1;
+/* exit message */
+pub const EXIT_PID: usize = MSG_ARGS_0;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Msg {
+    /// `src_pid` will be set at the kernel.
     pub src_pid: usize,
     pub mtype: usize,
     pub args: [usize; 6]

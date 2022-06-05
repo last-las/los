@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 user_lib = { path = "../lib" }
+share = {path = "../../share"}
 
 [features]
 board_qemu = []

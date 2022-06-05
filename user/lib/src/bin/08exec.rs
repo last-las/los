@@ -6,8 +6,7 @@ extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{exec, fork};
-use alloc::vec::Vec;
+use user_lib::syscall::exec;
 
 
 #[no_mangle]

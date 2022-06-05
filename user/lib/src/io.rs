@@ -1,5 +1,5 @@
 use alloc::string::String;
-use crate::syscall::_read;
+use crate::syscall::read;
 
 const STDIN: usize = 0;
 const BS: u8 = 0x08;
@@ -12,7 +12,7 @@ pub fn read_line() -> String {
     let mut buf = [0];
     let mut cnt = 0;
     loop {
-        assert_eq!(_read(STDIN, &mut buf).unwrap(), 1);
+        assert_eq!(read(STDIN, &mut buf).unwrap(), 1);
         match buf[0] {
             LF | CR =>
                 break,

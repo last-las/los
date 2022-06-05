@@ -19,6 +19,7 @@ extern crate riscv;
 use core::arch::asm;
 use core::arch::global_asm;
 
+#[allow(unused_imports)]
 use processor::enable_other_harts;
 use processor::set_hart_id;
 
@@ -67,7 +68,7 @@ pub extern "C" fn kmain(hart_id: usize, _: usize) -> ! {
         plic::init();
         increase_alive_hart();
         task::print_app_names();
-        task::load_init_task();
+        task::load_init_tasks();
         // enable_other_harts();
         info!("start running");
         processor::run_on_current_hart();

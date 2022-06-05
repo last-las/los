@@ -7,6 +7,7 @@ use crate::syscall::notify;
 #[cfg(feature = "board_k210")]
 use core::arch::asm;
 use riscv::register::{sie, sip};
+use share::ipc::TERMINAL_PID;
 
 #[cfg(feature = "board_qemu")]
 const UART_IRQ: u32 = 10;
@@ -59,7 +60,7 @@ pub fn handle_interrupt() {
     if let Some(interrupt) = next_interrupt_number() {
         match interrupt {
             UART_IRQ => {
-                notify(1);
+                notify(TERMINAL_PID).unwrap();
                 disable_uart_interrupt();
             }
             RTC_IRQ => {
