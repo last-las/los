@@ -11,10 +11,8 @@ use share::file::{OpenFlag, Stat, AT_FD_CWD};
 use alloc::vec;
 
 pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) -> Result<usize, SysError> {
-    info!("before do_exec");
     // read file data from fs server.
     let path_cstr = CStr::from_ptr(path_ptr as *const _);
-    println!("read path:{}", path_cstr.as_str());
     let path_cstring = CString::from(path_cstr);
     let open_flag = OpenFlag::RDONLY;
     let fd = do_open( AT_FD_CWD as usize,path_cstring.as_ptr() as usize, open_flag.bits() as usize, 0)?;
@@ -23,7 +21,6 @@ pub fn do_exec(path_ptr: usize, argv: *const *const u8, envp: *const *const u8) 
     let data_buffer = vec![0; stat.size];
     do_read(fd, data_buffer.as_ptr() as usize, stat.size)?;
     do_close(fd)?;
-    info!("after do_close");
     let data = data_buffer.as_slice();
 
     // create new address space.
