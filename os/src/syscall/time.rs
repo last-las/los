@@ -8,9 +8,11 @@ pub fn do_get_time() -> Result<usize, SysError> {
 }
 
 pub fn do_get_time_of_day(time: *mut Timespec) -> Result<usize, SysError> {
-    unsafe {
-        (*time).tv_sec = get_time_s() as u64;
-        (*time).tv_usec = get_time_us() as u64;
+    if time as usize != 0 {
+        unsafe {
+            (*time).tv_sec = get_time_s() as u64;
+            (*time).tv_usec = get_time_us() as u64;
+        }
     }
     do_get_time()
 }

@@ -203,7 +203,7 @@ pub fn sys_uname(which: usize) -> isize {
 }
 
 pub fn sys_get_time() -> isize {
-    syscall0(SYSCALL_GET_TIME)
+    syscall1(SYSCALL_GET_TIME, 0)
 }
 
 pub fn sys_get_pid() -> isize {
