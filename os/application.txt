@@ -1,1 +1,1 @@
-init terminal virtio-blk fs
+init terminal sdcard fs idle
