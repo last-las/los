@@ -1,4 +1,4 @@
 pub mod ramfs;
-pub mod ezfs;
+pub mod fatfs;
 pub mod devfs;
 

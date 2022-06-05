@@ -30,7 +30,7 @@ pub fn getcwd() -> Result<String, SysError> {
     Ok(String::from(cstr.as_str()))
 }
 
-pub fn dup(old_fd : usize) -> Result<usize, SysError> {
+pub fn dup(old_fd: usize) -> Result<usize, SysError> {
     isize2result(sys_dup(old_fd))
 }
 
@@ -61,7 +61,7 @@ pub fn chdir(path: &str) -> Result<(), SysError> {
 pub fn open(path: &str, flags: OpenFlag, mode: u32) -> Result<usize, SysError> {
     let cstring = CString::from(path);
 
-    isize2result(sys_open(AT_FD_CWD as usize,cstring.as_ptr() as usize, flags.bits(), mode))
+    isize2result(sys_open(AT_FD_CWD as usize, cstring.as_ptr() as usize, flags.bits(), mode))
 }
 
 pub fn close(fd: usize) -> Result<usize, SysError> {
@@ -69,14 +69,20 @@ pub fn close(fd: usize) -> Result<usize, SysError> {
 }
 
 static mut DENTS_BUFFER: [u8; DIRENT_BUFFER_SZ] = [0; DIRENT_BUFFER_SZ];
+
 pub fn get_dents(fd: usize) -> Result<Vec<RDirent>, SysError> {
     let buffer_ptr = unsafe { DENTS_BUFFER.as_ptr() as usize };
     let buffer_length = unsafe { DENTS_BUFFER.len() };
-    let nbytes = isize2result(sys_get_dents(fd,buffer_ptr,buffer_length))?;
+    let nbytes = isize2result(sys_get_dents(fd, buffer_ptr, buffer_length))?;
     let mut rdirents = Vec::new();
 
+    let dirent_size = core::mem::size_of::<Dirent>();
     let mut pos = 0;
     while pos < nbytes {
+        let start = buffer_ptr + pos;
+        let aligned_start = (start + dirent_size - 1) & (!dirent_size + 1);
+        pos += aligned_start - start;
+
         let dirent = unsafe {
             ((buffer_ptr + pos) as *const Dirent).read()
         };
@@ -100,7 +106,7 @@ pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
     isize2result(sys_read(fd, buf))
 }
 
-pub fn write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+pub fn write(fd: usize, buf: &[u8]) -> Result<usize, SysError> {
     isize2result(sys_write(fd, buf))
 }
 
@@ -123,7 +129,7 @@ pub fn unlink(path: &str) -> Result<(), SysError> {
 
 pub fn rmdir(path: &str) -> Result<(), SysError> {
     let cstring = CString::from(path);
-    isize2result( sys_rmdir(cstring.as_ptr() as usize))?;
+    isize2result(sys_rmdir(cstring.as_ptr() as usize))?;
     Ok(())
 }
 
@@ -161,7 +167,7 @@ pub fn getppid() -> usize {
 }
 
 pub fn brk(new_brk: Option<usize>) -> Result<usize, SysError> {
-    let new_brk = if new_brk.is_some() {new_brk.unwrap()} else { 0 };
+    let new_brk = if new_brk.is_some() { new_brk.unwrap() } else { 0 };
 
     isize2result(sys_brk(new_brk))
 }
@@ -182,7 +188,7 @@ pub fn exec(path: &str, args: Vec<&str>) -> Result<usize, SysError> {
     if result.is_some() {
         let path = result.unwrap();
         let env_paths: Vec<&str> = path.split(":").collect();
-        search_paths.extend(env_paths.iter().map(|&str| { String::from(str)}));
+        search_paths.extend(env_paths.iter().map(|&str| { String::from(str) }));
     }
 
     // construct `argv_ptr`
@@ -206,7 +212,7 @@ pub fn exec(path: &str, args: Vec<&str>) -> Result<usize, SysError> {
 
         let envp = get_envp_copy();
         let envp_ptr = envp.as_ptr() as usize;
-        sys_exec(path_ptr, argv_ptr,envp_ptr); // if success this function will never return.
+        sys_exec(path_ptr, argv_ptr, envp_ptr); // if success this function will never return.
     }
 
     return Err(SysError::new(ENFILE));
@@ -251,6 +257,10 @@ pub fn dev_write_u8(dev_phys_addr: usize, val: u8) -> Result<usize, SysError> {
     isize2result(k_write_dev(dev_phys_addr, val as usize, 1))
 }
 
+pub fn dev_read_u32(dev_phys_addr: usize) -> Result<usize, SysError> {
+    isize2result(k_read_dev(dev_phys_addr, 4))
+}
+
 pub fn dev_write_u32(dev_phys_addr: usize, val: u32) -> Result<usize, SysError> {
     isize2result(k_write_dev(dev_phys_addr, val as usize, 4))
 }
@@ -286,6 +296,14 @@ pub fn terminal_read(fd: usize, buf: &mut [u8]) -> Result<usize, SysError> {
     isize2result(k_terminal_read(fd, buf))
 }
 
-pub fn terminal_write(fd: usize, buf: &[u8]) -> Result<usize, SysError>{
+pub fn terminal_write(fd: usize, buf: &[u8]) -> Result<usize, SysError> {
     isize2result(k_terminal_write(fd, buf))
+}
+
+pub fn sdcard_read(block_id: usize, buf: &mut [u8]) -> Result<usize, SysError> {
+    isize2result(k_sdcard_read(block_id, buf.as_mut_ptr() as usize, buf.len()))
+}
+
+pub fn sdcard_write(block_id: usize, buf: &[u8]) -> Result<usize, SysError> {
+    isize2result(k_sdcard_write(block_id, buf.as_ptr() as usize, buf.len()))
 }

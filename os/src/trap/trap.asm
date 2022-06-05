@@ -10,6 +10,7 @@
     .section .text
     .globl __enter_user_mode
     .globl __from_user_mode
+    .align 2
 
 __from_user_mode:
     # switch to kernel sp

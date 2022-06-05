@@ -15,7 +15,8 @@ fn main() {
     setenv("PATH", "/bin:/usr/bin:", true);
     sleep(1); // wait for fs server init.
     open_standard_fd();
-    mount_ezfs_on("/bin");
+    mount_fatfs_on("/bin");
+    mkdir_at(0,"/bin/mnt",0).unwrap();
     fork_and_exec("/bin/idle");
     fork_and_exec("/bin/shell");
 
@@ -36,9 +37,10 @@ fn open_standard_fd() {
     assert_eq!(fd, 2);
 }
 
-fn mount_ezfs_on(path: &str) {
+fn mount_fatfs_on(path: &str) {
     mkdir_at(0, path, 0).unwrap();
-    mount("/dev/sda2", path, "ezfs", 0, 0).unwrap();
+    //mkdir_at(0,"/bin/contest",0).unwrap();
+    mount("/dev/vda2", path, "vfat", 0, 0).unwrap();
 }
 
 fn fork_and_exec(path: &str) {

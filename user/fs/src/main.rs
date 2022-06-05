@@ -10,6 +10,7 @@ mod proc;
 mod syscall;
 mod device;
 
+#[macro_use]
 extern crate user_lib;
 #[macro_use]
 extern crate alloc;
@@ -31,12 +32,12 @@ use share::syscall::error::SysError;
 use crate::vfs::dentry::{VfsDentry, VfsMount};
 use share::file::{FileTypeFlag, VIRT_BLK_MAJOR, CONSOLE_MAJOR, RAM_MAJOR};
 use crate::vfs::inode::Rdev;
-use crate::fs::ezfs::register_ezfs;
+use crate::fs::fatfs::register_fatfs;
 use crate::fs::devfs::register_devfs;
 
 #[no_mangle]
 fn main() {
-    register_ezfs();
+    register_fatfs();
     register_ramfs();
     register_devfs();
     let rdev = Rdev::new(0, RAM_MAJOR);
@@ -82,7 +83,7 @@ fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMo
     // create sda inode.
     let rdev = Rdev::new(0, VIRT_BLK_MAJOR);
     let file_type = FileTypeFlag::DT_BLK;
-    attach_device_to(dev_dentry.clone(), "sda2", file_type, rdev);
+    attach_device_to(dev_dentry.clone(), "vda2", file_type, rdev);
 
     // create console inode.
     let rdev = Rdev::new(0, CONSOLE_MAJOR);
@@ -97,6 +98,7 @@ fn init_dev_directory(root_dentry: Rc<RefCell<VfsDentry>>, mnt: Rc<RefCell<VfsMo
     }
 }
 
+//add device file
 fn attach_device_to(dev_dentry: Rc<RefCell<VfsDentry>>, name: &str, file_type: FileTypeFlag, rdev: Rdev) {
     let dev_inode = dev_dentry.borrow().inode.clone();
     let device_dentry = dev_inode.borrow().iop.mknod(name, file_type, rdev, dev_inode.clone()).unwrap();
@@ -135,7 +137,7 @@ fn handle_syscall(message: &mut Msg) -> Result<usize, SysError> {
             do_open(message.args[FS_SYSCALL_ARG0], path.as_str(), message.args[FS_SYSCALL_ARG2] as u32, message.args[FS_SYSCALL_ARG3] as u32, cur_fs)
         },
         SYSCALL_CLOSE => do_close(message.args[FS_SYSCALL_ARG0], cur_fs),
-        SYSCALL_GETDENTS => do_get_dents(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
+        SYSCALL_GETDENTS => unsafe {do_get_dents(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs) },
         SYSCALL_READ => do_read(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
         SYSCALL_WRITE => do_write(message.args[FS_SYSCALL_ARG0], message.args[FS_SYSCALL_ARG1], message.args[FS_SYSCALL_ARG2], src_pid, cur_fs),
         SYSCALL_MKDIRAT => {

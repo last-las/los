@@ -1,5 +1,5 @@
-use user_lib::syscall::{dev_read, dev_write};
 use core::fmt::{Debug, Formatter};
+use user_lib::syscall::{dev_read, dev_write};
 
 #[derive(Debug, Clone, Default)]
 pub struct ReadOnly<T: Copy + Debug>(Volatile<T>);
@@ -38,27 +38,17 @@ impl<T: Copy + Debug> Volatile<T> {
         let size = core::mem::size_of::<T>();
         assert!(size <= core::mem::size_of::<usize>());
         let ret = dev_read(&self.0 as *const _ as usize, size).unwrap();
-        unsafe {
-            (&ret as *const _ as usize as *const T).read_volatile()
-        }
+        unsafe { (&ret as *const _ as usize as *const T).read_volatile() }
     }
 
     pub fn write(&mut self, value: T) {
         let size = core::mem::size_of::<T>();
-        let value =unsafe {
+        let value = unsafe {
             match size {
-                1 => {
-                    (&value as *const _ as usize as *const u8).read_volatile() as usize
-                },
-                2 => {
-                    (&value as *const _ as usize as *const u16).read_volatile() as usize
-                },
-                4 => {
-                    (&value as *const _ as usize as *const u32).read_volatile() as usize
-                },
-                8 => {
-                    (&value as *const _ as usize as *const u64).read_volatile() as usize
-                },
+                1 => (&value as *const _ as usize as *const u8).read_volatile() as usize,
+                2 => (&value as *const _ as usize as *const u16).read_volatile() as usize,
+                4 => (&value as *const _ as usize as *const u32).read_volatile() as usize,
+                8 => (&value as *const _ as usize as *const u64).read_volatile() as usize,
                 _ => panic!("Wrong size:{}", size),
             }
         };
