@@ -18,7 +18,8 @@ use share::syscall::sys_const::*;
 pub use ipc::notify;
 pub use proc::{MAX_PRIORITY, MIN_PRIORITY};
 
-use self::time::{do_get_time_of_day, do_nanosleep, Timespec};
+use self::time::{do_get_time_of_day, do_nanosleep};
+use share::time::Timespec;
 
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {

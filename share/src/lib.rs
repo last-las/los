@@ -8,6 +8,7 @@ pub mod file;
 pub mod device;
 pub mod mmap;
 pub mod system;
+pub mod time;
 
 extern crate alloc;
 #[macro_use]

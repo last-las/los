@@ -202,8 +202,8 @@ pub fn sys_uname(which: usize) -> isize {
     syscall1(SYSCALL_UNAME, which)
 }
 
-pub fn sys_get_time() -> isize {
-    syscall1(SYSCALL_GET_TIME, 0)
+pub fn sys_get_time(ptr: usize) -> isize {
+    syscall1(SYSCALL_GET_TIME, ptr)
 }
 
 pub fn sys_get_pid() -> isize {

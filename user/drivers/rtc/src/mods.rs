@@ -41,7 +41,8 @@ pub mod sysctl_mod {
 
     /// 读取时钟周期
     fn read_cycle() -> usize {
-        sys_get_time() as usize
+        // sys_get_time() as usize
+        0
     }
 
     // read CPU current freq

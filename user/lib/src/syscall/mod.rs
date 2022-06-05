@@ -9,6 +9,7 @@ use share::ipc::Msg;
 use share::file::{MAX_PATH_LENGTH, OpenFlag, RDirent, Dirent, DIRENT_BUFFER_SZ, SEEKFlag, Stat, AT_FD_CWD};
 use share::ffi::{CString, CStr};
 use share::mmap::{Prot, MMAPFlags};
+use share::time::Timespec;
 
 fn isize2result(ret: isize) -> Result<usize, SysError> {
     if ret < 0 {
@@ -155,7 +156,10 @@ pub fn set_priority(which: usize, who: usize, prio: isize) -> Result<usize, SysE
 }
 
 pub fn get_time() -> usize {
-    sys_get_time() as usize
+    let mut time_spec = Timespec::empty();
+    isize2result(sys_get_time(&mut time_spec as *mut _ as usize)).unwrap();
+
+    (time_spec.tv_usec as usize) / 1000
 }
 
 pub fn getpid() -> usize {

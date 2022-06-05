@@ -2,6 +2,7 @@ use crate::timer::{get_time_ms, get_time_s, get_time_us};
 use share::syscall::error::SysError;
 
 use super::proc::do_yield;
+use share::time::Timespec;
 
 pub fn do_get_time() -> Result<usize, SysError> {
     Ok(get_time_ms())
@@ -14,7 +15,8 @@ pub fn do_get_time_of_day(time: *mut Timespec) -> Result<usize, SysError> {
             (*time).tv_usec = get_time_us() as u64;
         }
     }
-    do_get_time()
+
+    Ok(0)
 }
 
 pub fn do_nanosleep(req: *mut Timespec, rem: *mut Timespec) -> Result<usize, SysError> {
@@ -31,9 +33,4 @@ pub fn do_nanosleep(req: *mut Timespec, rem: *mut Timespec) -> Result<usize, Sys
             }
         }
     }
-}
-
-pub struct Timespec {
-    pub tv_sec: u64,
-    pub tv_usec: u64,
 }
