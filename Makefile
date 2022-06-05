@@ -1,8 +1,7 @@
 TARGET := riscv64gc-unknown-none-elf
 MODE := release
 KERNEL_ELF := ./target/$(TARGET)/$(MODE)/os
-KERNEL_BIN := $(KERNEL_ELF).bin
-#KERNEL_BIN := /coursegrader/submit/target/k210.bin
+KERNEL_BIN := os.bin
 BOOTLOADER := ./bootloader/rustsbi-qemu.bin
 export CPU_NUMS = 2
 export LOG = ERROR
