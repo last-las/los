@@ -1,16 +1,7 @@
 use share::syscall::error::SysError;
 use crate::config::{DOMAINNAME, MACHINE, NODENAME, RELEASE, SYSNAME, VERSION};
+use share::system::Utsname;
 
-#[repr(C)]
-#[derive(Debug)]
-pub struct Utsname {
-    sysname: [u8; 65],
-    nodename: [u8; 65],
-    release: [u8; 65],
-    version: [u8; 65],
-    machine: [u8; 65],
-    domainname: [u8; 65],
-}
 
 pub fn do_uname(pointer: usize) -> Result<usize, SysError> {
     // println!("Hello Uname!");

@@ -7,17 +7,7 @@ extern crate alloc;
 use alloc::string::String;
 use user_lib::println;
 use user_lib::syscall::{sys_uname};
-
-#[derive(Debug)]
-#[repr(C)]
-struct Utsname {
-    sysname: [u8; 65],
-    nodename: [u8; 65],
-    release: [u8; 65],
-    version: [u8; 65],
-    machine: [u8; 65],
-    domainname: [u8; 65],
-}
+use share::system::Utsname;
 
 #[no_mangle]
 fn main() {
