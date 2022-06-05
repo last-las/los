@@ -27,3 +27,10 @@ pub const GPIOHS_ADDRESS: usize = 0x3800_1000;
 pub const DMAC_ADDRESS: usize = 0x5000_0000;
 pub const SPI0_ADDRESS: usize = 0x5200_0000;
 pub const SPI1_BASE_ADDR: usize = 0x53000000;
+
+pub const SYSNAME: &str = "LOS\0";
+pub const NODENAME: &str = "CSULOS\0";
+pub const RELEASE: &str = "beta\0";
+pub const VERSION: &str = "v1.0\0";
+pub const MACHINE: &str = "RISC-V 64\0";
+pub const DOMAINNAME: &str = "csu.edu.cn\0";

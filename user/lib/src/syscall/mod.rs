@@ -93,6 +93,10 @@ pub fn get_dents(fd: usize) -> Result<Vec<RDirent>, SysError> {
     Ok(rdirents)
 }
 
+pub fn uname(pointer: usize) -> isize {
+    sys_uname(pointer)
+}
+
 pub fn exit(exit_code: usize) -> isize {
     sys_exit(exit_code)
 }
