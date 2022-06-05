@@ -1,23 +1,24 @@
-mod ipc;
-mod mm;
 pub(crate) mod file;
-mod time;
-mod proc;
+mod ipc;
 mod kcall;
+mod mm;
+mod proc;
+mod time;
 
-use crate::syscall::mm::{do_brk, do_mmap, do_munmap};
+use crate::mm::available_frame;
 use crate::syscall::file::*;
-use crate::syscall::time::do_get_time;
 use crate::syscall::ipc::{kcall_receive, kcall_send};
+use crate::syscall::kcall::*;
+use crate::syscall::mm::{do_brk, do_mmap, do_munmap};
 use crate::syscall::proc::*;
+use crate::syscall::time::do_get_time;
 use share::syscall::error::{SysError, EUNKOWN};
 use share::syscall::sys_const::*;
-use crate::mm::available_frame;
-use crate::syscall::kcall::*;
 
 pub use ipc::notify;
-pub use proc::{MIN_PRIORITY, MAX_PRIORITY};
+pub use proc::{MAX_PRIORITY, MIN_PRIORITY};
 
+use self::time::{do_get_time_of_day, do_nanosleep, Timespec};
 
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> usize {
     let result: Result<usize, SysError> = match syscall_id {
@@ -59,29 +60,42 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> usize {
         SYSCALL_YIELD => do_yield(),
         SYSCALL_GET_PRIORITY => do_get_priority(args[0], args[1]),
         SYSCALL_SET_PRIORITY => do_set_priority(args[0], args[1], args[2] as isize),
-        SYSCALL_GET_TIME => do_get_time(),
+
+        // SYSCALL_GET_TIME => do_get_time(),
+        SYSCALL_GET_TIME => do_get_time_of_day(args[0] as *mut Timespec),
+        SYSCALL_NANOSLEEP => do_nanosleep(args[0] as *mut Timespec, args[1] as *mut Timespec),
+
         SYSCALL_GETPID => do_get_pid(),
         SYSCALL_GETPPID => do_get_ppid(),
         SYSCALL_BRK => do_brk(args[0]),
         SYSCALL_MUNMAP => do_munmap(args[0], args[1]),
         SYSCALL_FORK => do_fork(args[0] as u32, args[1], args[2], args[3], args[4]),
-        SYSCALL_EXEC => do_exec(args[0], args[1] as *const *const u8, args[2] as *const *const u8),
-        SYSCALL_MMAP => do_mmap(args[0], args[1], args[2] as u32, args[3] as u32, args[4], args[5]),
+        SYSCALL_EXEC => do_exec(
+            args[0],
+            args[1] as *const *const u8,
+            args[2] as *const *const u8,
+        ),
+        SYSCALL_MMAP => do_mmap(
+            args[0],
+            args[1],
+            args[2] as u32,
+            args[3] as u32,
+            args[4],
+            args[5],
+        ),
         SYSCALL_WAITPID => do_waitpid(args[0] as isize, args[1], args[2]),
 
-        SYSCALL_TEST =>  do_test(),
+        SYSCALL_TEST => do_test(),
 
         DEBUG_FRAME_USAGE => debug_frame_usage(),
 
-        _ => Err(SysError::new(EUNKOWN))
+        _ => Err(SysError::new(EUNKOWN)),
     };
 
     SysError::mux(result)
-
-
 }
 
-pub fn do_test() -> Result<usize, SysError>{
+pub fn do_test() -> Result<usize, SysError> {
     unimplemented!();
 }
 
