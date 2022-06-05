@@ -61,7 +61,7 @@ else ifeq ($(BOARD), k210)
 endif
 
 user:
-	@cd ./user && python build.py && cargo build --release --features "board_$(BOARD)"
+	@cd ./user && cargo build --release --features "board_$(BOARD)"
 
 fs-img: user
 	# @cd ./fat32-fuse && cargo run --release -- -s ../user/lib/src/bin/ -t ../user/target/$(TARGET)/$(MODE)/ -o $(OTHER_PATH)
