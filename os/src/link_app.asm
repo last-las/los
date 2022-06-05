@@ -17,6 +17,7 @@ _app_names:
      .string "terminal"
      .string "virtio-blk"
 
+        .align 3
         .section .data
         .global app_0_start
         .global app_0_end
@@ -24,6 +25,7 @@ _app_names:
         .incbin "./user/target/riscv64gc-unknown-none-elf/release/fs"
     app_0_end:
 
+        .align 3
         .section .data
         .global app_1_start
         .global app_1_end
@@ -31,6 +33,7 @@ _app_names:
         .incbin "./user/target/riscv64gc-unknown-none-elf/release/init"
     app_1_end:
 
+        .align 3
         .section .data
         .global app_2_start
         .global app_2_end
@@ -38,6 +41,7 @@ _app_names:
         .incbin "./user/target/riscv64gc-unknown-none-elf/release/terminal"
     app_2_end:
 
+        .align 3
         .section .data
         .global app_3_start
         .global app_3_end
