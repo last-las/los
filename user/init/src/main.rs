@@ -1,13 +1,15 @@
 #![no_std]
 #![no_main]
 
+#[macro_use]
 extern crate user_lib;
 #[macro_use]
 extern crate alloc;
 
-use user_lib::syscall::{fork, exec, waitpid, sys_yield, exit, sleep, mkdir_at, mount, open, set_priority};
+use user_lib::syscall::*;
 use share::file::OpenFlag;
 use user_lib::env::setenv;
+use alloc::vec::Vec;
 
 #[no_mangle]
 fn main() {
@@ -17,8 +19,9 @@ fn main() {
     open_standard_fd();
     mount_fatfs_on("/bin");
     mkdir_at(0,"/bin/mnt",0).unwrap();
-    fork_and_exec("/bin/idle");
-    fork_and_exec("/bin/shell");
+    chdir("/bin");
+
+    test_all();
 
     loop {
         match waitpid(-1, None, 0) {
@@ -42,11 +45,51 @@ fn mount_fatfs_on(path: &str) {
     //mkdir_at(0,"/bin/contest",0).unwrap();
     mount("/dev/sda2", path, "vfat", 0, 0).unwrap();
 }
-
-fn fork_and_exec(path: &str) {
-    let ret = fork().unwrap();
-    if ret == 0 {
-        exec(path, vec![path]).unwrap();
-        exit(0); // never reach here.
+fn test_all() {
+    let mut files = Vec::new();
+    files.push("brk");
+    files.push("chdir");
+    // files.push("/bin/clone"); misaligned
+    files.push("close");
+    files.push("dup");
+    files.push("dup2");
+    files.push("execve");
+    // files.push("/bin/exit");
+    // files.push("/bin/fork"); misaligned
+    files.push("fstat");
+    files.push("getcwd");
+    // files.push("getdents"); file system panic
+    files.push("getpid");
+    files.push("getppid");
+    files.push("gettimeofday");
+    files.push("mkdir_");
+    //test.push("/bin/mmap");
+    files.push("mount");
+    //test.push("/bin/munmap");
+    files.push("open");
+    files.push("openat");
+    //files.push("/bin/pipe");
+    files.push("read");
+    files.push("sleep");
+    //files.push("/bin/times");
+    files.push("umount");
+    files.push("uname");
+    //files.push("unlink");
+    // files.push("wait"); misaligned
+    // files.push("waitpid"); misaligned
+    files.push("write");
+    files.push("yield");
+    println!("-- Test mode,Start test --");
+    for file in files {
+        let pid = fork().unwrap();
+        if pid == 0 {
+            if exec(file, vec![]).is_err() {
+                println!("Fail to exec {}",file);
+                exit(1);
+            }
+            exit(0);
+        } else {
+            waitpid(pid as isize, None,0).unwrap();
+        }
     }
 }

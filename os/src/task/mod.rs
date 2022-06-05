@@ -44,7 +44,7 @@ pub fn load_init_tasks() {
     #[cfg(feature = "board_qemu")]
     let tasks = vec!["init", "terminal", "virtio-blk", "fs"];
     #[cfg(feature = "board_k210")]
-        let tasks = vec!["init", "terminal", "sdcard", "fs"];
+        let tasks = vec!["init", "terminal", "sdcard", "fs", "idle"];
     for task_name in tasks {
         let data = get_task_data_by_name(task_name).unwrap_or_else(|| {
             panic!("{} doesn't exist!", task_name);
@@ -57,6 +57,8 @@ pub fn load_init_tasks() {
             priority = 3;
         } else if task_name == "fs" { // make sure fs' min_priority is higher than device.
             priority = 2;
+        } else if task_name == "idle" {
+            priority = 3;
         }
         let mut inner = task.acquire_inner_lock();
         inner.min_priority = priority;
