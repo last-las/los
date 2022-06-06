@@ -1,1 +1,1 @@
-中南大学。一个Rust语言编写的操作系统
+a minix-like microkernel written in rust
